@@ -1,0 +1,49 @@
+import { supabase } from '../client';
+import { showSuccess, showError } from '@/utils/toast';
+
+export interface Area {
+  id: string;
+  nome: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const getAreas = async (): Promise<Area[] | null> => {
+  const { data, error } = await supabase.from('areas').select('*').order('nome', { ascending: true });
+  if (error) {
+    console.error('Error fetching areas:', error.message);
+    showError('Erro ao carregar áreas.');
+    return null;
+  }
+  return data;
+};
+
+export const createArea = async (nome: string): Promise<Area | null> => {
+  const { data, error } = await supabase.from('areas').insert({ nome }).select().single();
+  if (error) {
+    console.error('Error creating area:', error.message);
+    showError(`Erro ao criar área: ${error.message}`);
+    return null;
+  }
+  return data;
+};
+
+export const updateArea = async (id: string, nome: string): Promise<Area | null> => {
+  const { data, error } = await supabase.from('areas').update({ nome, updated_at: new Date().toISOString() }).eq('id', id).select().single();
+  if (error) {
+    console.error('Error updating area:', error.message);
+    showError(`Erro ao atualizar área: ${error.message}`);
+    return null;
+  }
+  return data;
+};
+
+export const deleteArea = async (id: string): Promise<boolean> => {
+  const { error } = await supabase.from('areas').delete().eq('id', id);
+  if (error) {
+    console.error('Error deleting area:', error.message);
+    showError(`Erro ao excluir área: ${error.message}`);
+    return false;
+  }
+  return true;
+};

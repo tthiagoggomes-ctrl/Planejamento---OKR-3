@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 
-const formSchema = z.object({
+export const userFormSchema = z.object({
   first_name: z.string().min(2, {
     message: "O nome deve ter pelo menos 2 caracteres.",
   }),
@@ -55,10 +55,12 @@ const formSchema = z.object({
   }),
 });
 
+export type UserFormValues = z.infer<typeof userFormSchema>;
+
 interface UserFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (values: z.infer<typeof formSchema>) => void;
+  onSubmit: (values: UserFormValues) => void;
   initialData?: UserProfile | null;
   isLoading?: boolean;
 }
@@ -70,8 +72,8 @@ export const UserForm: React.FC<UserFormProps> = ({
   initialData,
   isLoading,
 }) => {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<UserFormValues>({
+    resolver: zodResolver(userFormSchema),
     defaultValues: {
       first_name: initialData?.first_name || "",
       last_name: initialData?.last_name || "",
@@ -112,7 +114,7 @@ export const UserForm: React.FC<UserFormProps> = ({
     }
   }, [initialData, form]);
 
-  const handleSubmit = (values: z.infer<typeof formSchema>) => {
+  const handleSubmit = (values: UserFormValues) => {
     onSubmit(values);
     if (!initialData) { // Only reset if creating a new user
       form.reset({

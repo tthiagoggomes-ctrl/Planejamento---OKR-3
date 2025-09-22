@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { UserForm } from "@/components/forms/UserForm";
+import { UserForm, UserFormValues } from "@/components/forms/UserForm"; // Import UserFormValues
 import {
   getUsers,
   createUser,
@@ -35,7 +35,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import * as z from "zod";
+
+// Define um tipo para os argumentos da mutação de atualização
+type UpdateUserMutationArgs = UserFormValues & { id: string };
 
 const Users = () => {
   const queryClient = useQueryClient();
@@ -52,9 +54,14 @@ const Users = () => {
   });
 
   const createUserMutation = useMutation({
-    mutationFn: ({ email, password, first_name, last_name, area_id, permissao }: z.infer<typeof z.object({
-      email: z.string(), password?: string, first_name: string, last_name: string, area_id: string | null, permissao: 'admin' | 'member'
-    })>) => createUser(email, password, first_name, last_name, area_id, permissao),
+    mutationFn: (values: UserFormValues) => createUser( // Usando UserFormValues
+      values.email,
+      values.password,
+      values.first_name,
+      values.last_name,
+      values.area_id,
+      values.permissao
+    ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setIsFormOpen(false);
@@ -66,9 +73,8 @@ const Users = () => {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ id, first_name, last_name, area_id, permissao, status }: {
-      id: string; first_name: string; last_name: string; area_id: string | null; permissao: 'admin' | 'member'; status: 'active' | 'blocked';
-    }) => updateUserProfile(id, first_name, last_name, area_id, permissao, status),
+    mutationFn: ({ id, first_name, last_name, area_id, permissao, status }: UpdateUserMutationArgs) => // Usando UpdateUserMutationArgs
+      updateUserProfile(id, first_name, last_name, area_id, permissao, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setIsFormOpen(false);
@@ -127,9 +133,7 @@ const Users = () => {
     },
   });
 
-  const handleCreateOrUpdateUser = (values: z.infer<typeof z.object({
-    first_name: z.string(), last_name: z.string(), email: z.string(), password?: string, area_id: string | null, permissao: 'admin' | 'member', status: 'active' | 'blocked'
-  })>) => {
+  const handleCreateOrUpdateUser = (values: UserFormValues) => { // Usando UserFormValues
     if (editingUser) {
       updateUserMutation.mutate({
         id: editingUser.id,
@@ -137,7 +141,7 @@ const Users = () => {
         last_name: values.last_name,
         area_id: values.area_id,
         permissao: values.permissao,
-        status: values.status,
+        status: values.status || 'active', // Garante que o status seja 'active' se não for fornecido (embora o formulário deva fornecer)
       });
     } else {
       createUserMutation.mutate({
@@ -147,6 +151,7 @@ const Users = () => {
         last_name: values.last_name,
         area_id: values.area_id,
         permissao: values.permissao,
+        status: 'active', // Status padrão para novos usuários
       });
     }
   };

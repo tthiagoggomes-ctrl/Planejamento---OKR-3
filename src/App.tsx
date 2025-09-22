@@ -8,6 +8,8 @@ import NotFound from "./pages/NotFound";
 import Layout from "./components/layout/Layout";
 import Areas from "./pages/Areas";
 import Users from "./pages/Users";
+import Login from "./pages/Login"; // Import the Login page
+import { SessionContextProvider } from "./components/auth/SessionContextProvider"; // Import the SessionContextProvider
 
 const queryClient = new QueryClient();
 
@@ -17,15 +19,18 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Index />} />
-            <Route path="areas" element={<Areas />} />
-            <Route path="usuarios" element={<Users />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Route>
-        </Routes>
+        <SessionContextProvider> {/* Wrap the entire app with SessionContextProvider */}
+          <Routes>
+            <Route path="/login" element={<Login />} /> {/* Add the login route */}
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Index />} />
+              <Route path="areas" element={<Areas />} />
+              <Route path="usuarios" element={<Users />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </SessionContextProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd"; // Corrected import path
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Atividade } from "@/integrations/supabase/api/atividades";
 import { Badge } from "@/components/ui/badge";

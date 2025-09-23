@@ -25,14 +25,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ObjetivoForm, ObjetivoFormValues } from "@/components/forms/ObjetivoForm";
 import { getObjetivos, createObjetivo, updateObjetivo, deleteObjetivo, Objetivo } from "@/integrations/supabase/api/objetivos";
-import { KeyResultForm, KeyResultFormValues } from "@/components/forms/KeyResultForm"; // Import KeyResultForm
-import { getKeyResultsByObjetivoId, createKeyResult, updateKeyResult, deleteKeyResult, KeyResult } from "@/integrations/supabase/api/key_results"; // Import KR API
+import { KeyResultForm, KeyResultFormValues } from "@/components/forms/KeyResultForm";
+import { getKeyResultsByObjetivoId, createKeyResult, updateKeyResult, deleteKeyResult, KeyResult } from "@/integrations/supabase/api/key_results";
 import { showSuccess, showError } from "@/utils/toast";
-import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
+import { useSession } from "@/components/auth/SessionContextProvider";
+import { Input } from "@/components/ui/input"; // Import Input component
+import { useDebounce } from "@/hooks/use-debounce"; // Import useDebounce hook
 
 const Objetivos = () => {
   const queryClient = useQueryClient();
-  const { user } = useSession(); // Get the current user from session
+  const { user } = useSession();
 
   // State for Objetivo management
   const [isObjetivoFormOpen, setIsObjetivoFormOpen] = React.useState(false);
@@ -46,6 +48,10 @@ const Objetivos = () => {
   const [selectedObjetivoForKR, setSelectedObjetivoForKR] = React.useState<Objetivo | null>(null);
   const [isKeyResultDeleteDialogOpen, setIsKeyResultDeleteDialogOpen] = React.useState(false);
   const [keyResultToDelete, setKeyResultToDelete] = React.useState<string | null>(null);
+
+  // State for inline KR value editing
+  const [krCurrentValues, setKrCurrentValues] = React.useState<Record<string, number>>({});
+  const [updatingKrId, setUpdatingKrId] = React.useState<string | null>(null);
 
   // State for expanded objective rows
   const [expandedObjetivos, setExpandedObjetivos] = React.useState<Set<string>>(new Set());
@@ -68,6 +74,16 @@ const Objetivos = () => {
       return new Map(results);
     },
     enabled: !!objetivos, // Only run if objectives are loaded
+    onSuccess: (data) => {
+      // Initialize krCurrentValues when key results are loaded
+      const initialValues: Record<string, number> = {};
+      data.forEach(krs => {
+        krs.forEach(kr => {
+          initialValues[kr.id] = kr.valor_atual;
+        });
+      });
+      setKrCurrentValues(initialValues);
+    }
   });
 
   // Mutations for Objetivos
@@ -165,6 +181,38 @@ const Objetivos = () => {
     },
     onError: (err) => {
       showError(`Erro ao atualizar Key Result: ${err.message}`);
+    },
+  });
+
+  // Mutation for inline KR value update
+  const inlineUpdateKeyResultMutation = useMutation({
+    mutationFn: async ({ id, valor_atual }: { id: string; valor_atual: number }) => {
+      const currentKRs = keyResultsMap?.get(selectedObjetivoForKR?.id || '') || [];
+      const krToUpdate = currentKRs.find(kr => kr.id === id);
+      if (!krToUpdate) throw new Error("Key Result not found for inline update.");
+
+      setUpdatingKrId(id); // Set loading state for this specific KR
+      const updatedKr = await updateKeyResult(
+        id,
+        krToUpdate.titulo,
+        krToUpdate.tipo,
+        krToUpdate.valor_inicial,
+        krToUpdate.valor_meta,
+        valor_atual, // Only update valor_atual
+        krToUpdate.unidade,
+        krToUpdate.status
+      );
+      setUpdatingKrId(null); // Clear loading state
+      return updatedKr;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo"] });
+      showSuccess("Valor atual do Key Result atualizado!");
+    },
+    onError: (err) => {
+      showError(`Erro ao atualizar valor do Key Result: ${err.message}`);
+      // Revert local state if update fails
+      queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo"] });
     },
   });
 
@@ -269,6 +317,30 @@ const Objetivos = () => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  // Inline KR value update logic
+  const handleKrValueChange = (krId: string, value: string) => {
+    const numericValue = parseFloat(value);
+    if (!isNaN(numericValue) && numericValue >= 0) {
+      setKrCurrentValues(prev => ({ ...prev, [krId]: numericValue }));
+    }
+  };
+
+  const debouncedKrCurrentValues = useDebounce(krCurrentValues, 1000); // Debounce for 1 second
+
+  React.useEffect(() => {
+    // Iterate over debounced values and trigger mutations
+    for (const krId in debouncedKrCurrentValues) {
+      const newValue = debouncedKrCurrentValues[krId];
+      const currentKRs = Array.from(keyResultsMap?.values() || []).flat();
+      const originalKr = currentKRs.find(kr => kr.id === krId);
+
+      if (originalKr && originalKr.valor_atual !== newValue && updatingKrId !== krId) {
+        inlineUpdateKeyResultMutation.mutate({ id: krId, valor_atual: newValue });
+      }
+    }
+  }, [debouncedKrCurrentValues, keyResultsMap, inlineUpdateKeyResultMutation, updatingKrId]);
+
 
   if (isLoadingObjetivos) {
     return (
@@ -379,6 +451,7 @@ const Objetivos = () => {
                                       <TableHead>Título do KR</TableHead>
                                       <TableHead>Tipo</TableHead>
                                       <TableHead>Progresso</TableHead>
+                                      <TableHead>Valor Atual</TableHead> {/* New column for inline edit */}
                                       <TableHead>Status</TableHead>
                                       <TableHead className="text-right">Ações</TableHead>
                                     </TableRow>
@@ -393,7 +466,20 @@ const Objetivos = () => {
                                           {kr.tipo === 'percentage' && 'Porcentagem'}
                                         </TableCell>
                                         <TableCell>
-                                          {kr.valor_inicial} {kr.unidade} para {kr.valor_meta} {kr.unidade} (Atual: {kr.valor_atual} {kr.unidade})
+                                          {kr.valor_inicial} {kr.unidade} para {kr.valor_meta} {kr.unidade}
+                                        </TableCell>
+                                        <TableCell className="relative">
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            value={krCurrentValues[kr.id] !== undefined ? krCurrentValues[kr.id] : kr.valor_atual}
+                                            onChange={(e) => handleKrValueChange(kr.id, e.target.value)}
+                                            className="w-24 pr-8"
+                                            disabled={updatingKrId === kr.id}
+                                          />
+                                          {updatingKrId === kr.id && (
+                                            <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
+                                          )}
                                         </TableCell>
                                         <TableCell>
                                           <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getKeyResultStatusBadgeClass(kr.status)}`}>

@@ -623,6 +623,7 @@ const ObjetivoDetails = () => {
             <AlertDialogDescription>
               Esta ação não pode ser desfeita. Isso excluirá permanentemente o objetivo "{objetivo.titulo}" e todos os Key Results (KRs) e Atividades associados.
             </AlertDialogDescription>
+          </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>

@@ -1,4 +1,5 @@
 import { supabase } from '../client';
+import { supabaseAdmin } from '../admin'; // Importa o cliente admin
 import { showSuccess, showError } from '@/utils/toast';
 import { User } from '@supabase/supabase-js';
 
@@ -26,8 +27,8 @@ export const getUsers = async (): Promise<UserProfile[] | null> => {
     return null;
   }
 
-  // Fetch auth.users to get email addresses
-  const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+  // Busca auth.users para obter endereços de e-mail usando o cliente admin
+  const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
 
   if (authError) {
     console.error('Error fetching auth users:', authError.message);
@@ -40,7 +41,7 @@ export const getUsers = async (): Promise<UserProfile[] | null> => {
   const combinedUsers: UserProfile[] = usersData.map(profile => ({
     ...profile,
     email: authUsersMap.get(profile.id)?.email || 'N/A',
-    area_name: profile.area?.nome || 'N/A', // Adiciona o nome da área
+    area_name: (profile as any).area?.nome || 'N/A', // Adiciona o nome da área
   }));
 
   return combinedUsers;
@@ -54,12 +55,12 @@ export const createUser = async (
   area_id: string | null,
   permissao: 'admin' | 'member'
 ): Promise<UserProfile | null> => {
-  // Create user in auth.users
-  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+  // Cria usuário em auth.users usando o cliente admin
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
-    password: password || undefined, // If no password, user will need to reset
-    email_confirm: true, // Automatically confirm email
-    user_metadata: { first_name, last_name }, // Pass metadata for handle_new_user trigger
+    password: password || undefined, // Se não houver senha, o usuário precisará redefinir
+    email_confirm: true, // Confirma automaticamente o e-mail
+    user_metadata: { first_name, last_name }, // Passa metadados para o trigger handle_new_user
   });
 
   if (authError) {
@@ -68,8 +69,8 @@ export const createUser = async (
     return null;
   }
 
-  // The handle_new_user trigger will create the profile in public.usuarios
-  // We need to update the area_id and permissao after the profile is created
+  // O trigger handle_new_user criará o perfil em public.usuarios
+  // Precisamos atualizar o area_id e permissao após o perfil ser criado
   const { data: profileData, error: profileError } = await supabase
     .from('usuarios')
     .update({ area_id, permissao, updated_at: new Date().toISOString() })
@@ -80,7 +81,7 @@ export const createUser = async (
   if (profileError) {
     console.error('Error updating user profile after creation:', profileError.message);
     showError(`Erro ao atualizar perfil do usuário: ${profileError.message}`);
-    // Consider rolling back auth user creation here if necessary
+    // Considere reverter a criação do usuário auth aqui se necessário
     return null;
   }
 
@@ -108,20 +109,20 @@ export const updateUserProfile = async (
     return null;
   }
 
-  // Fetch email from auth.users
-  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(id);
+  // Busca e-mail de auth.users usando o cliente admin
+  const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(id);
   if (authError) {
     console.error('Error fetching auth user for update:', authError.message);
     showError('Erro ao buscar dados de autenticação do usuário.');
     return null;
   }
 
-  return { ...data, email: authUser.user?.email || 'N/A', area_name: data.area?.nome || 'N/A' };
+  return { ...data, email: authUser.user?.email || 'N/A', area_name: (data as any).area?.nome || 'N/A' };
 };
 
 export const deleteUser = async (id: string): Promise<boolean> => {
-  // Deleting from auth.users will cascade delete from public.usuarios due to foreign key constraint
-  const { error } = await supabase.auth.admin.deleteUser(id);
+  // A exclusão de auth.users irá cascatear a exclusão de public.usuarios devido à restrição de chave estrangeira
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(id); // Usa o cliente admin
   if (error) {
     console.error('Error deleting user:', error.message);
     showError(`Erro ao excluir usuário: ${error.message}`);
@@ -131,7 +132,7 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 };
 
 export const sendPasswordResetEmail = async (email: string): Promise<boolean> => {
-  const { error } = await supabase.auth.admin.generateLink({
+  const { error } = await supabaseAdmin.auth.admin.generateLink({ // Usa o cliente admin
     type: 'password_reset',
     email,
   });
@@ -157,14 +158,14 @@ export const blockUser = async (id: string): Promise<UserProfile | null> => {
     showError(`Erro ao bloquear usuário: ${error.message}`);
     return null;
   }
-  // Fetch email from auth.users
-  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(id);
+  // Busca e-mail de auth.users usando o cliente admin
+  const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(id);
   if (authError) {
     console.error('Error fetching auth user for block:', authError.message);
     showError('Erro ao buscar dados de autenticação do usuário.');
     return null;
   }
-  return { ...data, email: authUser.user?.email || 'N/A', area_name: data.area?.nome || 'N/A' };
+  return { ...data, email: authUser.user?.email || 'N/A', area_name: (data as any).area?.nome || 'N/A' };
 };
 
 export const unblockUser = async (id: string): Promise<UserProfile | null> => {
@@ -180,12 +181,12 @@ export const unblockUser = async (id: string): Promise<UserProfile | null> => {
     showError(`Erro ao desbloquear usuário: ${error.message}`);
     return null;
   }
-  // Fetch email from auth.users
-  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(id);
+  // Busca e-mail de auth.users usando o cliente admin
+  const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(id);
   if (authError) {
     console.error('Error fetching auth user for unblock:', authError.message);
     showError('Erro ao buscar dados de autenticação do usuário.');
     return null;
   }
-  return { ...data, email: authUser.user?.email || 'N/A', area_name: data.area?.nome || 'N/A' };
+  return { ...data, email: authUser.user?.email || 'N/A', area_name: (data as any).area?.nome || 'N/A' };
 };

@@ -20,15 +20,21 @@ export interface AtividadeSummary {
   count: number;
 }
 
-export const getAtividades = async (): Promise<Atividade[] | null> => {
-  const { data, error } = await supabase
+export const getAtividades = async (limit?: number): Promise<Atividade[] | null> => {
+  let query = supabase
     .from('atividades')
     .select(`
       *,
       key_result:key_results(titulo),
       assignee:usuarios(first_name, last_name)
     `)
-    .order('created_at', { ascending: false });
+    .order('updated_at', { ascending: false }); // Order by updated_at for recent changes
+
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Error fetching activities:', error.message);

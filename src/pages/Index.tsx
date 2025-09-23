@@ -1,15 +1,18 @@
 "use client";
 
-import React from 'react'; // Added React import
+import React from 'react';
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { getObjetivos, getObjetivosSummary, Objetivo, ObjetivoSummary } from "@/integrations/supabase/api/objetivos";
 import { getAllKeyResults, getKeyResultsSummary, KeyResult, KeyResultSummary, calculateKeyResultProgress } from "@/integrations/supabase/api/key_results";
 import { getAtividadesSummary, AtividadeSummary } from "@/integrations/supabase/api/atividades";
-import { Loader2, Target, ListTodo, CheckCircle, Hourglass, XCircle, Flag, TrendingUp, AlertTriangle, Clock, CircleDot, StopCircle } from "lucide-react"; // Adicionado StopCircle
+import { Loader2, Target, ListTodo, CheckCircle, Hourglass, XCircle, Flag, TrendingUp, AlertTriangle, Clock, CircleDot, StopCircle } from "lucide-react";
 import StatusDistributionChart from "@/components/charts/StatusDistributionChart";
-import { Progress } from "@/components/ui/progress"; // Import Progress component
+import { Progress } from "@/components/ui/progress";
+import AreaProgressList from '@/components/dashboard/AreaProgressList'; // Import new component
+import RecentActivitiesList from '@/components/dashboard/RecentActivitiesList'; // Import new component
+import AlertsAndPending from '@/components/dashboard/AlertsAndPending'; // Import new component
 
 const Index = () => {
   const { data: objetivosSummary, isLoading: isLoadingObjetivosSummary, error: errorObjetivosSummary } = useQuery<ObjetivoSummary[], Error>({
@@ -208,6 +211,12 @@ const Index = () => {
         {isLoadingAtividades ? renderLoading() : errorAtividades ? <p className="text-red-500">Erro ao carregar gráfico de atividades</p> : (
           <StatusDistributionChart title="Status das Atividades" data={atividadeChartData} />
         )}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3 mb-6">
+        <AreaProgressList />
+        <RecentActivitiesList />
+        <AlertsAndPending />
       </div>
 
       <MadeWithDyad />

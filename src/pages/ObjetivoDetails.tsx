@@ -32,11 +32,11 @@ import { getAtividadesByKeyResultId, createAtividade, updateAtividade, deleteAti
 import { AtividadeForm, AtividadeFormValues } from "@/components/forms/AtividadeForm";
 import { showSuccess, showError } from "@/utils/toast";
 import { useSession } from "@/components/auth/SessionContextProvider";
-import { Input } from "@/components/ui/input"; // Keep Input for other uses if needed
-import { useDebounce } from "@/hooks/use-debounce"; // Keep useDebounce for other uses if needed
+import { Input } from "@/components/ui/input";
+// Removed: import { useDebounce } from "@/hooks/use-debounce";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
-import { Progress } from "@/components/ui/progress"; // Import Progress component
+import { Progress } from "@/components/ui/progress";
 
 const ObjetivoDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -56,7 +56,7 @@ const ObjetivoDetails = () => {
 
   // State for Activity management
   const [isAtividadeFormOpen, setIsAtividadeFormOpen] = React.useState(false);
-  const [editingAtividade, setEditingAtividade] = React.useState<Atividade | null>(null);
+  const [editingAtividade, setEditingAtividade] = React.React.useState<Atividade | null>(null);
   const [selectedKeyResultForAtividade, setSelectedKeyResultForAtividade] = React.useState<KeyResult | null>(null);
   const [isAtividadeDeleteDialogOpen, setIsAtividadeDeleteDialogOpen] = React.useState(false);
   const [atividadeToDelete, setAtividadeToDelete] = React.useState<string | null>(null);
@@ -158,8 +158,6 @@ const ObjetivoDetails = () => {
     },
   });
 
-  // Removed inlineUpdateKeyResultMutation as valor_atual is no longer directly editable
-
   const deleteKeyResultMutation = useMutation({
     mutationFn: deleteKeyResult,
     onSuccess: () => {
@@ -206,7 +204,7 @@ const ObjetivoDetails = () => {
       }
       return updateAtividade(
         atividadeId,
-        values.key_result_id, // This should be the KR the activity is currently linked to
+        values.key_result_id,
         values.user_id,
         values.titulo,
         values.descricao,
@@ -292,7 +290,7 @@ const ObjetivoDetails = () => {
 
   const handleEditAtividadeClick = (atividade: Atividade, kr: KeyResult) => {
     setEditingAtividade(atividade);
-    setSelectedKeyResultForAtividade(kr); // Set the KR context for the form
+    setSelectedKeyResultForAtividade(kr);
     setIsAtividadeFormOpen(true);
   };
 
@@ -349,17 +347,14 @@ const ObjetivoDetails = () => {
 
   const getAtividadeStatusBadgeClass = (status: Atividade['status']) => {
     switch (status) {
-      case 'todo': return 'bg-gray-900 text-white'; // Preto
-      case 'in_progress': return 'bg-blue-600 text-white'; // Azul
-      case 'done': return 'bg-green-600 text-white'; // Verde
-      case 'stopped': return 'bg-red-600 text-white'; // Vermelho
+      case 'todo': return 'bg-gray-900 text-white';
+      case 'in_progress': return 'bg-blue-600 text-white';
+      case 'done': return 'bg-green-600 text-white';
+      case 'stopped': return 'bg-red-600 text-white';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  // Removed inline KR value update logic and debouncing as valor_atual is now derived
-
-  // Calculate Objective progress
   const calculateObjetivoOverallProgress = (): number => {
     if (!keyResults || keyResults.length === 0) {
       return 0;
@@ -370,7 +365,7 @@ const ObjetivoDetails = () => {
 
   const objectiveProgress = calculateObjetivoOverallProgress();
 
-  if (isLoadingObjetivo || isLoadingKeyResults) { // Removed isLoadingAtividades as activities are nested
+  if (isLoadingObjetivo || isLoadingKeyResults) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -462,14 +457,14 @@ const ObjetivoDetails = () => {
                   <TableHead>Título do KR</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Meta</TableHead>
-                  <TableHead>Progresso (%)</TableHead> {/* Now directly shows calculated progress */}
+                  <TableHead>Progresso (%)</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {keyResults.map((kr) => {
-                  const krProgress = calculateKeyResultProgress(kr); // Use the new calculation
+                  const krProgress = calculateKeyResultProgress(kr);
                   return (
                     <React.Fragment key={kr.id}>
                       <TableRow>
@@ -532,7 +527,7 @@ const ObjetivoDetails = () => {
                       </TableRow>
                       {expandedKeyResults.has(kr.id) && (
                         <TableRow>
-                          <TableCell colSpan={7} className="p-0"> {/* Adjusted colspan */}
+                          <TableCell colSpan={7} className="p-0">
                             <div className="bg-gray-100 dark:bg-gray-700 p-4 border-t border-b">
                               <div className="flex justify-between items-center mb-3">
                                 <h5 className="text-md font-semibold flex items-center">

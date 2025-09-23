@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2, List, LayoutKanban } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -27,6 +27,8 @@ import { AtividadeForm, AtividadeFormValues } from "@/components/forms/Atividade
 import { getAtividades, createAtividade, updateAtividade, deleteAtividade, Atividade } from "@/integrations/supabase/api/atividades";
 import { showSuccess, showError } from "@/utils/toast";
 import { format } from "date-fns";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"; // Import ToggleGroup
+import { KanbanBoard } from "@/components/KanbanBoard"; // Import KanbanBoard
 
 const Atividades = () => {
   const queryClient = useQueryClient();
@@ -34,6 +36,7 @@ const Atividades = () => {
   const [editingAtividade, setEditingAtividade] = React.useState<Atividade | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [atividadeToDelete, setAtividadeToDelete] = React.useState<string | null>(null);
+  const [viewMode, setViewMode] = React.useState<'list' | 'kanban'>('list'); // New state for view mode
 
   const { data: atividades, isLoading, error } = useQuery<Atividade[], Error>({
     queryKey: ["atividades"],
@@ -119,6 +122,21 @@ const Atividades = () => {
     }
   };
 
+  const handleStatusChangeFromKanban = (atividadeId: string, newStatus: Atividade['status']) => {
+    const atividadeToUpdate = atividades?.find(ativ => ativ.id === atividadeId);
+    if (atividadeToUpdate) {
+      updateAtividadeMutation.mutate({
+        id: atividadeToUpdate.id,
+        key_result_id: atividadeToUpdate.key_result_id,
+        user_id: atividadeToUpdate.user_id,
+        titulo: atividadeToUpdate.titulo,
+        descricao: atividadeToUpdate.descricao,
+        due_date: atividadeToUpdate.due_date,
+        status: newStatus,
+      });
+    }
+  };
+
   const getStatusBadgeClass = (status: Atividade['status']) => {
     switch (status) {
       case 'todo': return 'bg-gray-100 text-gray-800';
@@ -149,64 +167,83 @@ const Atividades = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-2xl font-bold">Gestão de Atividades</CardTitle>
-          <Button onClick={() => { setEditingAtividade(null); setIsFormOpen(true); }}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Nova Atividade
-          </Button>
+          <div className="flex items-center gap-2">
+            <ToggleGroup type="single" value={viewMode} onValueChange={(value: 'list' | 'kanban') => value && setViewMode(value)}>
+              <ToggleGroupItem value="list" aria-label="Visualização em Lista">
+                <List className="h-4 w-4 mr-2" /> Lista
+              </ToggleGroupItem>
+              <ToggleGroupItem value="kanban" aria-label="Visualização em Kanban">
+                <LayoutKanban className="h-4 w-4 mr-2" /> Kanban
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <Button onClick={() => { setEditingAtividade(null); setIsFormOpen(true); }}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Nova Atividade
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          {atividades && atividades.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Key Result</TableHead>
-                  <TableHead>Responsável</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {atividades.map((atividade) => (
-                  <TableRow key={atividade.id}>
-                    <TableCell className="font-medium">{atividade.titulo}</TableCell>
-                    <TableCell>{atividade.key_result_title}</TableCell>
-                    <TableCell>{atividade.assignee_name}</TableCell>
-                    <TableCell>
-                      {atividade.due_date ? format(new Date(atividade.due_date), "PPP") : "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(atividade.status)}`}>
-                        {atividade.status === 'todo' && 'A Fazer'}
-                        {atividade.status === 'in_progress' && 'Em Progresso'}
-                        {atividade.status === 'done' && 'Concluído'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditClick(atividade)}
-                        className="mr-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Editar</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteClick(atividade.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Excluir</span>
-                      </Button>
-                    </TableCell>
+          {viewMode === 'list' ? (
+            atividades && atividades.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Título</TableHead>
+                    <TableHead>Key Result</TableHead>
+                    <TableHead>Responsável</TableHead>
+                    <TableHead>Vencimento</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {atividades.map((atividade) => (
+                    <TableRow key={atividade.id}>
+                      <TableCell className="font-medium">{atividade.titulo}</TableCell>
+                      <TableCell>{atividade.key_result_title}</TableCell>
+                      <TableCell>{atividade.assignee_name}</TableCell>
+                      <TableCell>
+                        {atividade.due_date ? format(new Date(atividade.due_date), "PPP") : "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(atividade.status)}`}>
+                          {atividade.status === 'todo' && 'A Fazer'}
+                          {atividade.status === 'in_progress' && 'Em Progresso'}
+                          {atividade.status === 'done' && 'Concluído'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditClick(atividade)}
+                          className="mr-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Editar</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteClick(atividade.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Excluir</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-gray-600">Nenhuma atividade cadastrada ainda.</p>
+            )
           ) : (
-            <p className="text-gray-600">Nenhuma atividade cadastrada ainda.</p>
+            <KanbanBoard
+              atividades={atividades || []}
+              onStatusChange={handleStatusChangeFromKanban}
+              onEdit={handleEditClick}
+              onDelete={handleDeleteClick}
+            />
           )}
         </CardContent>
       </Card>

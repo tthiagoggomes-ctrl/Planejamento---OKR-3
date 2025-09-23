@@ -7,6 +7,7 @@ import { getObjetivosSummary, ObjetivoSummary } from "@/integrations/supabase/ap
 import { getKeyResultsSummary, KeyResultSummary } from "@/integrations/supabase/api/key_results";
 import { getAtividadesSummary, AtividadeSummary } from "@/integrations/supabase/api/atividades";
 import { Loader2, Target, ListTodo, CheckCircle, Hourglass, XCircle, Flag, TrendingUp, AlertTriangle, Clock, CircleDot } from "lucide-react";
+import StatusDistributionChart from "@/components/charts/StatusDistributionChart"; // Import the new chart component
 
 const Index = () => {
   const { data: objetivosSummary, isLoading: isLoadingObjetivos, error: errorObjetivos } = useQuery<ObjetivoSummary[], Error>({
@@ -37,6 +38,29 @@ const Index = () => {
       <Loader2 className="h-6 w-6 animate-spin text-primary" />
     </div>
   );
+
+  // Prepare data for Objetivo Status Chart
+  const objetivoChartData = [
+    { name: 'Rascunhos', value: getStatusCount(objetivosSummary, 'draft'), color: '#facc15' }, // yellow-500
+    { name: 'Ativos', value: getStatusCount(objetivosSummary, 'active'), color: '#3b82f6' }, // blue-500
+    { name: 'Concluídos', value: getStatusCount(objetivosSummary, 'completed'), color: '#22c55e' }, // green-500
+    { name: 'Arquivados', value: getStatusCount(objetivosSummary, 'archived'), color: '#6b7280' }, // gray-500
+  ].filter(item => item.value > 0);
+
+  // Prepare data for Key Result Status Chart
+  const keyResultChartData = [
+    { name: 'No Caminho', value: getStatusCount(keyResultsSummary, 'on_track'), color: '#22c55e' }, // green-500
+    { name: 'Em Risco', value: getStatusCount(keyResultsSummary, 'at_risk'), color: '#facc15' }, // yellow-500
+    { name: 'Fora do Caminho', value: getStatusCount(keyResultsSummary, 'off_track'), color: '#ef4444' }, // red-500
+    { name: 'Concluídos', value: getStatusCount(keyResultsSummary, 'completed'), color: '#3b82f6' }, // blue-500
+  ].filter(item => item.value > 0);
+
+  // Prepare data for Atividade Status Chart
+  const atividadeChartData = [
+    { name: 'A Fazer', value: getStatusCount(atividadesSummary, 'todo'), color: '#6b7280' }, // gray-500
+    { name: 'Em Progresso', value: getStatusCount(atividadesSummary, 'in_progress'), color: '#3b82f6' }, // blue-500
+    { name: 'Concluídas', value: getStatusCount(atividadesSummary, 'done'), color: '#22c55e' }, // green-500
+  ].filter(item => item.value > 0);
 
   return (
     <div className="container mx-auto py-6">
@@ -115,6 +139,18 @@ const Index = () => {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3 mb-6">
+        {isLoadingObjetivos ? renderLoading() : errorObjetivos ? <p className="text-red-500">Erro ao carregar gráfico de objetivos</p> : (
+          <StatusDistributionChart title="Status dos Objetivos" data={objetivoChartData} />
+        )}
+        {isLoadingKeyResults ? renderLoading() : errorKeyResults ? <p className="text-red-500">Erro ao carregar gráfico de Key Results</p> : (
+          <StatusDistributionChart title="Status dos Key Results" data={keyResultChartData} />
+        )}
+        {isLoadingAtividades ? renderLoading() : errorAtividades ? <p className="text-red-500">Erro ao carregar gráfico de atividades</p> : (
+          <StatusDistributionChart title="Status das Atividades" data={atividadeChartData} />
+        )}
       </div>
 
       <MadeWithDyad />

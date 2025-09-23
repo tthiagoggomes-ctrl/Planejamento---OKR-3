@@ -34,6 +34,23 @@ export const calculateKeyResultProgress = (kr: KeyResult): number => {
   return Math.max(0, Math.min(100, Math.round(progress)));
 };
 
+/**
+ * Determines the Key Result status based on its progress.
+ */
+export const determineKeyResultStatus = (kr: { valor_inicial: number; valor_meta: number; valor_atual: number }): KeyResult['status'] => {
+  const progress = calculateKeyResultProgress(kr);
+
+  if (progress >= 100) {
+    return 'completed';
+  } else if (progress >= 75) { // Example threshold for 'on_track'
+    return 'on_track';
+  } else if (progress >= 40) { // Example threshold for 'at_risk'
+    return 'at_risk';
+  } else {
+    return 'off_track';
+  }
+};
+
 export const getKeyResultsByObjetivoId = async (objetivo_id: string): Promise<KeyResult[] | null> => {
   const { data, error } = await supabase
     .from('key_results')
@@ -86,8 +103,10 @@ export const createKeyResult = async (
   valor_meta: number,
   valor_atual: number,
   unidade: string | null,
-  status: 'on_track' | 'at_risk' | 'off_track' | 'completed'
+  // status: 'on_track' | 'at_risk' | 'off_track' | 'completed' // Status will be determined automatically
 ): Promise<KeyResult | null> => {
+  const calculatedStatus = determineKeyResultStatus({ valor_inicial, valor_meta, valor_atual });
+
   const { data, error } = await supabase
     .from('key_results')
     .insert({
@@ -99,7 +118,7 @@ export const createKeyResult = async (
       valor_meta,
       valor_atual,
       unidade,
-      status,
+      status: calculatedStatus, // Use the calculated status
     })
     .select()
     .single();
@@ -120,8 +139,10 @@ export const updateKeyResult = async (
   valor_meta: number,
   valor_atual: number,
   unidade: string | null,
-  status: 'on_track' | 'at_risk' | 'off_track' | 'completed'
+  // status: 'on_track' | 'at_risk' | 'off_track' | 'completed' // Status will be determined automatically
 ): Promise<KeyResult | null> => {
+  const calculatedStatus = determineKeyResultStatus({ valor_inicial, valor_meta, valor_atual });
+
   const { data, error } = await supabase
     .from('key_results')
     .update({
@@ -131,7 +152,7 @@ export const updateKeyResult = async (
       valor_meta,
       valor_atual,
       unidade,
-      status,
+      status: calculatedStatus, // Use the calculated status
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

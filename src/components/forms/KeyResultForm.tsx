@@ -28,8 +28,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { KeyResult } from "@/integrations/supabase/api/key_results";
+import { KeyResult, determineKeyResultStatus } from "@/integrations/supabase/api/key_results"; // Import determineKeyResultStatus
 import { Loader2 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Import Alert component
+import { Info } from "lucide-react"; // Import Info icon
 
 const formSchema = z.object({
   titulo: z.string().min(5, {
@@ -48,9 +50,9 @@ const formSchema = z.object({
     message: "O valor atual não pode ser negativo.",
   }),
   unidade: z.string().nullable(),
-  status: z.enum(['on_track', 'at_risk', 'off_track', 'completed'], {
-    message: "Selecione um status válido.",
-  }),
+  // status: z.enum(['on_track', 'at_risk', 'off_track', 'completed'], { // Status is now automatically determined
+  //   message: "Selecione um status válido.",
+  // }),
 });
 
 export type KeyResultFormValues = z.infer<typeof formSchema>;
@@ -79,9 +81,13 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
       valor_meta: initialData?.valor_meta || 0,
       valor_atual: initialData?.valor_atual || 0,
       unidade: initialData?.unidade || "",
-      status: initialData?.status || "on_track",
+      // status: initialData?.status || "on_track", // Status is now automatically determined
     },
   });
+
+  // Watch for changes in valor_inicial, valor_meta, valor_atual to update displayed status
+  const { valor_inicial, valor_meta, valor_atual } = form.watch(['valor_inicial', 'valor_meta', 'valor_atual']);
+  const currentCalculatedStatus = determineKeyResultStatus({ valor_inicial, valor_meta, valor_atual });
 
   React.useEffect(() => {
     if (initialData) {
@@ -92,7 +98,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
         valor_meta: initialData.valor_meta,
         valor_atual: initialData.valor_atual,
         unidade: initialData.unidade,
-        status: initialData.status,
+        // status: initialData.status, // Status is now automatically determined
       });
     } else {
       form.reset({
@@ -102,7 +108,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
         valor_meta: 0,
         valor_atual: 0,
         unidade: "",
-        status: "on_track",
+        // status: "on_track", // Status is now automatically determined
       });
     }
   }, [initialData, form]);
@@ -117,7 +123,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
         valor_meta: 0,
         valor_atual: 0,
         unidade: "",
-        status: "on_track",
+        // status: "on_track", // Status is now automatically determined
       });
     }
   };
@@ -134,6 +140,10 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
     { value: "off_track", label: "Fora do Caminho" },
     { value: "completed", label: "Concluído" },
   ];
+
+  const getStatusLabel = (statusValue: KeyResult['status']) => {
+    return krStatuses.find(s => s.value === statusValue)?.label || statusValue;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -234,30 +244,24 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {krStatuses.map((status) => (
-                        <SelectItem key={status.value} value={status.value}>
-                          {status.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <FormControl>
+                <Input
+                  value={getStatusLabel(currentCalculatedStatus)}
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
+                />
+              </FormControl>
+              <FormMessage />
+              <Alert className="mt-2">
+                <Info className="h-4 w-4" />
+                <AlertTitle>Status Automático</AlertTitle>
+                <AlertDescription>
+                  O status do Key Result é determinado automaticamente com base nos valores inicial, meta e atual.
+                </AlertDescription>
+              </Alert>
+            </FormItem>
             <DialogFooter>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

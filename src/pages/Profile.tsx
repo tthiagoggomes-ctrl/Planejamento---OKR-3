@@ -79,7 +79,6 @@ const Profile = () => {
         Nenhum perfil de usuário encontrado.
       </div>
     );
-  );
   }
 
   // Determine if the current user can edit this profile

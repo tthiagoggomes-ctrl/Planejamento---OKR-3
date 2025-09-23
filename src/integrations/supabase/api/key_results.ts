@@ -21,6 +21,19 @@ export interface KeyResultSummary {
   count: number;
 }
 
+/**
+ * Calculates the progress percentage for a Key Result.
+ * Returns a value between 0 and 100.
+ */
+export const calculateKeyResultProgress = (kr: KeyResult): number => {
+  if (kr.valor_meta === kr.valor_inicial) {
+    return kr.valor_atual >= kr.valor_meta ? 100 : 0;
+  }
+
+  const progress = ((kr.valor_atual - kr.valor_inicial) / (kr.valor_meta - kr.valor_inicial)) * 100;
+  return Math.max(0, Math.min(100, Math.round(progress)));
+};
+
 export const getKeyResultsByObjetivoId = async (objetivo_id: string): Promise<KeyResult[] | null> => {
   const { data, error } = await supabase
     .from('key_results')

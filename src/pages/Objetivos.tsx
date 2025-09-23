@@ -26,8 +26,8 @@ import {
 import { ObjetivoForm, ObjetivoFormValues } from "@/components/forms/ObjetivoForm";
 import { getObjetivos, createObjetivo, updateObjetivo, deleteObjetivo, Objetivo } from "@/integrations/supabase/api/objetivos";
 import { KeyResultForm, KeyResultFormValues } from "@/components/forms/KeyResultForm";
-import { getKeyResultsByObjetivoId, createKeyResult, updateKeyResult, deleteKeyResult, KeyResult } from "@/integrations/supabase/api/key_results";
-import { getAreas, Area } from "@/integrations/supabase/api/areas"; // Import getAreas
+import { getKeyResultsByObjetivoId, createKeyResult, updateKeyResult, deleteKeyResult, KeyResult, calculateKeyResultProgress } from "@/integrations/supabase/api/key_results";
+import { getAreas, Area } from "@/integrations/supabase/api/areas";
 import { showSuccess, showError } from "@/utils/toast";
 import { useSession } from "@/components/auth/SessionContextProvider";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress"; // Import Progress component
 
 const Objetivos = () => {
   const queryClient = useQueryClient();
@@ -371,6 +372,16 @@ const Objetivos = () => {
     }
   }, [debouncedKrCurrentValues, keyResultsMap, inlineUpdateKeyResultMutation, updatingKrId]);
 
+  // Calculate Objective progress
+  const calculateObjetivoOverallProgress = (objetivoId: string): number => {
+    const krs = keyResultsMap?.get(objetivoId);
+    if (!krs || krs.length === 0) {
+      return 0;
+    }
+    const totalProgress = krs.reduce((sum, kr) => sum + calculateKeyResultProgress(kr), 0);
+    return Math.round(totalProgress / krs.length);
+  };
+
 
   if (isLoadingObjetivos || isLoadingAreas) {
     return (
@@ -482,155 +493,175 @@ const Objetivos = () => {
                   <TableHead>Período</TableHead>
                   <TableHead>Área</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Progresso</TableHead> {/* New column for Objective progress */}
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {objetivos.map((objetivo) => (
-                  <React.Fragment key={objetivo.id}>
-                    <TableRow>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => toggleObjetivoExpansion(objetivo.id)}
-                        >
-                          {expandedObjetivos.has(objetivo.id) ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                          <span className="sr-only">Expandir/Colapsar KRs</span>
-                        </Button>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        <Link to={`/objetivos/${objetivo.id}`} className="text-blue-600 hover:underline">
-                          {objetivo.titulo}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{objetivo.periodo}</TableCell>
-                      <TableCell>{objetivo.area_name}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getObjetivoStatusBadgeClass(objetivo.status)}`}>
-                          {objetivo.status === 'draft' && 'Rascunho'}
-                          {objetivo.status === 'active' && 'Ativo'}
-                          {objetivo.status === 'completed' && 'Concluído'}
-                          {objetivo.status === 'archived' && 'Arquivado'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditObjetivoClick(objetivo)}
-                          className="mr-2"
-                        >
-                          <Edit className="h-4 w-4" />
-                          <span className="sr-only">Editar Objetivo</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteObjetivoClick(objetivo.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Excluir Objetivo</span>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    {expandedObjetivos.has(objetivo.id) && (
+                {objetivos.map((objetivo) => {
+                  const objectiveProgress = calculateObjetivoOverallProgress(objetivo.id);
+                  return (
+                    <React.Fragment key={objetivo.id}>
                       <TableRow>
-                        <TableCell colSpan={6} className="p-0">
-                          <div className="bg-gray-50 dark:bg-gray-800 p-4 border-t border-b">
-                            <div className="flex justify-between items-center mb-3">
-                              <h4 className="text-lg font-semibold">Key Results para "{objetivo.titulo}"</h4>
-                              <Button size="sm" onClick={() => handleAddKeyResultClick(objetivo)}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar KR
-                              </Button>
-                            </div>
-                            {isLoadingKeyResults ? (
-                              <div className="flex justify-center items-center py-4">
-                                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                              </div>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => toggleObjetivoExpansion(objetivo.id)}
+                          >
+                            {expandedObjetivos.has(objetivo.id) ? (
+                              <ChevronUp className="h-4 w-4" />
                             ) : (
-                              keyResultsMap?.get(objetivo.id)?.length > 0 ? (
-                                <Table className="bg-white dark:bg-gray-900">
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Título do KR</TableHead>
-                                      <TableHead>Tipo</TableHead>
-                                      <TableHead>Progresso</TableHead>
-                                      <TableHead>Valor Atual</TableHead> {/* New column for inline edit */}
-                                      <TableHead>Status</TableHead>
-                                      <TableHead className="text-right">Ações</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {keyResultsMap.get(objetivo.id)?.map((kr) => (
-                                      <TableRow key={kr.id}>
-                                        <TableCell>{kr.titulo}</TableCell>
-                                        <TableCell>
-                                          {kr.tipo === 'numeric' && 'Numérico'}
-                                          {kr.tipo === 'boolean' && 'Booleano'}
-                                          {kr.tipo === 'percentage' && 'Porcentagem'}
-                                        </TableCell>
-                                        <TableCell>
-                                          {kr.valor_inicial} {kr.unidade} para {kr.valor_meta} {kr.unidade}
-                                        </TableCell>
-                                        <TableCell className="relative">
-                                          <Input
-                                            type="number"
-                                            step="0.01"
-                                            value={krCurrentValues[kr.id] !== undefined ? krCurrentValues[kr.id] : kr.valor_atual}
-                                            onChange={(e) => handleKrValueChange(kr.id, e.target.value)}
-                                            className="w-24 pr-8"
-                                            disabled={updatingKrId === kr.id}
-                                          />
-                                          {updatingKrId === kr.id && (
-                                            <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
-                                          )}
-                                        </TableCell>
-                                        <TableCell>
-                                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getKeyResultStatusBadgeClass(kr.status)}`}>
-                                            {kr.status === 'on_track' && 'No Caminho'}
-                                            {kr.status === 'at_risk' && 'Em Risco'}
-                                            {kr.status === 'off_track' && 'Fora do Caminho'}
-                                            {kr.status === 'completed' && 'Concluído'}
-                                          </span>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleEditKeyResultClick(kr, objetivo)}
-                                            className="mr-2"
-                                          >
-                                            <Edit className="h-4 w-4" />
-                                            <span className="sr-only">Editar KR</span>
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleDeleteKeyResultClick(kr.id)}
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                            <span className="sr-only">Excluir KR</span>
-                                          </Button>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              ) : (
-                                <p className="text-gray-600 text-center py-4">Nenhum Key Result cadastrado para este objetivo.</p>
-                              )
+                              <ChevronDown className="h-4 w-4" />
                             )}
+                            <span className="sr-only">Expandir/Colapsar KRs</span>
+                          </Button>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <Link to={`/objetivos/${objetivo.id}`} className="text-blue-600 hover:underline">
+                            {objetivo.titulo}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{objetivo.periodo}</TableCell>
+                        <TableCell>{objetivo.area_name}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getObjetivoStatusBadgeClass(objetivo.status)}`}>
+                            {objetivo.status === 'draft' && 'Rascunho'}
+                            {objetivo.status === 'active' && 'Ativo'}
+                            {objetivo.status === 'completed' && 'Concluído'}
+                            {objetivo.status === 'archived' && 'Arquivado'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Progress value={objectiveProgress} className="w-[100px]" />
+                            <span className="text-sm text-muted-foreground">{objectiveProgress}%</span>
                           </div>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditObjetivoClick(objetivo)}
+                            className="mr-2"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Editar Objetivo</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteObjetivoClick(objetivo.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Excluir Objetivo</span>
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    )}
-                  </React.Fragment>
-                ))}
+                      {expandedObjetivos.has(objetivo.id) && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="p-0">
+                            <div className="bg-gray-50 dark:bg-gray-800 p-4 border-t border-b">
+                              <div className="flex justify-between items-center mb-3">
+                                <h4 className="text-lg font-semibold">Key Results para "{objetivo.titulo}"</h4>
+                                <Button size="sm" onClick={() => handleAddKeyResultClick(objetivo)}>
+                                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar KR
+                                </Button>
+                              </div>
+                              {isLoadingKeyResults ? (
+                                <div className="flex justify-center items-center py-4">
+                                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                </div>
+                              ) : (
+                                keyResultsMap?.get(objetivo.id)?.length > 0 ? (
+                                  <Table className="bg-white dark:bg-gray-900">
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Título do KR</TableHead>
+                                        <TableHead>Tipo</TableHead>
+                                        <TableHead>Progresso</TableHead>
+                                        <TableHead>Valor Atual</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Progresso (%)</TableHead> {/* New column for KR progress */}
+                                        <TableHead className="text-right">Ações</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {keyResultsMap.get(objetivo.id)?.map((kr) => {
+                                        const krProgress = calculateKeyResultProgress(kr);
+                                        return (
+                                          <TableRow key={kr.id}>
+                                            <TableCell>{kr.titulo}</TableCell>
+                                            <TableCell>
+                                              {kr.tipo === 'numeric' && 'Numérico'}
+                                              {kr.tipo === 'boolean' && 'Booleano'}
+                                              {kr.tipo === 'percentage' && 'Porcentagem'}
+                                            </TableCell>
+                                            <TableCell>
+                                              {kr.valor_inicial} {kr.unidade} para {kr.valor_meta} {kr.unidade}
+                                            </TableCell>
+                                            <TableCell className="relative">
+                                              <Input
+                                                type="number"
+                                                step="0.01"
+                                                value={krCurrentValues[kr.id] !== undefined ? krCurrentValues[kr.id] : kr.valor_atual}
+                                                onChange={(e) => handleKrValueChange(kr.id, e.target.value)}
+                                                className="w-24 pr-8"
+                                                disabled={updatingKrId === kr.id}
+                                              />
+                                              {updatingKrId === kr.id && (
+                                                <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
+                                              )}
+                                            </TableCell>
+                                            <TableCell>
+                                              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getKeyResultStatusBadgeClass(kr.status)}`}>
+                                                {kr.status === 'on_track' && 'No Caminho'}
+                                                {kr.status === 'at_risk' && 'Em Risco'}
+                                                {kr.status === 'off_track' && 'Fora do Caminho'}
+                                                {kr.status === 'completed' && 'Concluído'}
+                                              </span>
+                                            </TableCell>
+                                            <TableCell>
+                                              <div className="flex items-center gap-2">
+                                                <Progress value={krProgress} className="w-[80px]" />
+                                                <span className="text-sm text-muted-foreground">{krProgress}%</span>
+                                              </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleEditKeyResultClick(kr, objetivo)}
+                                                className="mr-2"
+                                              >
+                                                <Edit className="h-4 w-4" />
+                                                <span className="sr-only">Editar KR</span>
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleDeleteKeyResultClick(kr.id)}
+                                              >
+                                                <Trash2 className="h-4 w-4" />
+                                                <span className="sr-only">Excluir KR</span>
+                                              </Button>
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                    </TableBody>
+                                  </Table>
+                                ) : (
+                                  <p className="text-gray-600 text-center py-4">Nenhum Key Result cadastrado para este objetivo.</p>
+                                )
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </TableBody>
             </Table>
           ) : (

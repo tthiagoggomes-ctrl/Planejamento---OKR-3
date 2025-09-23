@@ -12,6 +12,7 @@ export interface Objetivo {
   status: 'draft' | 'active' | 'completed' | 'archived';
   created_at?: string;
   updated_at?: string;
+  progress_percentage?: number; // New field for calculated progress
 }
 
 export interface ObjetivoSummary {

@@ -27,7 +27,7 @@ import {
 import { ObjetivoForm, ObjetivoFormValues } from "@/components/forms/ObjetivoForm";
 import { getObjetivos, updateObjetivo, deleteObjetivo, Objetivo } from "@/integrations/supabase/api/objetivos";
 import { KeyResultForm, KeyResultFormValues } from "@/components/forms/KeyResultForm";
-import { getKeyResultsByObjetivoId, createKeyResult, updateKeyResult, deleteKeyResult, KeyResult } from "@/integrations/supabase/api/key_results";
+import { getKeyResultsByObjetivoId, createKeyResult, updateKeyResult, deleteKeyResult, KeyResult, calculateKeyResultProgress } from "@/integrations/supabase/api/key_results";
 import { getAtividadesByKeyResultId, createAtividade, updateAtividade, deleteAtividade, Atividade } from "@/integrations/supabase/api/atividades";
 import { AtividadeForm, AtividadeFormValues } from "@/components/forms/AtividadeForm";
 import { showSuccess, showError } from "@/utils/toast";
@@ -36,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
+import { Progress } from "@/components/ui/progress"; // Import Progress component
 
 const ObjetivoDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -435,6 +436,16 @@ const ObjetivoDetails = () => {
     }
   }, [debouncedKrCurrentValues, keyResults, inlineUpdateKeyResultMutation, updatingKrId]);
 
+  // Calculate Objective progress
+  const calculateObjetivoOverallProgress = (): number => {
+    if (!keyResults || keyResults.length === 0) {
+      return 0;
+    }
+    const totalProgress = keyResults.reduce((sum, kr) => sum + calculateKeyResultProgress(kr), 0);
+    return Math.round(totalProgress / keyResults.length);
+  };
+
+  const objectiveProgress = calculateObjetivoOverallProgress();
 
   if (isLoadingObjetivo || isLoadingKeyResults || isLoadingAtividades) {
     return (
@@ -500,6 +511,13 @@ const ObjetivoDetails = () => {
               </p>
             </div>
           </div>
+          <div className="mt-4">
+            <p className="text-sm font-medium text-muted-foreground mb-2">Progresso Geral do Objetivo</p>
+            <div className="flex items-center gap-2">
+              <Progress value={objectiveProgress} className="w-full" />
+              <span className="text-lg font-semibold">{objectiveProgress}%</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -523,153 +541,163 @@ const ObjetivoDetails = () => {
                   <TableHead>Progresso</TableHead>
                   <TableHead>Valor Atual</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Progresso (%)</TableHead> {/* New column for KR progress */}
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {keyResults.map((kr) => (
-                  <React.Fragment key={kr.id}>
-                    <TableRow>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => toggleKeyResultExpansion(kr.id)}
-                        >
-                          {expandedKeyResults.has(kr.id) ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                          <span className="sr-only">Expandir/Colapsar Atividades</span>
-                        </Button>
-                      </TableCell>
-                      <TableCell className="font-medium">{kr.titulo}</TableCell>
-                      <TableCell>
-                        {kr.tipo === 'numeric' && 'Numérico'}
-                        {kr.tipo === 'boolean' && 'Booleano'}
-                        {kr.tipo === 'percentage' && 'Porcentagem'}
-                      </TableCell>
-                      <TableCell>
-                        {kr.valor_inicial} {kr.unidade} para {kr.valor_meta} {kr.unidade}
-                      </TableCell>
-                      <TableCell className="relative">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={krCurrentValues[kr.id] !== undefined ? krCurrentValues[kr.id] : kr.valor_atual}
-                          onChange={(e) => handleKrValueChange(kr.id, e.target.value)}
-                          className="w-24 pr-8"
-                          disabled={updatingKrId === kr.id}
-                        />
-                        {updatingKrId === kr.id && (
-                          <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getKeyResultStatusBadgeClass(kr.status)}`}>
-                          {kr.status === 'on_track' && 'No Caminho'}
-                          {kr.status === 'at_risk' && 'Em Risco'}
-                          {kr.status === 'off_track' && 'Fora do Caminho'}
-                          {kr.status === 'completed' && 'Concluído'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditKeyResultClick(kr)}
-                          className="mr-2"
-                        >
-                          <Edit className="h-4 w-4" />
-                          <span className="sr-only">Editar KR</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteKeyResultClick(kr.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Excluir KR</span>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    {expandedKeyResults.has(kr.id) && (
+                {keyResults.map((kr) => {
+                  const krProgress = calculateKeyResultProgress(kr);
+                  return (
+                    <React.Fragment key={kr.id}>
                       <TableRow>
-                        <TableCell colSpan={7} className="p-0">
-                          <div className="bg-gray-100 dark:bg-gray-700 p-4 border-t border-b">
-                            <div className="flex justify-between items-center mb-3">
-                              <h5 className="text-md font-semibold flex items-center">
-                                <ListTodo className="mr-2 h-4 w-4" /> Atividades para "{kr.titulo}"
-                              </h5>
-                              <Button size="sm" onClick={() => handleAddAtividadeClick(kr)}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Atividade
-                              </Button>
-                            </div>
-                            {isLoadingAtividades ? (
-                              <div className="flex justify-center items-center py-4">
-                                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                              </div>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => toggleKeyResultExpansion(kr.id)}
+                          >
+                            {expandedKeyResults.has(kr.id) ? (
+                              <ChevronUp className="h-4 w-4" />
                             ) : (
-                              atividadesMap?.get(kr.id)?.length > 0 ? (
-                                <Table className="bg-white dark:bg-gray-900">
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Título da Atividade</TableHead>
-                                      <TableHead>Responsável</TableHead>
-                                      <TableHead>Vencimento</TableHead>
-                                      <TableHead>Status</TableHead>
-                                      <TableHead className="text-right">Ações</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {atividadesMap.get(kr.id)?.map((atividade) => (
-                                      <TableRow key={atividade.id}>
-                                        <TableCell>{atividade.titulo}</TableCell>
-                                        <TableCell>{atividade.assignee_name}</TableCell>
-                                        <TableCell>
-                                          {atividade.due_date ? format(new Date(atividade.due_date), "PPP") : "N/A"}
-                                        </TableCell>
-                                        <TableCell>
-                                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getAtividadeStatusBadgeClass(atividade.status)}`}>
-                                            {atividade.status === 'todo' && 'A Fazer'}
-                                            {atividade.status === 'in_progress' && 'Em Progresso'}
-                                            {atividade.status === 'done' && 'Concluído'}
-                                          </span>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleEditAtividadeClick(atividade, kr)}
-                                            className="mr-2"
-                                          >
-                                            <Edit className="h-4 w-4" />
-                                            <span className="sr-only">Editar Atividade</span>
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleDeleteAtividadeClick(atividade.id)}
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                            <span className="sr-only">Excluir Atividade</span>
-                                          </Button>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              ) : (
-                                <p className="text-gray-600 text-center py-4">Nenhuma atividade cadastrada para este Key Result.</p>
-                              )
+                              <ChevronDown className="h-4 w-4" />
                             )}
+                            <span className="sr-only">Expandir/Colapsar Atividades</span>
+                          </Button>
+                        </TableCell>
+                        <TableCell className="font-medium">{kr.titulo}</TableCell>
+                        <TableCell>
+                          {kr.tipo === 'numeric' && 'Numérico'}
+                          {kr.tipo === 'boolean' && 'Booleano'}
+                          {kr.tipo === 'percentage' && 'Porcentagem'}
+                        </TableCell>
+                        <TableCell>
+                          {kr.valor_inicial} {kr.unidade} para {kr.valor_meta} {kr.unidade}
+                        </TableCell>
+                        <TableCell className="relative">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={krCurrentValues[kr.id] !== undefined ? krCurrentValues[kr.id] : kr.valor_atual}
+                            onChange={(e) => handleKrValueChange(kr.id, e.target.value)}
+                            className="w-24 pr-8"
+                            disabled={updatingKrId === kr.id}
+                          />
+                          {updatingKrId === kr.id && (
+                            <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getKeyResultStatusBadgeClass(kr.status)}`}>
+                            {kr.status === 'on_track' && 'No Caminho'}
+                            {kr.status === 'at_risk' && 'Em Risco'}
+                            {kr.status === 'off_track' && 'Fora do Caminho'}
+                            {kr.status === 'completed' && 'Concluído'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Progress value={krProgress} className="w-[80px]" />
+                            <span className="text-sm text-muted-foreground">{krProgress}%</span>
                           </div>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditKeyResultClick(kr)}
+                            className="mr-2"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Editar KR</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteKeyResultClick(kr.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Excluir KR</span>
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    )}
-                  </React.Fragment>
-                ))}
+                      {expandedKeyResults.has(kr.id) && (
+                        <TableRow>
+                          <TableCell colSpan={8} className="p-0">
+                            <div className="bg-gray-100 dark:bg-gray-700 p-4 border-t border-b">
+                              <div className="flex justify-between items-center mb-3">
+                                <h5 className="text-md font-semibold flex items-center">
+                                  <ListTodo className="mr-2 h-4 w-4" /> Atividades para "{kr.titulo}"
+                                </h5>
+                                <Button size="sm" onClick={() => handleAddAtividadeClick(kr)}>
+                                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Atividade
+                                </Button>
+                              </div>
+                              {isLoadingAtividades ? (
+                                <div className="flex justify-center items-center py-4">
+                                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                </div>
+                              ) : (
+                                atividadesMap?.get(kr.id)?.length > 0 ? (
+                                  <Table className="bg-white dark:bg-gray-900">
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Título da Atividade</TableHead>
+                                        <TableHead>Responsável</TableHead>
+                                        <TableHead>Vencimento</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Ações</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {atividadesMap.get(kr.id)?.map((atividade) => (
+                                        <TableRow key={atividade.id}>
+                                          <TableCell>{atividade.titulo}</TableCell>
+                                          <TableCell>{atividade.assignee_name}</TableCell>
+                                          <TableCell>
+                                            {atividade.due_date ? format(new Date(atividade.due_date), "PPP") : "N/A"}
+                                          </TableCell>
+                                          <TableCell>
+                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getAtividadeStatusBadgeClass(atividade.status)}`}>
+                                              {atividade.status === 'todo' && 'A Fazer'}
+                                              {atividade.status === 'in_progress' && 'Em Progresso'}
+                                              {atividade.status === 'done' && 'Concluído'}
+                                            </span>
+                                          </TableCell>
+                                          <TableCell className="text-right">
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => handleEditAtividadeClick(atividade, kr)}
+                                              className="mr-2"
+                                            >
+                                              <Edit className="h-4 w-4" />
+                                              <span className="sr-only">Editar Atividade</span>
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => handleDeleteAtividadeClick(atividade.id)}
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                              <span className="sr-only">Excluir Atividade</span>
+                                            </Button>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                ) : (
+                                  <p className="text-gray-600 text-center py-4">Nenhuma atividade cadastrada para este Key Result.</p>
+                                )
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </TableBody>
             </Table>
           ) : (

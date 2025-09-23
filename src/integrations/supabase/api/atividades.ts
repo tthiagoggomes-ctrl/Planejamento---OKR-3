@@ -43,6 +43,30 @@ export const getAtividades = async (): Promise<Atividade[] | null> => {
   }));
 };
 
+export const getAtividadesByKeyResultId = async (key_result_id: string): Promise<Atividade[] | null> => {
+  const { data, error } = await supabase
+    .from('atividades')
+    .select(`
+      *,
+      key_result:key_results(titulo),
+      assignee:usuarios(first_name, last_name)
+    `)
+    .eq('key_result_id', key_result_id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error(`Error fetching activities for Key Result ${key_result_id}:`, error.message);
+    showError('Erro ao carregar atividades para o Key Result.');
+    return null;
+  }
+
+  return data.map(atividade => ({
+    ...atividade,
+    key_result_title: (atividade as any).key_result?.titulo || 'N/A',
+    assignee_name: (atividade as any).assignee ? `${(atividade as any).assignee.first_name} ${(atividade as any).assignee.last_name}` : 'N/A',
+  }));
+};
+
 export const getAtividadesSummary = async (): Promise<AtividadeSummary[] | null> => {
   const { data, error } = await supabase
     .from('atividades')

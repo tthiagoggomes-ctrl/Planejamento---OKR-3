@@ -31,6 +31,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import { useSession } from "@/components/auth/SessionContextProvider";
 import { Input } from "@/components/ui/input"; // Import Input component
 import { useDebounce } from "@/hooks/use-debounce"; // Import useDebounce hook
+import { Link } from "react-router-dom"; // Import Link for navigation
 
 const Objetivos = () => {
   const queryClient = useQueryClient();
@@ -398,7 +399,11 @@ const Objetivos = () => {
                           <span className="sr-only">Expandir/Colapsar KRs</span>
                         </Button>
                       </TableCell>
-                      <TableCell className="font-medium">{objetivo.titulo}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link to={`/objetivos/${objetivo.id}`} className="text-blue-600 hover:underline">
+                          {objetivo.titulo}
+                        </Link>
+                      </TableCell>
                       <TableCell>{objetivo.periodo}</TableCell>
                       <TableCell>{objetivo.area_name}</TableCell>
                       <TableCell>

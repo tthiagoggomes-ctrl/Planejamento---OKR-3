@@ -9,9 +9,10 @@ import Layout from "./components/layout/Layout";
 import Areas from "./pages/Areas";
 import Users from "./pages/Users";
 import Objetivos from "./pages/Objetivos";
+import ObjetivoDetails from "./pages/ObjetivoDetails"; // Import the new ObjetivoDetails page
 import Atividades from "./pages/Atividades";
 import Comentarios from "./pages/Comentarios";
-import Profile from "./pages/Profile"; // Import the Profile page
+import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import { SessionContextProvider } from "./components/auth/SessionContextProvider";
 
@@ -28,10 +29,11 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Layout />}>
               <Route index element={<Index />} />
-              <Route path="profile" element={<Profile />} /> {/* Add the profile route */}
+              <Route path="profile" element={<Profile />} />
               <Route path="areas" element={<Areas />} />
               <Route path="usuarios" element={<Users />} />
               <Route path="objetivos" element={<Objetivos />} />
+              <Route path="objetivos/:id" element={<ObjetivoDetails />} /> {/* Add the new details route */}
               <Route path="atividades" element={<Atividades />} />
               <Route path="comentarios" element={<Comentarios />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

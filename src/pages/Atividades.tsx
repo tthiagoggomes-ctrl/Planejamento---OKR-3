@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, List, Kanban } from "lucide-react"; // Changed LayoutKanban to Kanban
+import { PlusCircle, Edit, Trash2, Loader2, List, Kanban } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -43,6 +43,17 @@ const Atividades = () => {
     queryFn: getAtividades,
   });
 
+  // Helper function to format due_date for API
+  const formatDueDateForApi = (date: Date | string | null | undefined): string | null => {
+    if (date instanceof Date) {
+      return date.toISOString();
+    }
+    if (typeof date === 'string') {
+      return date; // Already an ISO string
+    }
+    return null;
+  };
+
   const createAtividadeMutation = useMutation({
     mutationFn: (values: AtividadeFormValues) =>
       createAtividade(
@@ -50,7 +61,7 @@ const Atividades = () => {
         values.user_id,
         values.titulo,
         values.descricao,
-        values.due_date ? values.due_date.toISOString() : null,
+        formatDueDateForApi(values.due_date), // Use helper here
         values.status
       ),
     onSuccess: () => {
@@ -71,7 +82,7 @@ const Atividades = () => {
         values.user_id,
         values.titulo,
         values.descricao,
-        values.due_date ? values.due_date.toISOString() : null,
+        formatDueDateForApi(values.due_date), // Use helper here
         values.status
       ),
     onSuccess: () => {
@@ -131,7 +142,7 @@ const Atividades = () => {
         user_id: atividadeToUpdate.user_id,
         titulo: atividadeToUpdate.titulo,
         descricao: atividadeToUpdate.descricao,
-        due_date: atividadeToUpdate.due_date,
+        due_date: atividadeToUpdate.due_date, // This is already string | null, will be handled by formatDueDateForApi
         status: newStatus,
       });
     }

@@ -30,6 +30,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import { useSession } from "@/components/auth/SessionContextProvider";
 import { format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea"; // Import Textarea for inline form
+import { ComentarioItem } from "@/components/ComentarioItem"; // Import the new ComentarioItem
 
 const Comentarios = () => {
   const queryClient = useQueryClient();
@@ -220,37 +221,12 @@ const Comentarios = () => {
                               comentariosMap?.get(atividade.id)?.length > 0 ? (
                                 <div className="space-y-4">
                                   {comentariosMap.get(atividade.id)?.map((comment) => (
-                                    <Card key={comment.id} className="p-4">
-                                      <div className="flex justify-between items-start">
-                                        <div>
-                                          <p className="text-sm font-semibold">{comment.author_name}</p>
-                                          <p className="text-xs text-gray-500">
-                                            {comment.created_at ? format(new Date(comment.created_at), "PPP 'às' HH:mm") : 'N/A'}
-                                          </p>
-                                          <p className="mt-2 text-gray-700 dark:text-gray-300">{comment.conteudo}</p>
-                                        </div>
-                                        {user?.id === comment.user_id && ( // Only allow editing/deleting own comments
-                                          <div className="flex space-x-2">
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() => handleEditCommentClick(comment)}
-                                            >
-                                              <Edit className="h-4 w-4" />
-                                              <span className="sr-only">Editar Comentário</span>
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() => handleDeleteCommentClick(comment.id)}
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                              <span className="sr-only">Excluir Comentário</span>
-                                            </Button>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </Card>
+                                    <ComentarioItem
+                                      key={comment.id}
+                                      comment={comment}
+                                      onEdit={handleEditCommentClick}
+                                      onDelete={handleDeleteCommentClick}
+                                    />
                                   ))}
                                 </div>
                               ) : (

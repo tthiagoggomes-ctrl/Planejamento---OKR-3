@@ -38,7 +38,7 @@ const Index = () => {
 
   const { data: allKeyResults, isLoading: isLoadingAllKeyResults, error: errorAllKeyResults } = useQuery<KeyResult[], Error>({
     queryKey: ["allKeyResults"],
-    queryFn: getAllKeyResults,
+    queryFn: getAllKeyResults, // This now fetches activities too
   });
 
   const getTotalCount = (summary: { count: number }[] | null) => {

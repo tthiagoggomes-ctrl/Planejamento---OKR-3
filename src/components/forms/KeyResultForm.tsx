@@ -3,7 +3,7 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import *s z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,10 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { KeyResult, determineKeyResultStatus } from "@/integrations/supabase/api/key_results"; // Import determineKeyResultStatus
+import { KeyResult } from "@/integrations/supabase/api/key_results"; // Removed determineKeyResultStatus import
 import { Loader2 } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Import Alert component
-import { Info } from "lucide-react"; // Import Info icon
+// Removed Alert and Info imports as the automatic status message is no longer needed in the form
 
 const formSchema = z.object({
   titulo: z.string().min(5, {
@@ -46,13 +45,10 @@ const formSchema = z.object({
   valor_meta: z.coerce.number().min(0, {
     message: "O valor meta não pode ser negativo.",
   }),
-  valor_atual: z.coerce.number().min(0, {
-    message: "O valor atual não pode ser negativo.",
-  }),
-  unidade: z.string().nullable(),
-  // status: z.enum(['on_track', 'at_risk', 'off_track', 'completed'], { // Status is now automatically determined
-  //   message: "Selecione um status válido.",
+  // valor_atual: z.coerce.number().min(0, { // Removed valor_atual from schema
+  //   message: "O valor atual não pode ser negativo.",
   // }),
+  unidade: z.string().nullable(),
 });
 
 export type KeyResultFormValues = z.infer<typeof formSchema>;
@@ -79,15 +75,10 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
       tipo: initialData?.tipo || "numeric",
       valor_inicial: initialData?.valor_inicial || 0,
       valor_meta: initialData?.valor_meta || 0,
-      valor_atual: initialData?.valor_atual || 0,
+      // valor_atual: initialData?.valor_atual || 0, // Removed valor_atual from defaultValues
       unidade: initialData?.unidade || "",
-      // status: initialData?.status || "on_track", // Status is now automatically determined
     },
   });
-
-  // Watch for changes in valor_inicial, valor_meta, valor_atual to update displayed status
-  const { valor_inicial, valor_meta, valor_atual } = form.watch(['valor_inicial', 'valor_meta', 'valor_atual']);
-  const currentCalculatedStatus = determineKeyResultStatus({ valor_inicial, valor_meta, valor_atual });
 
   React.useEffect(() => {
     if (initialData) {
@@ -96,9 +87,8 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
         tipo: initialData.tipo,
         valor_inicial: initialData.valor_inicial,
         valor_meta: initialData.valor_meta,
-        valor_atual: initialData.valor_atual,
+        // valor_atual: initialData.valor_atual, // Removed valor_atual from reset
         unidade: initialData.unidade,
-        // status: initialData.status, // Status is now automatically determined
       });
     } else {
       form.reset({
@@ -106,9 +96,8 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
         tipo: "numeric",
         valor_inicial: 0,
         valor_meta: 0,
-        valor_atual: 0,
+        // valor_atual: 0, // Removed valor_atual from reset
         unidade: "",
-        // status: "on_track", // Status is now automatically determined
       });
     }
   }, [initialData, form]);
@@ -121,9 +110,8 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
         tipo: "numeric",
         valor_inicial: 0,
         valor_meta: 0,
-        valor_atual: 0,
+        // valor_atual: 0, // Removed valor_atual from reset
         unidade: "",
-        // status: "on_track", // Status is now automatically determined
       });
     }
   };
@@ -133,17 +121,6 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
     { value: "boolean", label: "Booleano (Sim/Não)" },
     { value: "percentage", label: "Porcentagem" },
   ];
-
-  const krStatuses = [
-    { value: "on_track", label: "No Caminho Certo" },
-    { value: "at_risk", label: "Em Risco" },
-    { value: "off_track", label: "Fora do Caminho" },
-    { value: "completed", label: "Concluído" },
-  ];
-
-  const getStatusLabel = (statusValue: KeyResult['status']) => {
-    return krStatuses.find(s => s.value === statusValue)?.label || statusValue;
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -190,7 +167,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4"> {/* Changed to 2 columns as valor_atual is removed */}
               <FormField
                 control={form.control}
                 name="valor_inicial"
@@ -217,19 +194,6 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="valor_atual"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Valor Atual</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
             <FormField
               control={form.control}
@@ -244,24 +208,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
                 </FormItem>
               )}
             />
-            <FormItem>
-              <FormLabel>Status</FormLabel>
-              <FormControl>
-                <Input
-                  value={getStatusLabel(currentCalculatedStatus)}
-                  readOnly
-                  className="bg-muted cursor-not-allowed"
-                />
-              </FormControl>
-              <FormMessage />
-              <Alert className="mt-2">
-                <Info className="h-4 w-4" />
-                <AlertTitle>Status Automático</AlertTitle>
-                <AlertDescription>
-                  O status do Key Result é determinado automaticamente com base nos valores inicial, meta e atual.
-                </AlertDescription>
-              </Alert>
-            </FormItem>
+            {/* Removed Status display and Alert as it's no longer directly set in the form */}
             <DialogFooter>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

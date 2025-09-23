@@ -27,13 +27,13 @@ import {
 import { ObjetivoForm, ObjetivoFormValues } from "@/components/forms/ObjetivoForm";
 import { getObjetivos, updateObjetivo, deleteObjetivo, Objetivo } from "@/integrations/supabase/api/objetivos";
 import { KeyResultForm, KeyResultFormValues } from "@/components/forms/KeyResultForm";
-import { getKeyResultsByObjetivoId, createKeyResult, updateKeyResult, deleteKeyResult, KeyResult, calculateKeyResultProgress } from "@/integrations/supabase/api/key_results";
+import { getKeyResultsByObjetivoId, createKeyResult, updateKeyResult, deleteKeyResult, KeyResult, calculateKeyResultProgress, determineKeyResultStatus } from "@/integrations/supabase/api/key_results";
 import { getAtividadesByKeyResultId, createAtividade, updateAtividade, deleteAtividade, Atividade } from "@/integrations/supabase/api/atividades";
 import { AtividadeForm, AtividadeFormValues } from "@/components/forms/AtividadeForm";
 import { showSuccess, showError } from "@/utils/toast";
 import { useSession } from "@/components/auth/SessionContextProvider";
-import { Input } from "@/components/ui/input";
-import { useDebounce } from "@/hooks/use-debounce";
+import { Input } from "@/components/ui/input"; // Keep Input for other uses if needed
+import { useDebounce } from "@/hooks/use-debounce"; // Keep useDebounce for other uses if needed
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress"; // Import Progress component
@@ -61,10 +61,6 @@ const ObjetivoDetails = () => {
   const [isAtividadeDeleteDialogOpen, setIsAtividadeDeleteDialogOpen] = React.useState(false);
   const [atividadeToDelete, setAtividadeToDelete] = React.useState<string | null>(null);
 
-  // State for inline KR value editing
-  const [krCurrentValues, setKrCurrentValues] = React.useState<Record<string, number>>({});
-  const [updatingKrId, setUpdatingKrId] = React.useState<string | null>(null);
-
   // State for expanded Key Result rows (to show activities)
   const [expandedKeyResults, setExpandedKeyResults] = React.useState<Set<string>>(new Set());
 
@@ -78,34 +74,11 @@ const ObjetivoDetails = () => {
     enabled: !!id,
   });
 
-  // Fetch Key Results for this Objective
+  // Fetch Key Results for this Objective (now includes nested activities)
   const { data: keyResults, isLoading: isLoadingKeyResults, error: keyResultsError } = useQuery<KeyResult[], Error>({
     queryKey: ["key_results_by_objetivo", id],
     queryFn: () => getKeyResultsByObjetivoId(id!),
     enabled: !!id,
-    onSuccess: (data) => {
-      // Initialize krCurrentValues when key results are loaded
-      const initialValues: Record<string, number> = {};
-      data.forEach(kr => {
-        initialValues[kr.id] = kr.valor_atual;
-      });
-      setKrCurrentValues(initialValues);
-    }
-  });
-
-  // Fetch Activities for each Key Result
-  const { data: atividadesMap, isLoading: isLoadingAtividades } = useQuery<Map<string, Atividade[]>, Error>({
-    queryKey: ["atividades_by_key_result", keyResults],
-    queryFn: async () => {
-      if (!keyResults) return new Map();
-      const activityPromises = keyResults.map(async (kr) => {
-        const activities = await getAtividadesByKeyResultId(kr.id);
-        return [kr.id, activities || []] as [string, Atividade[]];
-      });
-      const results = await Promise.all(activityPromises);
-      return new Map(results);
-    },
-    enabled: !!keyResults,
   });
 
   // Mutations for Objetivos
@@ -150,9 +123,7 @@ const ObjetivoDetails = () => {
         values.tipo,
         values.valor_inicial,
         values.valor_meta,
-        values.valor_atual,
         values.unidade,
-        values.status
       );
     },
     onSuccess: () => {
@@ -174,9 +145,7 @@ const ObjetivoDetails = () => {
         values.tipo,
         values.valor_inicial,
         values.valor_meta,
-        values.valor_atual,
         values.unidade,
-        values.status
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo", id] });
@@ -189,34 +158,7 @@ const ObjetivoDetails = () => {
     },
   });
 
-  const inlineUpdateKeyResultMutation = useMutation({
-    mutationFn: async ({ id: krId, valor_atual }: { id: string; valor_atual: number }) => {
-      const krToUpdate = keyResults?.find(kr => kr.id === krId);
-      if (!krToUpdate) throw new Error("Key Result not found for inline update.");
-
-      setUpdatingKrId(krId); // Set loading state for this specific KR
-      const updatedKr = await updateKeyResult(
-        krId,
-        krToUpdate.titulo,
-        krToUpdate.tipo,
-        krToUpdate.valor_inicial,
-        krToUpdate.valor_meta,
-        valor_atual, // Only update valor_atual
-        krToUpdate.unidade,
-        krToUpdate.status
-      );
-      setUpdatingKrId(null); // Clear loading state
-      return updatedKr;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo", id] });
-      showSuccess("Valor atual do Key Result atualizado!");
-    },
-    onError: (err) => {
-      showError(`Erro ao atualizar valor do Key Result: ${err.message}`);
-      queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo", id] }); // Revert local state if update fails
-    },
-  });
+  // Removed inlineUpdateKeyResultMutation as valor_atual is no longer directly editable
 
   const deleteKeyResultMutation = useMutation({
     mutationFn: deleteKeyResult,
@@ -247,7 +189,7 @@ const ObjetivoDetails = () => {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["atividades_by_key_result", selectedKeyResultForAtividade?.id] });
+      queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo", id] }); // Invalidate KRs to recalculate progress
       setIsAtividadeFormOpen(false);
       setSelectedKeyResultForAtividade(null);
       showSuccess("Atividade criada com sucesso!");
@@ -273,7 +215,7 @@ const ObjetivoDetails = () => {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["atividades_by_key_result"] }); // Invalidate all activities for all KRs
+      queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo", id] }); // Invalidate KRs to recalculate progress
       setIsAtividadeFormOpen(false);
       setEditingAtividade(null);
       showSuccess("Atividade atualizada com sucesso!");
@@ -286,7 +228,7 @@ const ObjetivoDetails = () => {
   const deleteAtividadeMutation = useMutation({
     mutationFn: deleteAtividade,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["atividades_by_key_result"] }); // Invalidate all activities for all KRs
+      queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo", id] }); // Invalidate KRs to recalculate progress
       setIsAtividadeDeleteDialogOpen(false);
       setAtividadeToDelete(null);
       showSuccess("Atividade excluída com sucesso!");
@@ -407,34 +349,15 @@ const ObjetivoDetails = () => {
 
   const getAtividadeStatusBadgeClass = (status: Atividade['status']) => {
     switch (status) {
-      case 'todo': return 'bg-gray-100 text-gray-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'done': return 'bg-green-100 text-green-800';
+      case 'todo': return 'bg-gray-900 text-white'; // Preto
+      case 'in_progress': return 'bg-blue-600 text-white'; // Azul
+      case 'done': return 'bg-green-600 text-white'; // Verde
+      case 'stopped': return 'bg-red-600 text-white'; // Vermelho
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  // Inline KR value update logic
-  const handleKrValueChange = (krId: string, value: string) => {
-    const numericValue = parseFloat(value);
-    if (!isNaN(numericValue) && numericValue >= 0) {
-      setKrCurrentValues(prev => ({ ...prev, [krId]: numericValue }));
-    }
-  };
-
-  const debouncedKrCurrentValues = useDebounce(krCurrentValues, 1000); // Debounce for 1 second
-
-  React.useEffect(() => {
-    // Iterate over debounced values and trigger mutations
-    for (const krId in debouncedKrCurrentValues) {
-      const newValue = debouncedKrCurrentValues[krId];
-      const originalKr = keyResults?.find(kr => kr.id === krId);
-
-      if (originalKr && originalKr.valor_atual !== newValue && updatingKrId !== krId) {
-        inlineUpdateKeyResultMutation.mutate({ id: krId, valor_atual: newValue });
-      }
-    }
-  }, [debouncedKrCurrentValues, keyResults, inlineUpdateKeyResultMutation, updatingKrId]);
+  // Removed inline KR value update logic and debouncing as valor_atual is now derived
 
   // Calculate Objective progress
   const calculateObjetivoOverallProgress = (): number => {
@@ -447,7 +370,7 @@ const ObjetivoDetails = () => {
 
   const objectiveProgress = calculateObjetivoOverallProgress();
 
-  if (isLoadingObjetivo || isLoadingKeyResults || isLoadingAtividades) {
+  if (isLoadingObjetivo || isLoadingKeyResults) { // Removed isLoadingAtividades as activities are nested
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -538,16 +461,15 @@ const ObjetivoDetails = () => {
                   <TableHead className="w-[50px]"></TableHead>
                   <TableHead>Título do KR</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Progresso</TableHead>
-                  <TableHead>Valor Atual</TableHead>
+                  <TableHead>Meta</TableHead>
+                  <TableHead>Progresso (%)</TableHead> {/* Now directly shows calculated progress */}
                   <TableHead>Status</TableHead>
-                  <TableHead>Progresso (%)</TableHead> {/* New column for KR progress */}
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {keyResults.map((kr) => {
-                  const krProgress = calculateKeyResultProgress(kr);
+                  const krProgress = calculateKeyResultProgress(kr); // Use the new calculation
                   return (
                     <React.Fragment key={kr.id}>
                       <TableRow>
@@ -574,18 +496,11 @@ const ObjetivoDetails = () => {
                         <TableCell>
                           {kr.valor_inicial} {kr.unidade} para {kr.valor_meta} {kr.unidade}
                         </TableCell>
-                        <TableCell className="relative">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={krCurrentValues[kr.id] !== undefined ? krCurrentValues[kr.id] : kr.valor_atual}
-                            onChange={(e) => handleKrValueChange(kr.id, e.target.value)}
-                            className="w-24 pr-8"
-                            disabled={updatingKrId === kr.id}
-                          />
-                          {updatingKrId === kr.id && (
-                            <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
-                          )}
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Progress value={krProgress} className="w-[80px]" />
+                            <span className="text-sm text-muted-foreground">{krProgress}%</span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getKeyResultStatusBadgeClass(kr.status)}`}>
@@ -594,12 +509,6 @@ const ObjetivoDetails = () => {
                             {kr.status === 'off_track' && 'Fora do Caminho'}
                             {kr.status === 'completed' && 'Concluído'}
                           </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress value={krProgress} className="w-[80px]" />
-                            <span className="text-sm text-muted-foreground">{krProgress}%</span>
-                          </div>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
@@ -623,7 +532,7 @@ const ObjetivoDetails = () => {
                       </TableRow>
                       {expandedKeyResults.has(kr.id) && (
                         <TableRow>
-                          <TableCell colSpan={8} className="p-0">
+                          <TableCell colSpan={7} className="p-0"> {/* Adjusted colspan */}
                             <div className="bg-gray-100 dark:bg-gray-700 p-4 border-t border-b">
                               <div className="flex justify-between items-center mb-3">
                                 <h5 className="text-md font-semibold flex items-center">
@@ -633,12 +542,7 @@ const ObjetivoDetails = () => {
                                   <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Atividade
                                 </Button>
                               </div>
-                              {isLoadingAtividades ? (
-                                <div className="flex justify-center items-center py-4">
-                                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                                </div>
-                              ) : (
-                                atividadesMap?.get(kr.id)?.length > 0 ? (
+                              {kr.atividades && kr.atividades.length > 0 ? (
                                   <Table className="bg-white dark:bg-gray-900">
                                     <TableHeader>
                                       <TableRow>
@@ -650,7 +554,7 @@ const ObjetivoDetails = () => {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {atividadesMap.get(kr.id)?.map((atividade) => (
+                                      {kr.atividades.map((atividade) => (
                                         <TableRow key={atividade.id}>
                                           <TableCell>{atividade.titulo}</TableCell>
                                           <TableCell>{atividade.assignee_name}</TableCell>
@@ -662,6 +566,7 @@ const ObjetivoDetails = () => {
                                               {atividade.status === 'todo' && 'A Fazer'}
                                               {atividade.status === 'in_progress' && 'Em Progresso'}
                                               {atividade.status === 'done' && 'Concluído'}
+                                              {atividade.status === 'stopped' && 'Parado'}
                                             </span>
                                           </TableCell>
                                           <TableCell className="text-right">

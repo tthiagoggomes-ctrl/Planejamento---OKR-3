@@ -29,17 +29,18 @@ import { getAtividades, Atividade } from "@/integrations/supabase/api/atividades
 import { showSuccess, showError } from "@/utils/toast";
 import { useSession } from "@/components/auth/SessionContextProvider";
 import { format } from "date-fns";
+import { Textarea } from "@/components/ui/textarea"; // Import Textarea for inline form
 
 const Comentarios = () => {
   const queryClient = useQueryClient();
   const { user } = useSession();
 
-  const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false); // For editing existing comments
   const [editingComentario, setEditingComentario] = React.useState<Comentario | null>(null);
-  const [selectedAtividadeForComment, setSelectedAtividadeForComment] = React.useState<Atividade | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [comentarioToDelete, setComentarioToDelete] = React.useState<string | null>(null);
   const [expandedAtividades, setExpandedAtividades] = React.useState<Set<string>>(new Set());
+  const [inlineCommentContent, setInlineCommentContent] = React.useState<Record<string, string>>({}); // For inline comment input
 
   const { data: atividades, isLoading: isLoadingAtividades, error: atividadesError } = useQuery<Atividade[], Error>({
     queryKey: ["atividades"],
@@ -61,16 +62,15 @@ const Comentarios = () => {
   });
 
   const createComentarioMutation = useMutation({
-    mutationFn: (values: ComentarioFormValues) => {
-      if (!user?.id || !selectedAtividadeForComment?.id) {
-        throw new Error("User not authenticated or activity not selected.");
+    mutationFn: ({ atividade_id, conteudo }: { atividade_id: string; conteudo: string }) => {
+      if (!user?.id) {
+        throw new Error("User not authenticated.");
       }
-      return createComentario(selectedAtividadeForComment.id, user.id, values.conteudo);
+      return createComentario(atividade_id, user.id, conteudo);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["comentarios_by_atividade"] });
-      setIsFormOpen(false);
-      setSelectedAtividadeForComment(null);
+      setInlineCommentContent((prev) => ({ ...prev, [variables.atividade_id]: "" })); // Clear inline input
       showSuccess("Comentário adicionado com sucesso!");
     },
     onError: (err) => {
@@ -105,15 +105,17 @@ const Comentarios = () => {
     },
   });
 
-  const handleAddCommentClick = (atividade: Atividade) => {
-    setEditingComentario(null);
-    setSelectedAtividadeForComment(atividade);
-    setIsFormOpen(true);
+  const handleAddInlineComment = (atividadeId: string) => {
+    const content = inlineCommentContent[atividadeId];
+    if (content && content.trim() !== "") {
+      createComentarioMutation.mutate({ atividade_id: atividadeId, conteudo: content });
+    } else {
+      showError("O comentário não pode ser vazio.");
+    }
   };
 
-  const handleEditCommentClick = (comment: Comentario, atividade: Atividade) => {
+  const handleEditCommentClick = (comment: Comentario) => {
     setEditingComentario(comment);
-    setSelectedAtividadeForComment(atividade);
     setIsFormOpen(true);
   };
 
@@ -128,11 +130,9 @@ const Comentarios = () => {
     }
   };
 
-  const handleCreateOrUpdateComentario = (values: ComentarioFormValues) => {
+  const handleUpdateComentario = (values: ComentarioFormValues) => {
     if (editingComentario) {
       updateComentarioMutation.mutate({ id: editingComentario.id, ...values });
-    } else {
-      createComentarioMutation.mutate(values);
     }
   };
 
@@ -204,9 +204,7 @@ const Comentarios = () => {
                       <TableCell>{atividade.key_result_title}</TableCell>
                       <TableCell>{atividade.assignee_name}</TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" onClick={() => handleAddCommentClick(atividade)}>
-                          <MessageSquare className="mr-2 h-4 w-4" /> Adicionar Comentário
-                        </Button>
+                        {/* The "Add Comment" button is now part of the inline form */}
                       </TableCell>
                     </TableRow>
                     {expandedAtividades.has(atividade.id) && (
@@ -236,7 +234,7 @@ const Comentarios = () => {
                                             <Button
                                               variant="ghost"
                                               size="icon"
-                                              onClick={() => handleEditCommentClick(comment, atividade)}
+                                              onClick={() => handleEditCommentClick(comment)}
                                             >
                                               <Edit className="h-4 w-4" />
                                               <span className="sr-only">Editar Comentário</span>
@@ -259,6 +257,26 @@ const Comentarios = () => {
                                 <p className="text-gray-600 text-center py-4">Nenhum comentário para esta atividade.</p>
                               )
                             )}
+                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                              <h5 className="text-md font-semibold mb-2">Adicionar novo comentário</h5>
+                              <Textarea
+                                placeholder="Escreva seu comentário aqui..."
+                                value={inlineCommentContent[atividade.id] || ""}
+                                onChange={(e) => setInlineCommentContent((prev) => ({ ...prev, [atividade.id]: e.target.value }))}
+                                className="mb-2"
+                              />
+                              <Button
+                                onClick={() => handleAddInlineComment(atividade.id)}
+                                disabled={createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id}
+                              >
+                                {createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <MessageSquare className="mr-2 h-4 w-4" />
+                                )}
+                                {createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id ? "Adicionando..." : "Adicionar Comentário"}
+                              </Button>
+                            </div>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -273,13 +291,13 @@ const Comentarios = () => {
         </CardContent>
       </Card>
 
-      {/* Comentario Form */}
+      {/* Comentario Form (for editing existing comments) */}
       <ComentarioForm
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
-        onSubmit={handleCreateOrUpdateComentario}
+        onSubmit={handleUpdateComentario}
         initialData={editingComentario}
-        isLoading={createComentarioMutation.isPending || updateComentarioMutation.isPending}
+        isLoading={updateComentarioMutation.isPending}
       />
 
       {/* Comentario Delete Confirmation */}

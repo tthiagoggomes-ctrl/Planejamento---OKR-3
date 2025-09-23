@@ -11,8 +11,11 @@ import { getAreas, Area } from '@/integrations/supabase/api/areas';
 import { showError } from '@/utils/toast';
 import { formatDistanceToNow, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 const AlertsAndPending: React.FC = () => {
+  const navigate = useNavigate(); // Initialize useNavigate
+
   const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[], Error>({
     queryKey: ["allKeyResults"],
     queryFn: getAllKeyResults,
@@ -88,6 +91,18 @@ const AlertsAndPending: React.FC = () => {
     return areasWithNoRecentUpdate;
   }, [areas, objetivos, keyResults, atividades]);
 
+  const handleAreaClick = (areaId: string | null) => {
+    navigate('/objetivos', { state: { areaId } });
+  };
+
+  const handleObjectiveClick = (objectiveId: string) => {
+    navigate(`/objetivos/${objectiveId}`);
+  };
+
+  const handleKeyResultClick = (objetivoId: string, keyResultId: string) => {
+    navigate(`/objetivos/${objetivoId}`, { state: { keyResultId } });
+  };
+
 
   if (isLoadingKeyResults || isLoadingObjetivos || isLoadingAtividades || isLoadingAreas) {
     return (
@@ -141,7 +156,11 @@ const AlertsAndPending: React.FC = () => {
             </h4>
             <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
               {krsAtRiskOrOffTrack.map(kr => (
-                <li key={kr.id}>
+                <li
+                  key={kr.id}
+                  className="cursor-pointer hover:text-blue-600 hover:underline"
+                  onClick={() => handleKeyResultClick(kr.objetivo_id, kr.id)}
+                >
                   {kr.titulo} (Status: {kr.status === 'at_risk' ? 'Em Risco' : 'Fora do Caminho'})
                 </li>
               ))}
@@ -156,7 +175,13 @@ const AlertsAndPending: React.FC = () => {
             </h4>
             <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
               {objectivesBelow30Percent.map(obj => (
-                <li key={obj.id}>{obj.titulo}</li>
+                <li
+                  key={obj.id}
+                  className="cursor-pointer hover:text-blue-600 hover:underline"
+                  onClick={() => handleObjectiveClick(obj.id)}
+                >
+                  {obj.titulo}
+                </li>
               ))}
             </ul>
           </div>
@@ -169,7 +194,13 @@ const AlertsAndPending: React.FC = () => {
             </h4>
             <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
               {areasWithoutRecentUpdates.map(area => (
-                <li key={area.id}>{area.nome}</li>
+                <li
+                  key={area.id}
+                  className="cursor-pointer hover:text-blue-600 hover:underline"
+                  onClick={() => handleAreaClick(area.id)}
+                >
+                  {area.nome}
+                </li>
               ))}
             </ul>
           </div>

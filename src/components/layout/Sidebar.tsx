@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { Home, Building, Users, Target, ListTodo, LayoutDashboard, MessageSquare } from "lucide-react";
+import { Home, Building, Users, Target, ListTodo, LayoutDashboard, MessageSquare, UserCircle } from "lucide-react"; // Import UserCircle icon
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,6 +17,11 @@ const navItems = [
     name: "Dashboard",
     href: "/",
     icon: <LayoutDashboard className="h-4 w-4" />,
+  },
+  {
+    name: "Meu Perfil", // New item
+    href: "/profile",
+    icon: <UserCircle className="h-4 w-4" />,
   },
   {
     name: "Áreas",

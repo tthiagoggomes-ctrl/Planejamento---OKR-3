@@ -47,6 +47,35 @@ export const getUsers = async (): Promise<UserProfile[] | null> => {
   return combinedUsers;
 };
 
+export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    console.error('Error fetching current auth user:', authError?.message);
+    showError('Erro ao carregar dados do usuário autenticado.');
+    return null;
+  }
+
+  const { data: profileData, error: profileError } = await supabase
+    .from('usuarios')
+    .select('*, area:areas(nome)')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError) {
+    console.error('Error fetching current user profile:', profileError.message);
+    showError('Erro ao carregar perfil do usuário.');
+    return null;
+  }
+
+  return {
+    ...profileData,
+    email: user.email || 'N/A',
+    area_name: (profileData as any).area?.nome || 'N/A',
+  };
+};
+
+
 export const createUser = async (
   email: string,
   password?: string,

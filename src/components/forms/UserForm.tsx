@@ -47,7 +47,7 @@ export const userFormSchema = z.object({
     message: "A senha deve ter pelo menos 6 caracteres.",
   }).optional().or(z.literal("")), // Optional for edit, required for create
   area_id: z.string().uuid({ message: "Selecione uma área válida." }).nullable(),
-  permissao: z.enum(["admin", "member"], {
+  permissao: z.enum(["administrador", "diretoria", "gerente", "supervisor", "usuario"], { // Updated enum
     message: "Selecione uma permissão válida.",
   }),
   status: z.enum(["active", "blocked"], {
@@ -80,7 +80,7 @@ export const UserForm: React.FC<UserFormProps> = ({
       email: initialData?.email || "",
       password: "", // Always empty for security
       area_id: initialData?.area_id || null,
-      permissao: initialData?.permissao || "member",
+      permissao: initialData?.permissao || "usuario", // Default to 'usuario'
       status: initialData?.status || "active",
     },
   });
@@ -108,7 +108,7 @@ export const UserForm: React.FC<UserFormProps> = ({
         email: "",
         password: "",
         area_id: null,
-        permissao: "member",
+        permissao: "usuario", // Default to 'usuario' for new users
         status: "active",
       });
     }
@@ -123,7 +123,7 @@ export const UserForm: React.FC<UserFormProps> = ({
         email: "",
         password: "",
         area_id: null,
-        permissao: "member",
+        permissao: "usuario",
         status: "active",
       });
     }
@@ -235,8 +235,11 @@ export const UserForm: React.FC<UserFormProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="admin">Administrador</SelectItem>
-                      <SelectItem value="member">Membro</SelectItem>
+                      <SelectItem value="administrador">Administrador</SelectItem>
+                      <SelectItem value="diretoria">Diretoria</SelectItem>
+                      <SelectItem value="gerente">Gerente</SelectItem>
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
+                      <SelectItem value="usuario">Usuário</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -255,16 +258,16 @@ export const UserForm: React.FC<UserFormProps> = ({
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um status" />
                         </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="active">Ativo</SelectItem>
-                        <SelectItem value="blocked">Bloqueado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="active">Ativo</SelectItem>
+                      <SelectItem value="blocked">Bloqueado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             )}
             <DialogFooter>
               <Button type="submit" disabled={isLoading || isLoadingAreas}>

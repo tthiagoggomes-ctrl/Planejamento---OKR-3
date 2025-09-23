@@ -10,7 +10,7 @@ export interface UserProfile {
   email: string;
   area_id: string | null;
   area_name?: string; // Added to the interface
-  permissao: 'admin' | 'member';
+  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario'; // Updated permission types
   status: 'active' | 'blocked';
   created_at?: string;
   updated_at?: string;
@@ -71,7 +71,7 @@ export const createUser = async (
   first_name: string,
   last_name: string,
   area_id: string | null,
-  permissao: 'admin' | 'member'
+  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario' // Updated permission type
 ): Promise<UserProfile | null> => {
   try {
     const { data, error } = await supabase.functions.invoke('create-user', {
@@ -99,7 +99,7 @@ export const updateUserProfile = async (
   first_name: string,
   last_name: string,
   area_id: string | null,
-  permissao: 'admin' | 'member',
+  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario', // Updated permission type
   status: 'active' | 'blocked'
 ): Promise<UserProfile | null> => {
   const { data, error } = await supabase

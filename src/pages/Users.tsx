@@ -191,6 +191,17 @@ const Users = () => {
     }
   };
 
+  const getPermissaoLabel = (permissao: UserProfile['permissao']) => {
+    switch (permissao) {
+      case 'administrador': return 'Administrador';
+      case 'diretoria': return 'Diretoria';
+      case 'gerente': return 'Gerente';
+      case 'supervisor': return 'Supervisor';
+      case 'usuario': return 'Usuário';
+      default: return 'Desconhecido';
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -235,7 +246,7 @@ const Users = () => {
                     <TableCell className="font-medium">{user.first_name} {user.last_name}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{(user as any).area_name || 'N/A'}</TableCell>
-                    <TableCell>{user.permissao === 'admin' ? 'Administrador' : 'Membro'}</TableCell>
+                    <TableCell>{getPermissaoLabel(user.permissao)}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                         user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'

@@ -10,7 +10,7 @@ export interface UserProfile {
   email: string;
   area_id: string | null;
   area_name?: string; // Added to the interface
-  permissao: 'admin' | 'member';
+  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario'; // Updated permission types
   status: 'active' | 'blocked';
   created_at?: string;
   updated_at?: string;
@@ -71,45 +71,27 @@ export const createUser = async (
   first_name: string,
   last_name: string,
   area_id: string | null,
-  permissao: 'admin' | 'member'
+  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario' // Updated permission type
 ): Promise<UserProfile | null> => {
-  // This function still uses supabaseAdmin.auth.admin.createUser.
-  // For full security, this and other admin-level operations (deleteUser, sendPasswordResetEmail, blockUser, unblockUser)
-  // should also be moved to dedicated Edge Functions.
-  // For now, I'm only addressing the getUsers error.
-  const { data: authData, error: authError } = await supabase.auth.admin.createUser({ // This line needs to be updated to call an Edge Function
-    email,
-    password: password || undefined,
-    email_confirm: true,
-    user_metadata: { first_name, last_name },
-  });
+  try {
+    const { data, error } = await supabase.functions.invoke('create-user', {
+      method: 'POST',
+      body: { email, password, first_name, last_name, area_id, permissao },
+    });
 
-  if (authError) {
-    console.error('Error creating auth user:', authError.message);
-    showError(`Erro ao criar usuário: ${authError.message}`);
+    if (error) {
+      console.error('Error invoking create-user edge function:', error.message);
+      showError(`Erro ao criar usuário: ${error.message}`);
+      return null;
+    }
+
+    showSuccess("Usuário criado com sucesso!");
+    return data as UserProfile;
+  } catch (error: any) {
+    console.error('Error in createUser (client-side):', error.message);
+    showError(`Erro ao criar usuário: ${error.message}`);
     return null;
   }
-
-  // The handle_new_user trigger will create the profile in public.usuarios.
-  // We then update this newly created profile with area_id and permissao.
-  const { data: profileData, error: profileError } = await supabase
-    .from('usuarios')
-    .update({ area_id, permissao, updated_at: new Date().toISOString() })
-    .eq('id', authData.user.id)
-    .select('*, area:areas(nome)') // Select area name after update
-    .single();
-
-  if (profileError) {
-    console.error('Error updating user profile after creation:', profileError.message);
-    showError(`Erro ao atualizar perfil do usuário: ${profileError.message}`);
-    return null;
-  }
-
-  return {
-    ...profileData,
-    email: authData.user.email || 'N/A',
-    area_name: (profileData as any).area?.nome || 'N/A',
-  };
 };
 
 export const updateUserProfile = async (
@@ -117,7 +99,7 @@ export const updateUserProfile = async (
   first_name: string,
   last_name: string,
   area_id: string | null,
-  permissao: 'admin' | 'member',
+  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario', // Updated permission type
   status: 'active' | 'blocked'
 ): Promise<UserProfile | null> => {
   const { data, error } = await supabase
@@ -134,14 +116,11 @@ export const updateUserProfile = async (
   }
 
   // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.
-  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(id); 
-  if (authError) {
-    console.error('Error fetching auth user for update:', authError.message);
-    showError('Erro ao buscar dados de autenticação do usuário.');
-    return null;
-  }
+  // For now, we'll fetch the email from the client's session if available, or default to 'N/A'
+  const { data: { user: authUserSession } } = await supabase.auth.getUser();
+  const email = authUserSession?.id === id ? authUserSession.email : 'N/A'; // Only get email if it's the current user
 
-  return { ...data, email: authUser.user?.email || 'N/A', area_name: (data as any).area?.nome || 'N/A' };
+  return { ...data, email: email || 'N/A', area_name: (data as any).area?.nome || 'N/A' };
 };
 
 export const deleteUser = async (id: string): Promise<boolean> => {
@@ -186,13 +165,9 @@ export const blockUser = async (id: string): Promise<UserProfile | null> => {
     return null;
   }
   // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.
-  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(id);
-  if (authError) {
-    console.error('Error fetching auth user for block:', authError.message);
-    showError('Erro ao buscar dados de autenticação do usuário.');
-    return null;
-  }
-  return { ...data, email: authUser.user?.email || 'N/A', area_name: (data as any).area?.nome || 'N/A' };
+  const { data: { user: authUserSession } } = await supabase.auth.getUser();
+  const email = authUserSession?.id === id ? authUserSession.email : 'N/A';
+  return { ...data, email: email || 'N/A', area_name: (data as any).area?.nome || 'N/A' };
 };
 
 export const unblockUser = async (id: string): Promise<UserProfile | null> => {
@@ -209,11 +184,7 @@ export const unblockUser = async (id: string): Promise<UserProfile | null> => {
     return null;
   }
   // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.
-  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(id);
-  if (authError) {
-    console.error('Error fetching auth user for unblock:', authError.message);
-    showError('Erro ao buscar dados de autenticação do usuário.');
-    return null;
-  }
-  return { ...data, email: authUser.user?.email || 'N/A', area_name: (data as any).area?.nome || 'N/A' };
+  const { data: { user: authUserSession } } = await supabase.auth.getUser();
+  const email = authUserSession?.id === id ? authUserSession.email : 'N/A';
+  return { ...data, email: email || 'N/A', area_name: (data as any).area?.nome || 'N/A' };
 };

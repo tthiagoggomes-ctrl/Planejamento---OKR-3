@@ -43,6 +43,17 @@ const Profile = () => {
     updateUserProfileMutation.mutate(values);
   };
 
+  const getPermissaoLabel = (permissao: UserProfile['permissao']) => {
+    switch (permissao) {
+      case 'administrador': return 'Administrador';
+      case 'diretoria': return 'Diretoria';
+      case 'gerente': return 'Gerente';
+      case 'supervisor': return 'Supervisor';
+      case 'usuario': return 'Usuário';
+      default: return 'Desconhecido';
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -87,7 +98,7 @@ const Profile = () => {
               <p className="text-sm font-medium text-muted-foreground">Permissão</p>
               <p className="flex items-center text-lg font-semibold">
                 <Shield className="mr-2 h-5 w-5 text-gray-500" />
-                {userProfile.permissao === 'admin' ? 'Administrador' : 'Membro'}
+                {getPermissaoLabel(userProfile.permissao)}
               </p>
             </div>
             <div>

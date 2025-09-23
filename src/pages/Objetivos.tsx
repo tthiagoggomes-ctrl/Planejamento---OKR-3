@@ -187,7 +187,7 @@ const Objetivos = () => {
   // Mutation for inline KR value update
   const inlineUpdateKeyResultMutation = useMutation({
     mutationFn: async ({ id, valor_atual }: { id: string; valor_atual: number }) => {
-      const currentKRs = keyResultsMap?.get(selectedObjetivoForKR?.id || '') || [];
+      const currentKRs = Array.from(keyResultsMap?.values() || []).flat();
       const krToUpdate = currentKRs.find(kr => kr.id === id);
       if (!krToUpdate) throw new Error("Key Result not found for inline update.");
 

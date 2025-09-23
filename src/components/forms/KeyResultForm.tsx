@@ -3,7 +3,7 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import *s z from "zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,9 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { KeyResult } from "@/integrations/supabase/api/key_results"; // Removed determineKeyResultStatus import
+import { KeyResult } from "@/integrations/supabase/api/key_results";
 import { Loader2 } from "lucide-react";
-// Removed Alert and Info imports as the automatic status message is no longer needed in the form
 
 const formSchema = z.object({
   titulo: z.string().min(5, {
@@ -45,9 +44,6 @@ const formSchema = z.object({
   valor_meta: z.coerce.number().min(0, {
     message: "O valor meta não pode ser negativo.",
   }),
-  // valor_atual: z.coerce.number().min(0, { // Removed valor_atual from schema
-  //   message: "O valor atual não pode ser negativo.",
-  // }),
   unidade: z.string().nullable(),
 });
 
@@ -75,7 +71,6 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
       tipo: initialData?.tipo || "numeric",
       valor_inicial: initialData?.valor_inicial || 0,
       valor_meta: initialData?.valor_meta || 0,
-      // valor_atual: initialData?.valor_atual || 0, // Removed valor_atual from defaultValues
       unidade: initialData?.unidade || "",
     },
   });
@@ -87,7 +82,6 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
         tipo: initialData.tipo,
         valor_inicial: initialData.valor_inicial,
         valor_meta: initialData.valor_meta,
-        // valor_atual: initialData.valor_atual, // Removed valor_atual from reset
         unidade: initialData.unidade,
       });
     } else {
@@ -96,7 +90,6 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
         tipo: "numeric",
         valor_inicial: 0,
         valor_meta: 0,
-        // valor_atual: 0, // Removed valor_atual from reset
         unidade: "",
       });
     }
@@ -104,13 +97,12 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
 
   const handleSubmit = (values: KeyResultFormValues) => {
     onSubmit(values);
-    if (!initialData) { // Only reset if creating a new KR
+    if (!initialData) {
       form.reset({
         titulo: "",
         tipo: "numeric",
         valor_inicial: 0,
         valor_meta: 0,
-        // valor_atual: 0, // Removed valor_atual from reset
         unidade: "",
       });
     }
@@ -167,7 +159,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4"> {/* Changed to 2 columns as valor_atual is removed */}
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="valor_inicial"
@@ -208,7 +200,6 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
                 </FormItem>
               )}
             />
-            {/* Removed Status display and Alert as it's no longer directly set in the form */}
             <DialogFooter>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

@@ -40,6 +40,7 @@ import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
 
 const formSchema = z.object({
   titulo: z.string().min(5, {
@@ -62,6 +63,8 @@ interface AtividadeFormProps {
   onSubmit: (values: AtividadeFormValues) => void;
   initialData?: Atividade | null;
   isLoading?: boolean;
+  parentKeyResult?: KeyResult | null; // Pass parent KR for permission checks
+  parentObjetivo?: Objetivo | null; // Pass parent Objetivo for permission checks
 }
 
 export const AtividadeForm: React.FC<AtividadeFormProps> = ({
@@ -70,7 +73,17 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
   onSubmit,
   initialData,
   isLoading,
+  parentKeyResult,
+  parentObjetivo,
 }) => {
+  const { user, userProfile: currentUserProfile } = useSession();
+  const isAdmin = currentUserProfile?.permissao === 'administrador';
+  const isDiretoria = currentUserProfile?.permissao === 'diretoria';
+  const isGerente = currentUserProfile?.permissao === 'gerente';
+  const isSupervisor = currentUserProfile?.permissao === 'supervisor';
+  const isUsuario = currentUserProfile?.permissao === 'usuario';
+  const currentUserAreaId = currentUserProfile?.area_id;
+
   const form = useForm<AtividadeFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -78,8 +91,8 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
       descricao: initialData?.descricao || "",
       due_date: initialData?.due_date ? new Date(initialData.due_date) : null,
       status: initialData?.status || "todo",
-      key_result_id: initialData?.key_result_id || "",
-      user_id: initialData?.user_id || "",
+      key_result_id: initialData?.key_result_id || (parentKeyResult?.id || ""),
+      user_id: initialData?.user_id || (user?.id || ""), // Default to current user if creating
     },
   });
 
@@ -120,11 +133,11 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
         descricao: "",
         due_date: null,
         status: "todo",
-        key_result_id: "",
-        user_id: "",
+        key_result_id: parentKeyResult?.id || "",
+        user_id: user?.id || "",
       });
     }
-  }, [initialData, form]);
+  }, [initialData, form, parentKeyResult, user?.id]);
 
   const handleSubmit = (values: AtividadeFormValues) => {
     onSubmit(values);
@@ -134,8 +147,8 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
         descricao: "",
         due_date: null,
         status: "todo",
-        key_result_id: "",
-        user_id: "",
+        key_result_id: parentKeyResult?.id || "",
+        user_id: user?.id || "",
       });
     }
   };
@@ -146,6 +159,14 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
     { value: "done", label: "Concluído" },
     { value: "stopped", label: "Parado" }, // Adicionado 'Parado'
   ];
+
+  // Determine if the current user can edit this activity
+  const canEditActivity = isAdmin || isDiretoria ||
+    ((isGerente || isSupervisor) && parentObjetivo && currentUserAreaId === parentObjetivo.area_id) ||
+    (isUsuario && initialData && initialData.user_id === user?.id);
+
+  // Determine if the current user can change the assignee or KR
+  const canChangeAssigneeOrKR = isAdmin || isDiretoria || ((isGerente || isSupervisor) && parentObjetivo && currentUserAreaId === parentObjetivo.area_id);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,7 +183,7 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
                 <FormItem>
                   <FormLabel>Título da Atividade</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Pesquisar novas ferramentas de marketing" {...field} />
+                    <Input placeholder="Ex: Pesquisar novas ferramentas de marketing" {...field} disabled={!canEditActivity} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -175,7 +196,7 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
                 <FormItem>
                   <FormLabel>Descrição (Opcional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Detalhes sobre a atividade" {...field} value={field.value || ""} />
+                    <Textarea placeholder="Detalhes sobre a atividade" {...field} value={field.value || ""} disabled={!canEditActivity} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -196,6 +217,7 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
                             "w-full pl-3 text-left font-normal",
                             !field.value && "text-muted-foreground"
                           )}
+                          disabled={!canEditActivity}
                         >
                           {field.value ? (
                             format(field.value, "PPP")
@@ -225,7 +247,7 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={!canEditActivity}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o status" />
@@ -249,7 +271,7 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Key Result Associado</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={!canChangeAssigneeOrKR}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um Key Result" />
@@ -277,7 +299,7 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Responsável</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={!canChangeAssigneeOrKR}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um usuário" />
@@ -300,7 +322,7 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
               )}
             />
             <DialogFooter>
-              <Button type="submit" disabled={isLoading || isLoadingKeyResults || isLoadingUsers}>
+              <Button type="submit" disabled={isLoading || isLoadingKeyResults || isLoadingUsers || !canEditActivity}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? "Salvando..." : "Salvar"}
               </Button>

@@ -47,15 +47,30 @@ import { format } from "date-fns"; // Import format for dates
 
 const Objetivos = () => {
   const queryClient = useQueryClient();
-  const { user } = useSession();
-  const location = useLocation();
+  const { user, userProfile } = useSession(); // Get current user and profile
+  const isAdmin = userProfile?.permissao === 'administrador';
+  const isDiretoria = userProfile?.permissao === 'diretoria';
+  const isGerente = userProfile?.permissao === 'gerente';
+  const isSupervisor = userProfile?.permissao === 'supervisor';
+  const isUsuario = userProfile?.permissao === 'usuario';
+  const currentUserAreaId = userProfile?.area_id;
 
   // State for Objetivo management
   const [isObjetivoFormOpen, setIsObjetivoFormOpen] = React.useState(false);
   const [editingObjetivo, setEditingObjetivo] = React.useState<Objetivo | null>(null);
   const [isObjetivoDeleteDialogOpen, setIsObjetivoDeleteDialogOpen] = React.useState(false);
   const [objetivoToDelete, setObjetivoToDelete] = React.useState<string | null>(null);
-  const [expandedObjetivos, setExpandedObjetivos] = React.useState<Set<string>>(new Set()); // Adicionado: Estado para expandir/colapsar objetivos
+  const [expandedObjetivos, setExpandedObjetivos] = React.useState<Set<string>>(() => {
+    const initialState = new Set<string>();
+    if (location.state && (location.state as any).keyResultId) {
+      // If navigating to a specific KR, expand its parent objective
+      const keyResultId = (location.state as any).keyResultId;
+      // This will be handled by the KR expansion logic, but we need to ensure the objective is expanded first
+      // For now, we'll just expand the objective if we find it.
+      // A more robust solution would involve fetching the KR to get its objective_id.
+    }
+    return initialState;
+  });
 
   // State for Key Result management
   const [isKeyResultFormOpen, setIsKeyResultFormOpen] = React.useState(false);
@@ -465,6 +480,19 @@ const Objetivos = () => {
     return Math.round(totalProgress / krs.length);
   };
 
+  // Permission checks for UI
+  const canCreateObjetivo = isAdmin || isDiretoria || (isGerente && currentUserAreaId) || (isSupervisor && currentUserAreaId);
+  const canEditObjetivo = (objetivo: Objetivo) => isAdmin || isDiretoria || ((isGerente || isSupervisor) && currentUserAreaId === objetivo.area_id);
+  const canDeleteObjetivo = (objetivo: Objetivo) => isAdmin || isDiretoria || ((isGerente || isSupervisor) && currentUserAreaId === objetivo.area_id);
+
+  const canCreateKeyResult = (objetivo: Objetivo) => isAdmin || isDiretoria || ((isGerente || isSupervisor) && currentUserAreaId === objetivo.area_id);
+  const canEditKeyResult = (kr: KeyResult, objetivo: Objetivo) => isAdmin || isDiretoria || ((isGerente || isSupervisor) && currentUserAreaId === objetivo.area_id);
+  const canDeleteKeyResult = (kr: KeyResult, objetivo: Objetivo) => isAdmin || isDiretoria || ((isGerente || isSupervisor) && currentUserAreaId === objetivo.area_id);
+
+  const canCreateAtividade = (kr: KeyResult, objetivo: Objetivo) => isAdmin || isDiretoria || ((isGerente || isSupervisor) && currentUserAreaId === objetivo.area_id);
+  const canEditAtividade = (atividade: Atividade, kr: KeyResult, objetivo: Objetivo) => isAdmin || isDiretoria || ((isGerente || isSupervisor) && currentUserAreaId === objetivo.area_id) || (isUsuario && atividade.user_id === user?.id);
+  const canDeleteAtividade = (atividade: Atividade, kr: KeyResult, objetivo: Objetivo) => isAdmin || isDiretoria || ((isGerente || isSupervisor) && currentUserAreaId === objetivo.area_id);
+
 
   if (isLoadingObjetivos || isLoadingAreas || isLoadingKeyResults) {
     return (
@@ -495,9 +523,11 @@ const Objetivos = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-2xl font-bold">Gestão de Objetivos & KRs</CardTitle>
-          <Button onClick={() => { setEditingObjetivo(null); setIsObjetivoFormOpen(true); }}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Novo Objetivo
-          </Button>
+          {canCreateObjetivo && (
+            <Button onClick={() => { setEditingObjetivo(null); setIsObjetivoFormOpen(true); }}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Novo Objetivo
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-4 mb-4">
@@ -570,6 +600,8 @@ const Objetivos = () => {
               <TableBody>
                 {objetivos.map((objetivo) => {
                   const objectiveProgress = calculateObjetivoOverallProgress(objetivo.id);
+                  const canEditThisObjetivo = canEditObjetivo(objetivo);
+                  const canDeleteThisObjetivo = canDeleteObjetivo(objetivo);
                   return (
                     <React.Fragment key={objetivo.id}>
                       <TableRow>
@@ -609,23 +641,27 @@ const Objetivos = () => {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEditObjetivoClick(objetivo)}
-                            className="mr-2"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Editar Objetivo</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteObjetivoClick(objetivo.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Excluir Objetivo</span>
-                          </Button>
+                          {canEditThisObjetivo && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditObjetivoClick(objetivo)}
+                              className="mr-2"
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span className="sr-only">Editar Objetivo</span>
+                            </Button>
+                          )}
+                          {canDeleteThisObjetivo && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteObjetivoClick(objetivo.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Excluir Objetivo</span>
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                       {expandedObjetivos.has(objetivo.id) && (
@@ -634,9 +670,11 @@ const Objetivos = () => {
                             <div className="bg-gray-50 dark:bg-gray-800 p-4 border-t border-b">
                               <div className="flex justify-between items-center mb-3">
                                 <h4 className="text-lg font-semibold">Key Results para "{objetivo.titulo}"</h4>
-                                <Button size="sm" onClick={() => handleAddKeyResultClick(objetivo)}>
-                                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar KR
-                                </Button>
+                                {canCreateKeyResult(objetivo) && (
+                                  <Button size="sm" onClick={() => handleAddKeyResultClick(objetivo)}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar KR
+                                  </Button>
+                                )}
                               </div>
                               {isLoadingKeyResults ? (
                                 <div className="flex justify-center items-center py-4">
@@ -659,6 +697,8 @@ const Objetivos = () => {
                                     <TableBody>
                                       {keyResultsMap.get(objetivo.id)?.map((kr) => {
                                         const krProgress = calculateKeyResultProgress(kr);
+                                        const canEditThisKeyResult = canEditKeyResult(kr, objetivo);
+                                        const canDeleteThisKeyResult = canDeleteKeyResult(kr, objetivo);
                                         return (
                                           <React.Fragment key={kr.id}>
                                             <TableRow>
@@ -700,23 +740,27 @@ const Objetivos = () => {
                                                 </span>
                                               </TableCell>
                                               <TableCell className="text-right">
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  onClick={() => handleEditKeyResultClick(kr, objetivo)}
-                                                  className="mr-2"
-                                                >
-                                                  <Edit className="h-4 w-4" />
-                                                  <span className="sr-only">Editar KR</span>
-                                                </Button>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  onClick={() => handleDeleteKeyResultClick(kr.id)}
-                                                >
-                                                  <Trash2 className="h-4 w-4" />
-                                                  <span className="sr-only">Excluir KR</span>
-                                                </Button>
+                                                {canEditThisKeyResult && (
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleEditKeyResultClick(kr, objetivo)}
+                                                    className="mr-2"
+                                                  >
+                                                    <Edit className="h-4 w-4" />
+                                                    <span className="sr-only">Editar KR</span>
+                                                  </Button>
+                                                )}
+                                                {canDeleteThisKeyResult && (
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleDeleteKeyResultClick(kr.id)}
+                                                  >
+                                                    <Trash2 className="h-4 w-4" />
+                                                    <span className="sr-only">Excluir KR</span>
+                                                  </Button>
+                                                )}
                                               </TableCell>
                                             </TableRow>
                                             {expandedKeyResults.has(kr.id) && (
@@ -727,9 +771,11 @@ const Objetivos = () => {
                                                       <h5 className="text-md font-semibold flex items-center">
                                                         <ListTodo className="mr-2 h-4 w-4" /> Atividades para "{kr.titulo}"
                                                       </h5>
-                                                      <Button size="sm" onClick={() => handleAddAtividadeClick(kr)}>
-                                                        <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Atividade
-                                                      </Button>
+                                                      {canCreateAtividade(kr, objetivo) && (
+                                                        <Button size="sm" onClick={() => handleAddAtividadeClick(kr)}>
+                                                          <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Atividade
+                                                        </Button>
+                                                      )}
                                                     </div>
                                                     {kr.atividades && kr.atividades.length > 0 ? (
                                                         <Table className="bg-white dark:bg-gray-900">
@@ -743,42 +789,50 @@ const Objetivos = () => {
                                                             </TableRow>
                                                           </TableHeader>
                                                           <TableBody>
-                                                            {kr.atividades.map((atividade) => (
-                                                              <TableRow key={atividade.id}>
-                                                                <TableCell>{atividade.titulo}</TableCell>
-                                                                <TableCell>{atividade.assignee_name}</TableCell>
-                                                                <TableCell>
-                                                                  {atividade.due_date ? format(new Date(atividade.due_date), "PPP") : "N/A"}
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getAtividadeStatusBadgeClass(atividade.status)}`}>
-                                                                    {atividade.status === 'todo' && 'A Fazer'}
-                                                                    {atividade.status === 'in_progress' && 'Em Progresso'}
-                                                                    {atividade.status === 'done' && 'Concluído'}
-                                                                    {atividade.status === 'stopped' && 'Parado'}
-                                                                  </span>
-                                                                </TableCell>
-                                                                <TableCell className="text-right">
-                                                                  <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleEditAtividadeClick(atividade, kr)}
-                                                                    className="mr-2"
-                                                                  >
-                                                                    <Edit className="h-4 w-4" />
-                                                                    <span className="sr-only">Editar Atividade</span>
-                                                                  </Button>
-                                                                  <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleDeleteAtividadeClick(atividade.id)}
-                                                                  >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                    <span className="sr-only">Excluir Atividade</span>
-                                                                  </Button>
-                                                                </TableCell>
-                                                              </TableRow>
-                                                            ))}
+                                                            {kr.atividades.map((atividade) => {
+                                                              const canEditThisAtividade = canEditAtividade(atividade, kr, objetivo);
+                                                              const canDeleteThisAtividade = canDeleteAtividade(atividade, kr, objetivo);
+                                                              return (
+                                                                <TableRow key={atividade.id}>
+                                                                  <TableCell>{atividade.titulo}</TableCell>
+                                                                  <TableCell>{atividade.assignee_name}</TableCell>
+                                                                  <TableCell>
+                                                                    {atividade.due_date ? format(new Date(atividade.due_date), "PPP") : "N/A"}
+                                                                  </TableCell>
+                                                                  <TableCell>
+                                                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getAtividadeStatusBadgeClass(atividade.status)}`}>
+                                                                      {atividade.status === 'todo' && 'A Fazer'}
+                                                                      {atividade.status === 'in_progress' && 'Em Progresso'}
+                                                                      {atividade.status === 'done' && 'Concluído'}
+                                                                      {atividade.status === 'stopped' && 'Parado'}
+                                                                    </span>
+                                                                  </TableCell>
+                                                                  <TableCell className="text-right">
+                                                                    {canEditThisAtividade && (
+                                                                      <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={() => handleEditAtividadeClick(atividade, kr)}
+                                                                        className="mr-2"
+                                                                      >
+                                                                        <Edit className="h-4 w-4" />
+                                                                        <span className="sr-only">Editar Atividade</span>
+                                                                      </Button>
+                                                                    )}
+                                                                    {canDeleteThisAtividade && (
+                                                                      <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={() => handleDeleteAtividadeClick(atividade.id)}
+                                                                      >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                        <span className="sr-only">Excluir Atividade</span>
+                                                                      </Button>
+                                                                    )}
+                                                                  </TableCell>
+                                                                </TableRow>
+                                                              );
+                                                            })}
                                                           </TableBody>
                                                         </Table>
                                                       ) : (

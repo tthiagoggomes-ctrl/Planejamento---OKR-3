@@ -19,8 +19,13 @@ export const ComentarioItem: React.FC<ComentarioItemProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const { user } = useSession();
+  const { user, userProfile: currentUserProfile } = useSession();
   const isAuthor = user?.id === comment.user_id;
+  const isAdmin = currentUserProfile?.permissao === 'administrador';
+  const isDiretoria = currentUserProfile?.permissao === 'diretoria';
+
+  const canEditComment = isAdmin || isDiretoria || isAuthor;
+  const canDeleteComment = isAdmin || isDiretoria || isAuthor;
 
   return (
     <Card className="p-4 flex space-x-3">
@@ -35,26 +40,30 @@ export const ComentarioItem: React.FC<ComentarioItemProps> = ({
               {comment.created_at ? format(new Date(comment.created_at), "PPP 'às' HH:mm") : 'N/A'}
             </p>
           </div>
-          {isAuthor && (
+          {(canEditComment || canDeleteComment) && (
             <div className="flex space-x-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onEdit(comment)}
-                className="h-7 w-7"
-              >
-                <Edit className="h-4 w-4" />
-                <span className="sr-only">Editar Comentário</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onDelete(comment.id)}
-                className="h-7 w-7"
-              >
-                <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Excluir Comentário</span>
-              </Button>
+              {canEditComment && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onEdit(comment)}
+                  className="h-7 w-7"
+                >
+                  <Edit className="h-4 w-4" />
+                  <span className="sr-only">Editar Comentário</span>
+                </Button>
+              )}
+              {canDeleteComment && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onDelete(comment.id)}
+                  className="h-7 w-7"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="sr-only">Excluir Comentário</span>
+                </Button>
+              )}
             </div>
           )}
         </div>

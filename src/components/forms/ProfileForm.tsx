@@ -25,6 +25,7 @@ import { UserProfile } from "@/integrations/supabase/api/users";
 import { Area, getAreas } from "@/integrations/supabase/api/areas";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
 
 const formSchema = z.object({
   first_name: z.string().min(2, {
@@ -49,6 +50,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   initialData,
   isLoading,
 }) => {
+  const { userProfile: currentUserProfile } = useSession();
+  const isAdmin = currentUserProfile?.permissao === 'administrador';
+  const isEditingSelf = initialData && currentUserProfile?.id === initialData.id;
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -77,6 +82,9 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     onSubmit(values);
   };
 
+  // Only allow editing if admin or editing self
+  const canEdit = isAdmin || isEditingSelf;
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -87,7 +95,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
             <FormItem>
               <FormLabel>Nome</FormLabel>
               <FormControl>
-                <Input placeholder="Nome" {...field} />
+                <Input placeholder="Nome" {...field} disabled={!canEdit} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -100,7 +108,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
             <FormItem>
               <FormLabel>Sobrenome</FormLabel>
               <FormControl>
-                <Input placeholder="Sobrenome" {...field} />
+                <Input placeholder="Sobrenome" {...field} disabled={!canEdit} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -112,7 +120,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Área</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ""}>
+              <Select onValueChange={field.onChange} value={field.value || ""} disabled={!canEdit}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma área" />
@@ -137,7 +145,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isLoading || isLoadingAreas}>
+        <Button type="submit" disabled={isLoading || isLoadingAreas || !canEdit}>
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {isLoading ? "Salvando..." : "Salvar Alterações"}
         </Button>

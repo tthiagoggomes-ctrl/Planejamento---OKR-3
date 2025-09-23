@@ -35,12 +35,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
 
 // Define um tipo para os argumentos da mutação de atualização
 type UpdateUserMutationArgs = UserFormValues & { id: string };
 
 const Users = () => {
   const queryClient = useQueryClient();
+  const { userProfile: currentUserProfile } = useSession(); // Get current user's profile
+  const isAdmin = currentUserProfile?.permissao === 'administrador';
+
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingUser, setEditingUser] = React.useState<UserProfile | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -223,9 +227,11 @@ const Users = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-2xl font-bold">Gestão de Usuários</CardTitle>
-          <Button onClick={() => { setEditingUser(null); setIsFormOpen(true); }}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Novo Usuário
-          </Button>
+          {isAdmin && (
+            <Button onClick={() => { setEditingUser(null); setIsFormOpen(true); }}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Novo Usuário
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {users && users.length > 0 ? (
@@ -255,42 +261,46 @@ const Users = () => {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditClick(user)}
-                        className="mr-1"
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Editar</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleBlockUnblockClick(user)}
-                        className="mr-1"
-                        disabled={blockUserMutation.isPending || unblockUserMutation.isPending}
-                      >
-                        {user.status === 'active' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                        <span className="sr-only">{user.status === 'active' ? 'Bloquear' : 'Desbloquear'}</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleResetPasswordClick(user)}
-                        className="mr-1"
-                      >
-                        <Mail className="h-4 w-4" />
-                        <span className="sr-only">Redefinir Senha</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteClick(user.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Excluir</span>
-                      </Button>
+                      {isAdmin && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditClick(user)}
+                            className="mr-1"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Editar</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleBlockUnblockClick(user)}
+                            className="mr-1"
+                            disabled={blockUserMutation.isPending || unblockUserMutation.isPending}
+                          >
+                            {user.status === 'active' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                            <span className="sr-only">{user.status === 'active' ? 'Bloquear' : 'Desbloquear'}</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleResetPasswordClick(user)}
+                            className="mr-1"
+                          >
+                            <Mail className="h-4 w-4" />
+                            <span className="sr-only">Redefinir Senha</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteClick(user.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Excluir</span>
+                          </Button>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

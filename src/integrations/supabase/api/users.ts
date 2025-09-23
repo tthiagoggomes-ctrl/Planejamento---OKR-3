@@ -3,6 +3,8 @@ import { supabase } from '../client';
 import { showSuccess, showError } from '@/utils/toast';
 import { User } from '@supabase/supabase-js';
 
+export type UserPermission = 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario';
+
 export interface UserProfile {
   id: string;
   first_name: string;
@@ -10,7 +12,7 @@ export interface UserProfile {
   email: string;
   area_id: string | null;
   area_name?: string; // Added to the interface
-  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario'; // Updated permission types
+  permissao: UserPermission; // Updated permission types
   status: 'active' | 'blocked';
   created_at?: string;
   updated_at?: string;
@@ -71,7 +73,7 @@ export const createUser = async (
   first_name: string,
   last_name: string,
   area_id: string | null,
-  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario' // Updated permission type
+  permissao: UserPermission // Updated permission type
 ): Promise<UserProfile | null> => {
   try {
     const { data, error } = await supabase.functions.invoke('create-user', {
@@ -99,7 +101,7 @@ export const updateUserProfile = async (
   first_name: string,
   last_name: string,
   area_id: string | null,
-  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario', // Updated permission type
+  permissao: UserPermission, // Updated permission type
   status: 'active' | 'blocked'
 ): Promise<UserProfile | null> => {
   const { data, error } = await supabase

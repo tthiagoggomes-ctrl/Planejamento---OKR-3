@@ -21,7 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { UserProfile } from "@/integrations/supabase/api/users";
+import { UserProfile, UserPermission } from "@/integrations/supabase/api/users"; // Import UserPermission
 import { Area, getAreas } from "@/integrations/supabase/api/areas";
 import { Loader2 } from "lucide-react";
 import {
@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
+import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
 
 export const userFormSchema = z.object({
   first_name: z.string().min(2, {
@@ -72,6 +73,10 @@ export const UserForm: React.FC<UserFormProps> = ({
   initialData,
   isLoading,
 }) => {
+  const { userProfile: currentUserProfile } = useSession(); // Get current user's profile
+  const isAdmin = currentUserProfile?.permissao === 'administrador';
+  const isEditingSelf = initialData && currentUserProfile?.id === initialData.id;
+
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
@@ -144,7 +149,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                 <FormItem>
                   <FormLabel>Nome</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nome" {...field} />
+                    <Input placeholder="Nome" {...field} disabled={!isAdmin && !isEditingSelf} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -157,7 +162,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                 <FormItem>
                   <FormLabel>Sobrenome</FormLabel>
                   <FormControl>
-                    <Input placeholder="Sobrenome" {...field} />
+                    <Input placeholder="Sobrenome" {...field} disabled={!isAdmin && !isEditingSelf} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -170,7 +175,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                 <FormItem>
                   <FormLabel>E-mail</FormLabel>
                   <FormControl>
-                    <Input placeholder="email@exemplo.com" type="email" {...field} disabled={!!initialData} />
+                    <Input placeholder="email@exemplo.com" type="email" {...field} disabled={true} /> {/* Email is never editable via this form */}
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -184,7 +189,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                   <FormItem>
                     <FormLabel>Senha</FormLabel>
                     <FormControl>
-                      <Input placeholder="********" type="password" {...field} />
+                      <Input placeholder="********" type="password" {...field} disabled={!isAdmin} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -197,7 +202,7 @@ export const UserForm: React.FC<UserFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Área</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ""}>
+                  <Select onValueChange={field.onChange} value={field.value || ""} disabled={!isAdmin && !isEditingSelf}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione uma área" />
@@ -228,7 +233,7 @@ export const UserForm: React.FC<UserFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Permissão</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={!isAdmin}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione uma permissão" />
@@ -253,7 +258,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!isAdmin}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um status" />
@@ -270,7 +275,7 @@ export const UserForm: React.FC<UserFormProps> = ({
             />
             )}
             <DialogFooter>
-              <Button type="submit" disabled={isLoading || isLoadingAreas}>
+              <Button type="submit" disabled={isLoading || isLoadingAreas || (!isAdmin && !isEditingSelf)}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? "Salvando..." : "Salvar"}
               </Button>

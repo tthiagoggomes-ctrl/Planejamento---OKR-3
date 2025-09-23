@@ -8,9 +8,12 @@ import { getCurrentUserProfile, updateUserProfile, UserProfile } from "@/integra
 import { ProfileForm, ProfileFormValues } from "@/components/forms/ProfileForm";
 import { showSuccess, showError } from "@/utils/toast";
 import { Separator } from "@/components/ui/separator";
+import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
 
 const Profile = () => {
   const queryClient = useQueryClient();
+  const { user, userProfile: currentUserProfile } = useSession(); // Get current user and profile
+  const isAdmin = currentUserProfile?.permissao === 'administrador';
 
   const { data: userProfile, isLoading, error } = useQuery<UserProfile, Error>({
     queryKey: ["currentUserProfile"],
@@ -76,7 +79,11 @@ const Profile = () => {
         Nenhum perfil de usuário encontrado.
       </div>
     );
+  );
   }
+
+  // Determine if the current user can edit this profile
+  const canEditProfile = isAdmin || (userProfile.id === user?.id);
 
   return (
     <div className="container mx-auto py-6">

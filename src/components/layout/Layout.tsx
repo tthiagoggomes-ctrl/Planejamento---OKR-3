@@ -4,18 +4,29 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, LogOut } from "lucide-react"; // Import LogOut icon
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
-import { Loader2 } from "lucide-react"; // For loading indicator
+import { useSession } from "@/components/auth/SessionContextProvider";
+import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client"; // Import supabase client
+import { showError } from "@/utils/toast"; // Import showError for logout errors
 
 const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
   const isMobile = useIsMobile();
-  const { session, loading } = useSession(); // Get session and loading state from context
+  const { session, loading } = useSession();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Error during logout:", error);
+      showError("Erro ao fazer logout.");
+    }
+    // SessionContextProvider will handle navigation to /login on SIGNED_OUT event
   };
 
   if (loading) {
@@ -26,11 +37,8 @@ const Layout = () => {
     );
   }
 
-  // If not loading and no session, the SessionContextProvider will handle redirection to /login
-  // So, if we reach here, it means there's a session or we are on a public route (handled by App.tsx)
-  // For now, all routes under Layout are protected.
   if (!session) {
-    return null; // Or a loading spinner, but SessionContextProvider handles redirect
+    return null;
   }
 
   return (
@@ -43,20 +51,25 @@ const Layout = () => {
         ></div>
       )}
       <div className="flex flex-col flex-1 lg:ml-64">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 lg:px-6">
-          {isMobile && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden"
-              onClick={toggleSidebar}
-            >
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle sidebar</span>
-            </Button>
-          )}
-          <h1 className="text-xl font-semibold">FADE-UFPE OKR System</h1>
-          {/* Add a logout button here later */}
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 lg:px-6 justify-between"> {/* Added justify-between */}
+          <div className="flex items-center gap-4">
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden"
+                onClick={toggleSidebar}
+              >
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle sidebar</span>
+              </Button>
+            )}
+            <h1 className="text-xl font-semibold">FADE-UFPE OKR System</h1>
+          </div>
+          <Button variant="ghost" onClick={handleLogout} className="flex items-center gap-2">
+            <LogOut className="h-4 w-4" />
+            <span className="hidden md:inline">Sair</span> {/* Added for larger screens */}
+          </Button>
         </header>
         <main className="flex-1 p-4 lg:p-6">
           <Outlet />

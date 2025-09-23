@@ -80,7 +80,7 @@ export const getObjetivos = async (params?: GetObjetivosParams): Promise<Objetiv
 export const getObjetivosSummary = async (): Promise<ObjetivoSummary[] | null> => {
   const { data, error } = await supabase
     .from('objetivos')
-    .select('status, count')
+    .select('status', { count: 'exact' }) // Corrected syntax for grouped count
     .returns<{ status: Objetivo['status'], count: number }[]>();
 
   if (error) {

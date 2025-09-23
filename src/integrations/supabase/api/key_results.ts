@@ -52,7 +52,7 @@ export const getKeyResultsByObjetivoId = async (objetivo_id: string): Promise<Ke
 export const getKeyResultsSummary = async (): Promise<KeyResultSummary[] | null> => {
   const { data, error } = await supabase
     .from('key_results')
-    .select('status, count')
+    .select('status', { count: 'exact' }) // Corrected syntax for grouped count
     .returns<{ status: KeyResult['status'], count: number }[]>();
 
   if (error) {

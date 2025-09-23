@@ -70,7 +70,7 @@ export const getAtividadesByKeyResultId = async (key_result_id: string): Promise
 export const getAtividadesSummary = async (): Promise<AtividadeSummary[] | null> => {
   const { data, error } = await supabase
     .from('atividades')
-    .select('status, count')
+    .select('status', { count: 'exact' }) // Corrected syntax for grouped count
     .returns<{ status: Atividade['status'], count: number }[]>();
 
   if (error) {

@@ -177,7 +177,7 @@ const Objetivos = () => {
         values.valor_meta,
         values.valor_atual,
         values.unidade,
-        values.status
+        // status is now automatically determined
       );
     },
     onSuccess: () => {
@@ -201,7 +201,7 @@ const Objetivos = () => {
         values.valor_meta,
         values.valor_atual,
         values.unidade,
-        values.status
+        // status is now automatically determined
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo"] });
@@ -231,7 +231,7 @@ const Objetivos = () => {
         krToUpdate.valor_meta,
         valor_atual, // Only update valor_atual
         krToUpdate.unidade,
-        krToUpdate.status
+        // status is now automatically determined
       );
       setUpdatingKrId(null); // Clear loading state
       return updatedKr;

@@ -19,11 +19,50 @@ export interface ObjetivoSummary {
   count: number;
 }
 
-export const getObjetivos = async (): Promise<Objetivo[] | null> => {
-  const { data, error } = await supabase
+interface GetObjetivosParams {
+  status?: Objetivo['status'] | 'all';
+  periodo?: string | 'all';
+  area_id?: string | 'all';
+  search?: string;
+  sortBy?: keyof Objetivo | 'area_name';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export const getObjetivos = async (params?: GetObjetivosParams): Promise<Objetivo[] | null> => {
+  let query = supabase
     .from('objetivos')
-    .select('*, area:areas(nome)')
-    .order('created_at', { ascending: false });
+    .select('*, area:areas(nome)');
+
+  // Apply filters
+  if (params?.status && params.status !== 'all') {
+    query = query.eq('status', params.status);
+  }
+  if (params?.periodo && params.periodo !== 'all') {
+    query = query.eq('periodo', params.periodo);
+  }
+  if (params?.area_id && params.area_id !== 'all') {
+    query = query.eq('area_id', params.area_id);
+  } else if (params?.area_id === 'null') { // Handle explicit 'Nenhuma Área' filter
+    query = query.is('area_id', null);
+  }
+
+  // Apply search
+  if (params?.search) {
+    query = query.ilike('titulo', `%${params.search}%`);
+  }
+
+  // Apply sorting
+  const sortByColumn = params?.sortBy || 'created_at';
+  const sortAscending = params?.sortOrder === 'asc';
+
+  if (sortByColumn === 'area_name') {
+    // Special handling for sorting by joined table column
+    query = query.order('area.nome', { ascending: sortAscending });
+  } else {
+    query = query.order(sortByColumn, { ascending: sortAscending });
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Error fetching objectives:', error.message);

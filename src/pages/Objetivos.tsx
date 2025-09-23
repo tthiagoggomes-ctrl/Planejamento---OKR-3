@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2, ChevronDown, ChevronUp, Search, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -27,11 +27,19 @@ import { ObjetivoForm, ObjetivoFormValues } from "@/components/forms/ObjetivoFor
 import { getObjetivos, createObjetivo, updateObjetivo, deleteObjetivo, Objetivo } from "@/integrations/supabase/api/objetivos";
 import { KeyResultForm, KeyResultFormValues } from "@/components/forms/KeyResultForm";
 import { getKeyResultsByObjetivoId, createKeyResult, updateKeyResult, deleteKeyResult, KeyResult } from "@/integrations/supabase/api/key_results";
+import { getAreas, Area } from "@/integrations/supabase/api/areas"; // Import getAreas
 import { showSuccess, showError } from "@/utils/toast";
 import { useSession } from "@/components/auth/SessionContextProvider";
-import { Input } from "@/components/ui/input"; // Import Input component
-import { useDebounce } from "@/hooks/use-debounce"; // Import useDebounce hook
-import { Link } from "react-router-dom"; // Import Link for navigation
+import { Input } from "@/components/ui/input";
+import { useDebounce } from "@/hooks/use-debounce";
+import { Link } from "react-router-dom";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Objetivos = () => {
   const queryClient = useQueryClient();
@@ -57,14 +65,35 @@ const Objetivos = () => {
   // State for expanded objective rows
   const [expandedObjetivos, setExpandedObjetivos] = React.useState<Set<string>>(new Set());
 
+  // State for filters and sorting
+  const [statusFilter, setStatusFilter] = React.useState<Objetivo['status'] | 'all'>('all');
+  const [periodoFilter, setPeriodoFilter] = React.useState<string | 'all'>('all');
+  const [areaFilter, setAreaFilter] = React.useState<string | 'all'>('all');
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const [sortBy, setSortBy] = React.useState<keyof Objetivo | 'area_name'>('created_at');
+  const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
+
   const { data: objetivos, isLoading: isLoadingObjetivos, error: objetivosError } = useQuery<Objetivo[], Error>({
-    queryKey: ["objetivos"],
-    queryFn: getObjetivos,
+    queryKey: ["objetivos", { statusFilter, periodoFilter, areaFilter, search: debouncedSearchQuery, sortBy, sortOrder }],
+    queryFn: () => getObjetivos({
+      status: statusFilter,
+      periodo: periodoFilter,
+      area_id: areaFilter,
+      search: debouncedSearchQuery,
+      sortBy,
+      sortOrder,
+    }),
+  });
+
+  const { data: areas, isLoading: isLoadingAreas } = useQuery<Area[], Error>({
+    queryKey: ["areas"],
+    queryFn: getAreas,
   });
 
   // Fetch Key Results for a specific objective
   const { data: keyResultsMap, isLoading: isLoadingKeyResults } = useQuery<Map<string, KeyResult[]>, Error>({
-    queryKey: ["key_results_by_objetivo"],
+    queryKey: ["key_results_by_objetivo", objetivos], // Depend on filtered objectives
     queryFn: async () => {
       if (!objetivos) return new Map();
       const krPromises = objetivos.map(async (obj) => {
@@ -343,7 +372,7 @@ const Objetivos = () => {
   }, [debouncedKrCurrentValues, keyResultsMap, inlineUpdateKeyResultMutation, updatingKrId]);
 
 
-  if (isLoadingObjetivos) {
+  if (isLoadingObjetivos || isLoadingAreas) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -359,6 +388,14 @@ const Objetivos = () => {
     );
   }
 
+  const periods = ["Q1 2024", "Q2 2024", "Q3 2024", "Q4 2024", "Anual 2024", "Q1 2025", "Q2 2025", "Q3 2025", "Q4 2025", "Anual 2025"];
+  const statuses = [
+    { value: "draft", label: "Rascunho" },
+    { value: "active", label: "Ativo" },
+    { value: "completed", label: "Concluído" },
+    { value: "archived", label: "Arquivado" },
+  ];
+
   return (
     <div className="container mx-auto py-6">
       <Card>
@@ -369,6 +406,73 @@ const Objetivos = () => {
           </Button>
         </CardHeader>
         <CardContent>
+          <div className="flex flex-wrap items-center gap-4 mb-4">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar objetivos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+
+            <Select value={statusFilter} onValueChange={(value: Objetivo['status'] | 'all') => setStatusFilter(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Status</SelectItem>
+                {statuses.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={periodoFilter} onValueChange={(value: string | 'all') => setPeriodoFilter(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Períodos</SelectItem>
+                {periods.map((p) => (
+                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={areaFilter} onValueChange={(value: string | 'all') => setAreaFilter(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por Área" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Áreas</SelectItem>
+                <SelectItem value="null">Nenhuma Área</SelectItem>
+                {areas?.map((area) => (
+                  <SelectItem key={area.id} value={area.id}>{area.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={sortBy} onValueChange={(value: keyof Objetivo | 'area_name') => setSortBy(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="titulo">Título</SelectItem>
+                <SelectItem value="periodo">Período</SelectItem>
+                <SelectItem value="area_name">Área</SelectItem>
+                <SelectItem value="status">Status</SelectItem>
+                <SelectItem value="created_at">Data de Criação</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button variant="outline" size="icon" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
+              {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+              <span className="sr-only">Alterar Ordem</span>
+            </Button>
+          </div>
+
           {objetivos && objetivos.length > 0 ? (
             <Table>
               <TableHeader>

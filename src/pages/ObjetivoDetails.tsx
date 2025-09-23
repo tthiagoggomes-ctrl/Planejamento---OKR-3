@@ -1,4 +1,5 @@
 "use client";
+// Forçando reprocessamento do arquivo para resolver erro de parsing.
 
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -33,7 +34,6 @@ import { AtividadeForm, AtividadeFormValues } from "@/components/forms/Atividade
 import { showSuccess, showError } from "@/utils/toast";
 import { useSession } from "@/components/auth/SessionContextProvider";
 import { Input } from "@/components/ui/input";
-// Removed: import { useDebounce } from "@/hooks/use-debounce";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
@@ -56,7 +56,7 @@ const ObjetivoDetails = () => {
 
   // State for Activity management
   const [isAtividadeFormOpen, setIsAtividadeFormOpen] = React.useState(false);
-  const [editingAtividade, setEditingAtividade] = React.React.useState<Atividade | null>(null);
+  const [editingAtividade, setEditingAtividade] = React.useState<Atividade | null>(null);
   const [selectedKeyResultForAtividade, setSelectedKeyResultForAtividade] = React.useState<KeyResult | null>(null);
   const [isAtividadeDeleteDialogOpen, setIsAtividadeDeleteDialogOpen] = React.useState(false);
   const [atividadeToDelete, setAtividadeToDelete] = React.useState<string | null>(null);

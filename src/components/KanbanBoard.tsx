@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Atividade } from "@/integrations/supabase/api/atividades";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { ListTodo, Hourglass, CheckCircle, Edit, Trash2 } from "lucide-react";
+import { ListTodo, Hourglass, CheckCircle, Edit, Trash2, Kanban } from "lucide-react"; // Changed LayoutKanban to Kanban
 import { Button } from "@/components/ui/button";
 
 interface KanbanBoardProps {

@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, List, LayoutKanban } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2, List, Kanban } from "lucide-react"; // Changed LayoutKanban to Kanban
 import {
   Table,
   TableBody,
@@ -173,7 +173,7 @@ const Atividades = () => {
                 <List className="h-4 w-4 mr-2" /> Lista
               </ToggleGroupItem>
               <ToggleGroupItem value="kanban" aria-label="Visualização em Kanban">
-                <LayoutKanban className="h-4 w-4 mr-2" /> Kanban
+                <Kanban className="h-4 w-4 mr-2" /> Kanban
               </ToggleGroupItem>
             </ToggleGroup>
             <Button onClick={() => { setEditingAtividade(null); setIsFormOpen(true); }}>

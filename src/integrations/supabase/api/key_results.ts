@@ -49,6 +49,20 @@ export const getKeyResultsByObjetivoId = async (objetivo_id: string): Promise<Ke
   return data;
 };
 
+export const getAllKeyResults = async (): Promise<KeyResult[] | null> => {
+  const { data, error } = await supabase
+    .from('key_results')
+    .select('*')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching all key results:', error.message);
+    showError('Erro ao carregar todos os Key Results.');
+    return null;
+  }
+  return data;
+};
+
 export const getKeyResultsSummary = async (): Promise<KeyResultSummary[] | null> => {
   const { data, error } = await supabase
     .from('key_results')

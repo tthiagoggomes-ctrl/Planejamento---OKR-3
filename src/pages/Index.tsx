@@ -3,19 +3,20 @@
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
-import { getObjetivosSummary, ObjetivoSummary } from "@/integrations/supabase/api/objetivos";
-import { getKeyResultsSummary, KeyResultSummary } from "@/integrations/supabase/api/key_results";
+import { getObjetivos, getObjetivosSummary, Objetivo, ObjetivoSummary } from "@/integrations/supabase/api/objetivos";
+import { getAllKeyResults, getKeyResultsSummary, KeyResult, KeyResultSummary, calculateKeyResultProgress } from "@/integrations/supabase/api/key_results";
 import { getAtividadesSummary, AtividadeSummary } from "@/integrations/supabase/api/atividades";
 import { Loader2, Target, ListTodo, CheckCircle, Hourglass, XCircle, Flag, TrendingUp, AlertTriangle, Clock, CircleDot } from "lucide-react";
-import StatusDistributionChart from "@/components/charts/StatusDistributionChart"; // Import the new chart component
+import StatusDistributionChart from "@/components/charts/StatusDistributionChart";
+import { Progress } from "@/components/ui/progress"; // Import Progress component
 
 const Index = () => {
-  const { data: objetivosSummary, isLoading: isLoadingObjetivos, error: errorObjetivos } = useQuery<ObjetivoSummary[], Error>({
+  const { data: objetivosSummary, isLoading: isLoadingObjetivosSummary, error: errorObjetivosSummary } = useQuery<ObjetivoSummary[], Error>({
     queryKey: ["objetivosSummary"],
     queryFn: getObjetivosSummary,
   });
 
-  const { data: keyResultsSummary, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResultSummary[], Error>({
+  const { data: keyResultsSummary, isLoading: isLoadingKeyResultsSummary, error: errorKeyResultsSummary } = useQuery<KeyResultSummary[], Error>({
     queryKey: ["keyResultsSummary"],
     queryFn: getKeyResultsSummary,
   });
@@ -23,6 +24,17 @@ const Index = () => {
   const { data: atividadesSummary, isLoading: isLoadingAtividades, error: errorAtividades } = useQuery<AtividadeSummary[], Error>({
     queryKey: ["atividadesSummary"],
     queryFn: getAtividadesSummary,
+  });
+
+  // Fetch all objectives and key results for overall progress calculation
+  const { data: allObjetivos, isLoading: isLoadingAllObjetivos, error: errorAllObjetivos } = useQuery<Objetivo[], Error>({
+    queryKey: ["allObjetivos"],
+    queryFn: () => getObjetivos(),
+  });
+
+  const { data: allKeyResults, isLoading: isLoadingAllKeyResults, error: errorAllKeyResults } = useQuery<KeyResult[], Error>({
+    queryKey: ["allKeyResults"],
+    queryFn: getAllKeyResults,
   });
 
   const getTotalCount = (summary: { count: number }[] | null) => {
@@ -38,6 +50,34 @@ const Index = () => {
       <Loader2 className="h-6 w-6 animate-spin text-primary" />
     </div>
   );
+
+  // Calculate overall Objective progress
+  const overallObjetivoProgress = React.useMemo(() => {
+    if (!allObjetivos || !allKeyResults || allObjetivos.length === 0) return 0;
+
+    let totalObjectiveProgress = 0;
+    let objectivesWithKRs = 0;
+
+    allObjetivos.forEach(obj => {
+      const krsForObjective = allKeyResults.filter(kr => kr.objetivo_id === obj.id);
+      if (krsForObjective.length > 0) {
+        const objectiveKRsProgress = krsForObjective.reduce((sum, kr) => sum + calculateKeyResultProgress(kr), 0);
+        totalObjectiveProgress += (objectiveKRsProgress / krsForObjective.length);
+        objectivesWithKRs++;
+      }
+    });
+
+    return objectivesWithKRs > 0 ? Math.round(totalObjectiveProgress / objectivesWithKRs) : 0;
+  }, [allObjetivos, allKeyResults]);
+
+  // Calculate overall Key Result progress
+  const overallKeyResultProgress = React.useMemo(() => {
+    if (!allKeyResults || allKeyResults.length === 0) return 0;
+
+    const totalProgress = allKeyResults.reduce((sum, kr) => sum + calculateKeyResultProgress(kr), 0);
+    return Math.round(totalProgress / allKeyResults.length);
+  }, [allKeyResults]);
+
 
   // Prepare data for Objetivo Status Chart
   const objetivoChartData = [
@@ -61,6 +101,9 @@ const Index = () => {
     { name: 'Em Progresso', value: getStatusCount(atividadesSummary, 'in_progress'), color: '#3b82f6' }, // blue-500
     { name: 'Concluídas', value: getStatusCount(atividadesSummary, 'done'), color: '#22c55e' }, // green-500
   ].filter(item => item.value > 0);
+
+  const isLoadingOverallData = isLoadingAllObjetivos || isLoadingAllKeyResults || isLoadingObjetivosSummary || isLoadingKeyResultsSummary || isLoadingAtividades;
+  const errorOverallData = errorAllObjetivos || errorAllKeyResults || errorObjetivosSummary || errorKeyResultsSummary || errorAtividades;
 
   return (
     <div className="container mx-auto py-6">
@@ -87,14 +130,19 @@ const Index = () => {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoadingObjetivos ? renderLoading() : errorObjetivos ? <p className="text-red-500">Erro ao carregar</p> : (
+            {isLoadingOverallData ? renderLoading() : errorOverallData ? <p className="text-red-500">Erro ao carregar</p> : (
               <>
                 <div className="text-2xl font-bold">{getTotalCount(objetivosSummary)}</div>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-muted-foreground mt-2 mb-2">
                   <span className="text-yellow-600 mr-1"><CircleDot className="inline h-3 w-3" /> {getStatusCount(objetivosSummary, 'draft')} Rascunhos</span>
                   <span className="text-blue-600 mr-1"><Flag className="inline h-3 w-3" /> {getStatusCount(objetivosSummary, 'active')} Ativos</span>
                   <span className="text-green-600 mr-1"><CheckCircle className="inline h-3 w-3" /> {getStatusCount(objetivosSummary, 'completed')} Concluídos</span>
                 </p>
+                <div className="flex items-center gap-2">
+                  <Progress value={overallObjetivoProgress} className="w-full" />
+                  <span className="text-sm font-semibold">{overallObjetivoProgress}%</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Progresso Geral</p>
               </>
             )}
           </CardContent>
@@ -107,14 +155,19 @@ const Index = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoadingKeyResults ? renderLoading() : errorKeyResults ? <p className="text-red-500">Erro ao carregar</p> : (
+            {isLoadingOverallData ? renderLoading() : errorOverallData ? <p className="text-red-500">Erro ao carregar</p> : (
               <>
                 <div className="text-2xl font-bold">{getTotalCount(keyResultsSummary)}</div>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-muted-foreground mt-2 mb-2">
                   <span className="text-green-600 mr-1"><CheckCircle className="inline h-3 w-3" /> {getStatusCount(keyResultsSummary, 'on_track')} No Caminho</span>
                   <span className="text-yellow-600 mr-1"><AlertTriangle className="inline h-3 w-3" /> {getStatusCount(keyResultsSummary, 'at_risk')} Em Risco</span>
                   <span className="text-red-600 mr-1"><XCircle className="inline h-3 w-3" /> {getStatusCount(keyResultsSummary, 'off_track')} Fora do Caminho</span>
                 </p>
+                <div className="flex items-center gap-2">
+                  <Progress value={overallKeyResultProgress} className="w-full" />
+                  <span className="text-sm font-semibold">{overallKeyResultProgress}%</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Progresso Geral</p>
               </>
             )}
           </CardContent>
@@ -127,7 +180,7 @@ const Index = () => {
             <ListTodo className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoadingAtividades ? renderLoading() : errorAtividades ? <p className="text-red-500">Erro ao carregar</p> : (
+            {isLoadingOverallData ? renderLoading() : errorOverallData ? <p className="text-red-500">Erro ao carregar</p> : (
               <>
                 <div className="text-2xl font-bold">{getTotalCount(atividadesSummary)}</div>
                 <p className="text-xs text-muted-foreground mt-2">
@@ -135,6 +188,7 @@ const Index = () => {
                   <span className="text-blue-600 mr-1"><Hourglass className="inline h-3 w-3" /> {getStatusCount(atividadesSummary, 'in_progress')} Em Progresso</span>
                   <span className="text-green-600 mr-1"><CheckCircle className="inline h-3 w-3" /> {getStatusCount(atividadesSummary, 'done')} Concluídas</span>
                 </p>
+                {/* Activities don't have a single numerical progress, so no progress bar here */}
               </>
             )}
           </CardContent>
@@ -142,10 +196,10 @@ const Index = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3 mb-6">
-        {isLoadingObjetivos ? renderLoading() : errorObjetivos ? <p className="text-red-500">Erro ao carregar gráfico de objetivos</p> : (
+        {isLoadingObjetivosSummary ? renderLoading() : errorObjetivosSummary ? <p className="text-red-500">Erro ao carregar gráfico de objetivos</p> : (
           <StatusDistributionChart title="Status dos Objetivos" data={objetivoChartData} />
         )}
-        {isLoadingKeyResults ? renderLoading() : errorKeyResults ? <p className="text-red-500">Erro ao carregar gráfico de Key Results</p> : (
+        {isLoadingKeyResultsSummary ? renderLoading() : errorKeyResultsSummary ? <p className="text-red-500">Erro ao carregar gráfico de Key Results</p> : (
           <StatusDistributionChart title="Status dos Key Results" data={keyResultChartData} />
         )}
         {isLoadingAtividades ? renderLoading() : errorAtividades ? <p className="text-red-500">Erro ao carregar gráfico de atividades</p> : (

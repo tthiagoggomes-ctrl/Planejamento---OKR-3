@@ -14,6 +14,11 @@ export interface Objetivo {
   updated_at?: string;
 }
 
+export interface ObjetivoSummary {
+  status: Objetivo['status'];
+  count: number;
+}
+
 export const getObjetivos = async (): Promise<Objetivo[] | null> => {
   const { data, error } = await supabase
     .from('objetivos')
@@ -30,6 +35,20 @@ export const getObjetivos = async (): Promise<Objetivo[] | null> => {
     ...obj,
     area_name: (obj as any).area?.nome || 'N/A',
   }));
+};
+
+export const getObjetivosSummary = async (): Promise<ObjetivoSummary[] | null> => {
+  const { data, error } = await supabase
+    .from('objetivos')
+    .select('status, count')
+    .returns<{ status: Objetivo['status'], count: number }[]>();
+
+  if (error) {
+    console.error('Error fetching objective summary:', error.message);
+    showError('Erro ao carregar resumo de objetivos.');
+    return null;
+  }
+  return data;
 };
 
 export const createObjetivo = async (

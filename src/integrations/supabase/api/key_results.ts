@@ -16,6 +16,11 @@ export interface KeyResult {
   updated_at?: string;
 }
 
+export interface KeyResultSummary {
+  status: KeyResult['status'];
+  count: number;
+}
+
 export const getKeyResultsByObjetivoId = async (objetivo_id: string): Promise<KeyResult[] | null> => {
   const { data, error } = await supabase
     .from('key_results')
@@ -26,6 +31,20 @@ export const getKeyResultsByObjetivoId = async (objetivo_id: string): Promise<Ke
   if (error) {
     console.error('Error fetching key results:', error.message);
     showError('Erro ao carregar Key Results.');
+    return null;
+  }
+  return data;
+};
+
+export const getKeyResultsSummary = async (): Promise<KeyResultSummary[] | null> => {
+  const { data, error } = await supabase
+    .from('key_results')
+    .select('status, count')
+    .returns<{ status: KeyResult['status'], count: number }[]>();
+
+  if (error) {
+    console.error('Error fetching key result summary:', error.message);
+    showError('Erro ao carregar resumo de Key Results.');
     return null;
   }
   return data;

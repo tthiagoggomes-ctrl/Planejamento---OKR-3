@@ -15,6 +15,11 @@ export interface Atividade {
   assignee_name?: string; // Joined from profiles
 }
 
+export interface AtividadeSummary {
+  status: Atividade['status'];
+  count: number;
+}
+
 export const getAtividades = async (): Promise<Atividade[] | null> => {
   const { data, error } = await supabase
     .from('atividades')
@@ -36,6 +41,20 @@ export const getAtividades = async (): Promise<Atividade[] | null> => {
     key_result_title: (atividade as any).key_result?.titulo || 'N/A',
     assignee_name: (atividade as any).assignee ? `${(atividade as any).assignee.first_name} ${(atividade as any).assignee.last_name}` : 'N/A',
   }));
+};
+
+export const getAtividadesSummary = async (): Promise<AtividadeSummary[] | null> => {
+  const { data, error } = await supabase
+    .from('atividades')
+    .select('status, count')
+    .returns<{ status: Atividade['status'], count: number }[]>();
+
+  if (error) {
+    console.error('Error fetching activity summary:', error.message);
+    showError('Erro ao carregar resumo de atividades.');
+    return null;
+  }
+  return data;
 };
 
 export const createAtividade = async (

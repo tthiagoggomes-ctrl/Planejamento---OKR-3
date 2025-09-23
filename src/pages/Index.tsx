@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react'; // Added React import
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";

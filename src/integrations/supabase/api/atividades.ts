@@ -70,15 +70,22 @@ export const getAtividadesByKeyResultId = async (key_result_id: string): Promise
 export const getAtividadesSummary = async (): Promise<AtividadeSummary[] | null> => {
   const { data, error } = await supabase
     .from('atividades')
-    .select('status', { count: 'exact' }) // Corrected syntax for grouped count
-    .returns<{ status: Atividade['status'], count: number }[]>();
+    .select('status'); // Select only the status column
 
   if (error) {
     console.error('Error fetching activity summary:', error.message);
     showError('Erro ao carregar resumo de atividades.');
     return null;
   }
-  return data;
+
+  // Group and count client-side
+  const summaryMap = new Map<Atividade['status'], number>();
+  data.forEach(ativ => {
+    const currentCount = summaryMap.get(ativ.status) || 0;
+    summaryMap.set(ativ.status, currentCount + 1);
+  });
+
+  return Array.from(summaryMap.entries()).map(([status, count]) => ({ status, count }));
 };
 
 export const createAtividade = async (

@@ -80,15 +80,22 @@ export const getObjetivos = async (params?: GetObjetivosParams): Promise<Objetiv
 export const getObjetivosSummary = async (): Promise<ObjetivoSummary[] | null> => {
   const { data, error } = await supabase
     .from('objetivos')
-    .select('status', { count: 'exact' }) // Corrected syntax for grouped count
-    .returns<{ status: Objetivo['status'], count: number }[]>();
+    .select('status'); // Select only the status column
 
   if (error) {
     console.error('Error fetching objective summary:', error.message);
     showError('Erro ao carregar resumo de objetivos.');
     return null;
   }
-  return data;
+
+  // Group and count client-side
+  const summaryMap = new Map<Objetivo['status'], number>();
+  data.forEach(obj => {
+    const currentCount = summaryMap.get(obj.status) || 0;
+    summaryMap.set(obj.status, currentCount + 1);
+  });
+
+  return Array.from(summaryMap.entries()).map(([status, count]) => ({ status, count }));
 };
 
 export const createObjetivo = async (

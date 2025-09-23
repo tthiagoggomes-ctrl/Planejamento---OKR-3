@@ -83,15 +83,22 @@ export const getAllKeyResults = async (): Promise<KeyResult[] | null> => {
 export const getKeyResultsSummary = async (): Promise<KeyResultSummary[] | null> => {
   const { data, error } = await supabase
     .from('key_results')
-    .select('status', { count: 'exact' }) // Corrected syntax for grouped count
-    .returns<{ status: KeyResult['status'], count: number }[]>();
+    .select('status'); // Select only the status column
 
   if (error) {
     console.error('Error fetching key result summary:', error.message);
     showError('Erro ao carregar resumo de Key Results.');
     return null;
   }
-  return data;
+
+  // Group and count client-side
+  const summaryMap = new Map<KeyResult['status'], number>();
+  data.forEach(kr => {
+    const currentCount = summaryMap.get(kr.status) || 0;
+    summaryMap.set(kr.status, currentCount + 1);
+  });
+
+  return Array.from(summaryMap.entries()).map(([status, count]) => ({ status, count }));
 };
 
 export const createKeyResult = async (

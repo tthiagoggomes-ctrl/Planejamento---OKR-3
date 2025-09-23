@@ -1,12 +1,12 @@
 "use client";
 
 import React from "react";
-import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd"; // Corrected import path
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Atividade } from "@/integrations/supabase/api/atividades";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { ListTodo, Hourglass, CheckCircle, Edit, Trash2, Kanban } from "lucide-react"; // Changed LayoutKanban to Kanban
+import { ListTodo, Hourglass, CheckCircle, Edit, Trash2, Kanban, StopCircle } from "lucide-react"; // Adicionado StopCircle
 import { Button } from "@/components/ui/button";
 
 interface KanbanBoardProps {
@@ -30,19 +30,25 @@ const columns: Record<ColumnId, Column> = {
     id: 'todo',
     title: 'A Fazer',
     icon: <ListTodo className="h-4 w-4" />,
-    colorClass: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+    colorClass: 'bg-gray-900 text-white dark:bg-gray-900 dark:text-white', // Preto
   },
   in_progress: {
     id: 'in_progress',
     title: 'Em Progresso',
     icon: <Hourglass className="h-4 w-4" />,
-    colorClass: 'bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-200',
+    colorClass: 'bg-blue-600 text-white dark:bg-blue-600 dark:text-white', // Azul
+  },
+  stopped: { // Nova coluna 'Parado'
+    id: 'stopped',
+    title: 'Parado',
+    icon: <StopCircle className="h-4 w-4" />,
+    colorClass: 'bg-red-600 text-white dark:bg-red-600 dark:text-white', // Vermelho
   },
   done: {
     id: 'done',
     title: 'Concluído',
     icon: <CheckCircle className="h-4 w-4" />,
-    colorClass: 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-200',
+    colorClass: 'bg-green-600 text-white dark:bg-green-600 dark:text-white', // Verde
   },
 };
 
@@ -74,11 +80,24 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusCh
     const draggedAtividade = orderedAtividades.find(ativ => ativ.id === draggableId);
     if (!draggedAtividade) return;
 
+    // Temporarily update local state for immediate visual feedback
     const newOrderedAtividades = Array.from(orderedAtividades);
-    newOrderedAtividades.splice(source.index, 1);
-    newOrderedAtividades.splice(destination.index, 0, draggedAtividade);
+    const sourceActivities = newOrderedAtividades.filter(a => a.status === source.droppableId);
+    const destinationActivities = newOrderedAtividades.filter(a => a.status === destination.droppableId);
 
-    setOrderedAtividades(newOrderedAtividades);
+    // Remove from source
+    sourceActivities.splice(source.index, 1);
+    // Add to destination
+    destinationActivities.splice(destination.index, 0, { ...draggedAtividade, status: destination.droppableId as Atividade['status'] });
+
+    // Reconstruct the full list
+    const updatedList = [
+      ...sourceActivities,
+      ...destinationActivities,
+      ...newOrderedAtividades.filter(a => a.status !== source.droppableId && a.status !== destination.droppableId)
+    ];
+    setOrderedAtividades(updatedList);
+
 
     const newStatus = destination.droppableId as Atividade['status'];
     if (draggedAtividade.status !== newStatus) {
@@ -88,7 +107,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusCh
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4"> {/* Alterado para 4 colunas */}
         {Object.values(columns).map(column => (
           <Droppable droppableId={column.id} key={column.id}>
             {(provided) => (
@@ -101,7 +120,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusCh
                   <CardTitle className="text-lg font-semibold flex items-center gap-2">
                     {column.icon} {column.title}
                   </CardTitle>
-                  <Badge variant="secondary" className="text-sm">
+                  <Badge variant="secondary" className="text-sm bg-white text-gray-900 dark:bg-gray-200 dark:text-gray-900">
                     {getActivitiesByStatus(column.id).length}
                   </Badge>
                 </CardHeader>

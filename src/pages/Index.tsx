@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getObjetivos, getObjetivosSummary, Objetivo, ObjetivoSummary } from "@/integrations/supabase/api/objetivos";
 import { getAllKeyResults, getKeyResultsSummary, KeyResult, KeyResultSummary, calculateKeyResultProgress } from "@/integrations/supabase/api/key_results";
 import { getAtividadesSummary, AtividadeSummary } from "@/integrations/supabase/api/atividades";
-import { Loader2, Target, ListTodo, CheckCircle, Hourglass, XCircle, Flag, TrendingUp, AlertTriangle, Clock, CircleDot } from "lucide-react";
+import { Loader2, Target, ListTodo, CheckCircle, Hourglass, XCircle, Flag, TrendingUp, AlertTriangle, Clock, CircleDot, StopCircle } from "lucide-react"; // Adicionado StopCircle
 import StatusDistributionChart from "@/components/charts/StatusDistributionChart";
 import { Progress } from "@/components/ui/progress"; // Import Progress component
 
@@ -98,9 +98,10 @@ const Index = () => {
 
   // Prepare data for Atividade Status Chart
   const atividadeChartData = [
-    { name: 'A Fazer', value: getStatusCount(atividadesSummary, 'todo'), color: '#6b7280' }, // gray-500
-    { name: 'Em Progresso', value: getStatusCount(atividadesSummary, 'in_progress'), color: '#3b82f6' }, // blue-500
-    { name: 'Concluídas', value: getStatusCount(atividadesSummary, 'done'), color: '#22c55e' }, // green-500
+    { name: 'A Fazer', value: getStatusCount(atividadesSummary, 'todo'), color: '#1f2937' }, // Preto (gray-900)
+    { name: 'Em Progresso', value: getStatusCount(atividadesSummary, 'in_progress'), color: '#2563eb' }, // Azul (blue-600)
+    { name: 'Paradas', value: getStatusCount(atividadesSummary, 'stopped'), color: '#dc2626' }, // Vermelho (red-600)
+    { name: 'Concluídas', value: getStatusCount(atividadesSummary, 'done'), color: '#16a34a' }, // Verde (green-600)
   ].filter(item => item.value > 0);
 
   const isLoadingOverallData = isLoadingAllObjetivos || isLoadingAllKeyResults || isLoadingObjetivosSummary || isLoadingKeyResultsSummary || isLoadingAtividades;
@@ -185,8 +186,9 @@ const Index = () => {
               <>
                 <div className="text-2xl font-bold">{getTotalCount(atividadesSummary)}</div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  <span className="text-gray-600 mr-1"><Clock className="inline h-3 w-3" /> {getStatusCount(atividadesSummary, 'todo')} A Fazer</span>
+                  <span className="text-gray-900 mr-1"><Clock className="inline h-3 w-3" /> {getStatusCount(atividadesSummary, 'todo')} A Fazer</span>
                   <span className="text-blue-600 mr-1"><Hourglass className="inline h-3 w-3" /> {getStatusCount(atividadesSummary, 'in_progress')} Em Progresso</span>
+                  <span className="text-red-600 mr-1"><StopCircle className="inline h-3 w-3" /> {getStatusCount(atividadesSummary, 'stopped')} Paradas</span>
                   <span className="text-green-600 mr-1"><CheckCircle className="inline h-3 w-3" /> {getStatusCount(atividadesSummary, 'done')} Concluídas</span>
                 </p>
                 {/* Activities don't have a single numerical progress, so no progress bar here */}

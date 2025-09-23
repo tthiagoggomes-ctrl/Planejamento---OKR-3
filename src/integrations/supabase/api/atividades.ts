@@ -8,7 +8,7 @@ export interface Atividade {
   titulo: string;
   descricao: string | null;
   due_date: string | null; // ISO string
-  status: 'todo' | 'in_progress' | 'done';
+  status: 'todo' | 'in_progress' | 'done' | 'stopped'; // Adicionado 'stopped'
   created_at?: string;
   updated_at?: string;
   key_result_title?: string; // Joined from key_results
@@ -94,7 +94,7 @@ export const createAtividade = async (
   titulo: string,
   descricao: string | null,
   due_date: string | null,
-  status: 'todo' | 'in_progress' | 'done'
+  status: 'todo' | 'in_progress' | 'done' | 'stopped' // Adicionado 'stopped'
 ): Promise<Atividade | null> => {
   const { data, error } = await supabase
     .from('atividades')
@@ -125,7 +125,7 @@ export const updateAtividade = async (
   titulo: string,
   descricao: string | null,
   due_date: string | null,
-  status: 'todo' | 'in_progress' | 'done'
+  status: 'todo' | 'in_progress' | 'done' | 'stopped' // Adicionado 'stopped'
 ): Promise<Atividade | null> => {
   const { data, error } = await supabase
     .from('atividades')

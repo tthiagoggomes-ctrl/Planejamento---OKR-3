@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, List, Kanban } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2, List, Kanban, StopCircle } from "lucide-react"; // Adicionado StopCircle
 import {
   Table,
   TableBody,
@@ -61,7 +61,7 @@ const Atividades = () => {
         values.user_id,
         values.titulo,
         values.descricao,
-        formatDueDateForApi(values.due_date), // Use helper here
+        formatDueDateForApi(values.due_date),
         values.status
       ),
     onSuccess: () => {
@@ -82,7 +82,7 @@ const Atividades = () => {
         values.user_id,
         values.titulo,
         values.descricao,
-        formatDueDateForApi(values.due_date), // Use helper here
+        formatDueDateForApi(values.due_date),
         values.status
       ),
     onSuccess: () => {
@@ -142,7 +142,7 @@ const Atividades = () => {
         user_id: atividadeToUpdate.user_id,
         titulo: atividadeToUpdate.titulo,
         descricao: atividadeToUpdate.descricao,
-        due_date: atividadeToUpdate.due_date, // This is already string | null, will be handled by formatDueDateForApi
+        due_date: atividadeToUpdate.due_date,
         status: newStatus,
       });
     }
@@ -150,9 +150,10 @@ const Atividades = () => {
 
   const getStatusBadgeClass = (status: Atividade['status']) => {
     switch (status) {
-      case 'todo': return 'bg-gray-100 text-gray-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'done': return 'bg-green-100 text-green-800';
+      case 'todo': return 'bg-gray-900 text-white'; // Preto
+      case 'in_progress': return 'bg-blue-600 text-white'; // Azul
+      case 'done': return 'bg-green-600 text-white'; // Verde
+      case 'stopped': return 'bg-red-600 text-white'; // Vermelho
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -220,6 +221,7 @@ const Atividades = () => {
                           {atividade.status === 'todo' && 'A Fazer'}
                           {atividade.status === 'in_progress' && 'Em Progresso'}
                           {atividade.status === 'done' && 'Concluído'}
+                          {atividade.status === 'stopped' && 'Parado'}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">

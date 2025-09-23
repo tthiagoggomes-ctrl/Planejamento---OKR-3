@@ -47,7 +47,7 @@ const formSchema = z.object({
   }),
   descricao: z.string().nullable(),
   due_date: z.date().nullable().optional(),
-  status: z.enum(['todo', 'in_progress', 'done'], {
+  status: z.enum(['todo', 'in_progress', 'done', 'stopped'], { // Adicionado 'stopped'
     message: "Selecione um status válido para a atividade.",
   }),
   key_result_id: z.string().uuid({ message: "Selecione um Key Result válido." }),
@@ -144,6 +144,7 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
     { value: "todo", label: "A Fazer" },
     { value: "in_progress", label: "Em Progresso" },
     { value: "done", label: "Concluído" },
+    { value: "stopped", label: "Parado" }, // Adicionado 'Parado'
   ];
 
   return (

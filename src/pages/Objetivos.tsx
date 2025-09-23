@@ -32,7 +32,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import { useSession } from "@/components/auth/SessionContextProvider";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/use-debounce";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom"; // Importar useLocation
 import {
   Select,
   SelectContent,
@@ -45,6 +45,7 @@ import { Progress } from "@/components/ui/progress"; // Import Progress componen
 const Objetivos = () => {
   const queryClient = useQueryClient();
   const { user } = useSession();
+  const location = useLocation(); // Inicializar useLocation
 
   // State for Objetivo management
   const [isObjetivoFormOpen, setIsObjetivoFormOpen] = React.useState(false);
@@ -72,6 +73,16 @@ const Objetivos = () => {
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [sortBy, setSortBy] = React.useState<keyof Objetivo | 'area_name'>('created_at');
   const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
+
+  // Effect to apply area filter from navigation state
+  React.useEffect(() => {
+    if (location.state && (location.state as any).areaId !== undefined) {
+      const areaIdFromState = (location.state as any).areaId;
+      setAreaFilter(areaIdFromState === null ? 'null' : areaIdFromState);
+      // Clear the state after using it to avoid re-applying on subsequent visits
+      window.history.replaceState({}, document.title, location.pathname);
+    }
+  }, [location.state]);
 
   const { data: objetivos, isLoading: isLoadingObjetivos, error: objetivosError } = useQuery<Objetivo[], Error>({
     queryKey: ["objetivos", { statusFilter, periodoFilter, areaFilter, search: debouncedSearchQuery, sortBy, sortOrder }],
@@ -395,19 +406,6 @@ const Objetivos = () => {
                 {areas?.map((area) => (
                   <SelectItem key={area.id} value={area.id}>{area.nome}</SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={sortBy} onValueChange={(value: keyof Objetivo | 'area_name') => setSortBy(value)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Ordenar por" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="titulo">Título</SelectItem>
-                <SelectItem value="periodo">Período</SelectItem>
-                <SelectItem value="area_name">Área</SelectItem>
-                <SelectItem value="status">Status</SelectItem>
-                <SelectItem value="created_at">Data de Criação</SelectItem>
               </SelectContent>
             </Select>
 

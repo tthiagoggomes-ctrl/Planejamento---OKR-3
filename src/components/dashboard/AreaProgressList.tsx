@@ -9,8 +9,11 @@ import { getAreas, Area } from '@/integrations/supabase/api/areas';
 import { getObjetivos, Objetivo } from '@/integrations/supabase/api/objetivos';
 import { getAllKeyResults, KeyResult, calculateKeyResultProgress } from '@/integrations/supabase/api/key_results';
 import { showError } from '@/utils/toast';
+import { useNavigate } from 'react-router-dom'; // Importar useNavigate
 
 const AreaProgressList: React.FC = () => {
+  const navigate = useNavigate(); // Inicializar useNavigate
+
   const { data: areas, isLoading: isLoadingAreas, error: errorAreas } = useQuery<Area[], Error>({
     queryKey: ["areas"],
     queryFn: getAreas,
@@ -45,6 +48,10 @@ const AreaProgressList: React.FC = () => {
     });
 
     return objectivesWithKRs > 0 ? Math.round(totalObjectiveProgress / objectivesWithKRs) : 0;
+  };
+
+  const handleAreaClick = (areaId: string | null) => {
+    navigate('/objetivos', { state: { areaId } });
   };
 
   if (isLoadingAreas || isLoadingObjetivos || isLoadingKeyResults) {
@@ -90,7 +97,11 @@ const AreaProgressList: React.FC = () => {
           areas.map((area) => {
             const progress = calculateAreaProgress(area.id);
             return (
-              <div key={area.id} className="flex flex-col gap-2">
+              <div
+                key={area.id}
+                className="flex flex-col gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded-md transition-colors"
+                onClick={() => handleAreaClick(area.id)}
+              >
                 <div className="flex justify-between items-center">
                   <span className="font-medium">{area.nome}</span>
                   <span className="text-sm text-muted-foreground">{progress}%</span>
@@ -104,7 +115,10 @@ const AreaProgressList: React.FC = () => {
         )}
         {/* Progress for objectives without an assigned area */}
         {objetivos && objetivos.some(obj => obj.area_id === null) && (
-          <div className="flex flex-col gap-2 border-t pt-4 mt-4">
+          <div
+            className="flex flex-col gap-2 border-t pt-4 mt-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded-md transition-colors"
+            onClick={() => handleAreaClick(null)}
+          >
             <div className="flex justify-between items-center">
               <span className="font-medium">Objetivos sem Área</span>
               <span className="text-sm text-muted-foreground">{calculateAreaProgress(null)}%</span>

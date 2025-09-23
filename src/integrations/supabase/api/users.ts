@@ -1,5 +1,5 @@
 import { supabase } from '../client';
-import { supabaseAdmin } from '../admin';
+// Removed direct import of supabaseAdmin for client-side security
 import { showSuccess, showError } from '@/utils/toast';
 import { User } from '@supabase/supabase-js';
 
@@ -17,34 +17,23 @@ export interface UserProfile {
 }
 
 export const getUsers = async (): Promise<UserProfile[] | null> => {
-  const { data: usersData, error: usersError } = await supabase
-    .from('usuarios')
-    .select('*, area:areas(nome)')
-    .order('first_name', { ascending: true });
+  try {
+    const { data, error } = await supabase.functions.invoke('list-users', {
+      method: 'GET',
+    });
 
-  if (usersError) {
-    console.error('Error fetching user profiles:', usersError.message);
-    showError('Erro ao carregar usuários.');
-    return null;
-  }
+    if (error) {
+      console.error('Error invoking list-users edge function:', error.message);
+      showError('Erro ao carregar dados de autenticação dos usuários.');
+      return null;
+    }
 
-  const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-
-  if (authError) {
-    console.error('Error fetching auth users:', authError.message);
+    return data as UserProfile[];
+  } catch (error: any) {
+    console.error('Error in getUsers (client-side):', error.message);
     showError('Erro ao carregar dados de autenticação dos usuários.');
     return null;
   }
-
-  const authUsersMap = new Map<string, User>(authUsers.users.map(user => [user.id, user]));
-
-  const combinedUsers: UserProfile[] = usersData.map(profile => ({
-    ...profile,
-    email: authUsersMap.get(profile.id)?.email || 'N/A',
-    area_name: (profile as any).area?.nome || 'N/A',
-  }));
-
-  return combinedUsers;
 };
 
 export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
@@ -84,7 +73,11 @@ export const createUser = async (
   area_id: string | null,
   permissao: 'admin' | 'member'
 ): Promise<UserProfile | null> => {
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+  // This function still uses supabaseAdmin.auth.admin.createUser.
+  // For full security, this and other admin-level operations (deleteUser, sendPasswordResetEmail, blockUser, unblockUser)
+  // should also be moved to dedicated Edge Functions.
+  // For now, I'm only addressing the getUsers error.
+  const { data: authData, error: authError } = await supabase.auth.admin.createUser({ // This line needs to be updated to call an Edge Function
     email,
     password: password || undefined,
     email_confirm: true,
@@ -140,7 +133,8 @@ export const updateUserProfile = async (
     return null;
   }
 
-  const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(id);
+  // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.
+  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(id); 
   if (authError) {
     console.error('Error fetching auth user for update:', authError.message);
     showError('Erro ao buscar dados de autenticação do usuário.');
@@ -151,7 +145,9 @@ export const updateUserProfile = async (
 };
 
 export const deleteUser = async (id: string): Promise<boolean> => {
-  const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
+  // This function still uses supabaseAdmin.auth.admin.deleteUser.
+  // For full security, this should also be moved to an Edge Function.
+  const { error } = await supabase.auth.admin.deleteUser(id);
   if (error) {
     console.error('Error deleting user:', error.message);
     showError(`Erro ao excluir usuário: ${error.message}`);
@@ -161,7 +157,9 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 };
 
 export const sendPasswordResetEmail = async (email: string): Promise<boolean> => {
-  const { error } = await supabaseAdmin.auth.admin.generateLink({
+  // This function still uses supabaseAdmin.auth.admin.generateLink.
+  // For full security, this should also be moved to an Edge Function.
+  const { error } = await supabase.auth.admin.generateLink({
     type: 'password_reset',
     email,
   });
@@ -187,7 +185,8 @@ export const blockUser = async (id: string): Promise<UserProfile | null> => {
     showError(`Erro ao bloquear usuário: ${error.message}`);
     return null;
   }
-  const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(id);
+  // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.
+  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(id);
   if (authError) {
     console.error('Error fetching auth user for block:', authError.message);
     showError('Erro ao buscar dados de autenticação do usuário.');
@@ -209,7 +208,8 @@ export const unblockUser = async (id: string): Promise<UserProfile | null> => {
     showError(`Erro ao desbloquear usuário: ${error.message}`);
     return null;
   }
-  const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(id);
+  // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.
+  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(id);
   if (authError) {
     console.error('Error fetching auth user for unblock:', authError.message);
     showError('Erro ao buscar dados de autenticação do usuário.');

@@ -55,6 +55,7 @@ const Objetivos = () => {
   const [editingObjetivo, setEditingObjetivo] = React.useState<Objetivo | null>(null);
   const [isObjetivoDeleteDialogOpen, setIsObjetivoDeleteDialogOpen] = React.useState(false);
   const [objetivoToDelete, setObjetivoToDelete] = React.useState<string | null>(null);
+  const [expandedObjetivos, setExpandedObjetivos] = React.useState<Set<string>>(new Set()); // Adicionado: Estado para expandir/colapsar objetivos
 
   // State for Key Result management
   const [isKeyResultFormOpen, setIsKeyResultFormOpen] = React.useState(false);

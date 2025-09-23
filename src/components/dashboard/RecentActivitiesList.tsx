@@ -8,11 +8,8 @@ import { getAtividades, Atividade } from '@/integrations/supabase/api/atividades
 import { showError } from '@/utils/toast';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 const RecentActivitiesList: React.FC = () => {
-  const navigate = useNavigate(); // Initialize useNavigate
-
   const { data: atividades, isLoading, error } = useQuery<Atividade[], Error>({
     queryKey: ["recentActivities"],
     queryFn: () => getAtividades(5), // Fetch last 5 activities
@@ -35,14 +32,6 @@ const RecentActivitiesList: React.FC = () => {
       case 'done': return <CheckCircle className="h-3 w-3 mr-1" />;
       case 'stopped': return <StopCircle className="h-3 w-3 mr-1" />;
       default: return null;
-    }
-  };
-
-  const handleActivityClick = (atividade: Atividade) => {
-    if (atividade.key_result_objetivo_id && atividade.key_result_id) {
-      navigate(`/objetivos/${atividade.key_result_objetivo_id}`, { state: { keyResultId: atividade.key_result_id } });
-    } else {
-      showError("Não foi possível navegar para o objetivo/KR associado.");
     }
   };
 
@@ -87,11 +76,7 @@ const RecentActivitiesList: React.FC = () => {
       <CardContent className="space-y-3">
         {atividades && atividades.length > 0 ? (
           atividades.map((atividade) => (
-            <div
-              key={atividade.id}
-              className="flex items-center justify-between border-b pb-2 last:border-b-0 last:pb-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded-md transition-colors"
-              onClick={() => handleActivityClick(atividade)}
-            >
+            <div key={atividade.id} className="flex items-center justify-between border-b pb-2 last:border-b-0 last:pb-0">
               <div>
                 <p className="font-medium text-sm">{atividade.titulo}</p>
                 <p className="text-xs text-muted-foreground">

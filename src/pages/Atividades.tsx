@@ -29,20 +29,9 @@ import { showSuccess, showError } from "@/utils/toast";
 import { format } from "date-fns";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"; // Import ToggleGroup
 import { KanbanBoard } from "@/components/KanbanBoard"; // Import KanbanBoard
-import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
-import { getObjetivos, Objetivo } from "@/integrations/supabase/api/objetivos"; // Import Objetivo
-import { getAllKeyResults, KeyResult } from "@/integrations/supabase/api/key_results"; // Import KeyResult
 
 const Atividades = () => {
   const queryClient = useQueryClient();
-  const { user, userProfile: currentUserProfile } = useSession(); // Get current user and profile
-  const isAdmin = currentUserProfile?.permissao === 'administrador';
-  const isDiretoria = currentUserProfile?.permissao === 'diretoria';
-  const isGerente = currentUserProfile?.permissao === 'gerente';
-  const isSupervisor = currentUserProfile?.permissao === 'supervisor';
-  const isUsuario = currentUserProfile?.permissao === 'usuario';
-  const currentUserAreaId = currentUserProfile?.area_id;
-
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingAtividade, setEditingAtividade] = React.useState<Atividade | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -53,24 +42,6 @@ const Atividades = () => {
     queryKey: ["atividades"],
     queryFn: getAtividades,
   });
-
-  const { data: objetivos, isLoading: isLoadingObjetivos } = useQuery<Objetivo[], Error>({
-    queryKey: ["objetivos"],
-    queryFn: getObjetivos,
-  });
-
-  const { data: keyResults, isLoading: isLoadingKeyResults } = useQuery<KeyResult[], Error>({
-    queryKey: ["allKeyResults"],
-    queryFn: getAllKeyResults,
-  });
-
-  const objetivosMap = React.useMemo(() => {
-    return new Map(objetivos?.map(obj => [obj.id, obj]) || []);
-  }, [objetivos]);
-
-  const keyResultsMap = React.useMemo(() => {
-    return new Map(keyResults?.map(kr => [kr.id, kr]) || []);
-  }, [keyResults]);
 
   // Helper function to format due_date for API
   const formatDueDateForApi = (date: Date | string | null | undefined): string | null => {
@@ -95,7 +66,6 @@ const Atividades = () => {
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atividades"] });
-      queryClient.invalidateQueries({ queryKey: ["allKeyResults"] }); // Invalidate KRs to recalculate progress
       setIsFormOpen(false);
       showSuccess("Atividade criada com sucesso!");
     },
@@ -117,7 +87,6 @@ const Atividades = () => {
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atividades"] });
-      queryClient.invalidateQueries({ queryKey: ["allKeyResults"] }); // Invalidate KRs to recalculate progress
       setIsFormOpen(false);
       setEditingAtividade(null);
       showSuccess("Atividade atualizada com sucesso!");
@@ -131,7 +100,6 @@ const Atividades = () => {
     mutationFn: deleteAtividade,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atividades"] });
-      queryClient.invalidateQueries({ queryKey: ["allKeyResults"] }); // Invalidate KRs to recalculate progress
       setIsDeleteDialogOpen(false);
       setAtividadeToDelete(null);
       showSuccess("Atividade excluída com sucesso!");
@@ -190,25 +158,7 @@ const Atividades = () => {
     }
   };
 
-  // Permission checks for UI
-  const canCreateAtividade = isAdmin || isDiretoria || (isGerente && currentUserAreaId) || (isSupervisor && currentUserAreaId);
-  const canEditAtividade = (atividade: Atividade) => {
-    const parentKr = keyResultsMap.get(atividade.key_result_id);
-    const parentObjetivo = parentKr ? objetivosMap.get(parentKr.objetivo_id) : null;
-
-    return isAdmin || isDiretoria ||
-      ((isGerente || isSupervisor) && parentObjetivo && currentUserAreaId === parentObjetivo.area_id) ||
-      (isUsuario && atividade.user_id === user?.id);
-  };
-  const canDeleteAtividade = (atividade: Atividade) => {
-    const parentKr = keyResultsMap.get(atividade.key_result_id);
-    const parentObjetivo = parentKr ? objetivosMap.get(parentKr.objetivo_id) : null;
-
-    return isAdmin || isDiretoria || ((isGerente || isSupervisor) && parentObjetivo && currentUserAreaId === parentObjetivo.area_id);
-  };
-
-
-  if (isLoading || isLoadingObjetivos || isLoadingKeyResults) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -238,11 +188,9 @@ const Atividades = () => {
                 <Kanban className="h-4 w-4 mr-2" /> Kanban
               </ToggleGroupItem>
             </ToggleGroup>
-            {canCreateAtividade && (
-              <Button onClick={() => { setEditingAtividade(null); setIsFormOpen(true); }}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Nova Atividade
-              </Button>
-            )}
+            <Button onClick={() => { setEditingAtividade(null); setIsFormOpen(true); }}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Nova Atividade
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -277,27 +225,23 @@ const Atividades = () => {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        {canEditAtividade(atividade) && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEditClick(atividade)}
-                            className="mr-2"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Editar</span>
-                          </Button>
-                        )}
-                        {canDeleteAtividade(atividade) && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteClick(atividade.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Excluir</span>
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditClick(atividade)}
+                          className="mr-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Editar</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteClick(atividade.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Excluir</span>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -312,8 +256,6 @@ const Atividades = () => {
               onStatusChange={handleStatusChangeFromKanban}
               onEdit={handleEditClick}
               onDelete={handleDeleteClick}
-              objetivosMap={objetivosMap}
-              keyResultsMap={keyResultsMap}
             />
           )}
         </CardContent>

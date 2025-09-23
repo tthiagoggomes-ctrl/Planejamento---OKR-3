@@ -33,7 +33,6 @@ import { Objetivo } from "@/integrations/supabase/api/objetivos";
 import { Area, getAreas } from "@/integrations/supabase/api/areas";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
 
 const formSchema = z.object({
   titulo: z.string().min(5, {
@@ -66,13 +65,6 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
   initialData,
   isLoading,
 }) => {
-  const { userProfile: currentUserProfile } = useSession();
-  const isAdmin = currentUserProfile?.permissao === 'administrador';
-  const isDiretoria = currentUserProfile?.permissao === 'diretoria';
-  const isGerente = currentUserProfile?.permissao === 'gerente';
-  const isSupervisor = currentUserProfile?.permissao === 'supervisor';
-  const currentUserAreaId = currentUserProfile?.area_id;
-
   const form = useForm<ObjetivoFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -103,11 +95,11 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
         titulo: "",
         descricao: "",
         periodo: "",
-        area_id: (isGerente || isSupervisor) && currentUserAreaId ? currentUserAreaId : null, // Default to user's area if manager/supervisor
+        area_id: null,
         status: "draft",
       });
     }
-  }, [initialData, form, isGerente, isSupervisor, currentUserAreaId]);
+  }, [initialData, form]);
 
   const handleSubmit = (values: ObjetivoFormValues) => {
     onSubmit(values);
@@ -116,7 +108,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
         titulo: "",
         descricao: "",
         periodo: "",
-        area_id: (isGerente || isSupervisor) && currentUserAreaId ? currentUserAreaId : null,
+        area_id: null,
         status: "draft",
       });
     }
@@ -129,10 +121,6 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
     { value: "completed", label: "Concluído" },
     { value: "archived", label: "Arquivado" },
   ];
-
-  const canEditAllFields = isAdmin || isDiretoria;
-  const canEditArea = isAdmin || isDiretoria;
-  const canEditStatus = isAdmin || isDiretoria;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -149,7 +137,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
                 <FormItem>
                   <FormLabel>Título do Objetivo</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Aumentar a satisfação do cliente" {...field} disabled={!canEditAllFields && initialData && currentUserAreaId !== initialData.area_id} />
+                    <Input placeholder="Ex: Aumentar a satisfação do cliente" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -162,7 +150,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
                 <FormItem>
                   <FormLabel>Descrição (Opcional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Detalhes sobre o objetivo" {...field} value={field.value || ""} disabled={!canEditAllFields && initialData && currentUserAreaId !== initialData.area_id} />
+                    <Textarea placeholder="Detalhes sobre o objetivo" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -174,7 +162,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Período</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!canEditAllFields && initialData && currentUserAreaId !== initialData.area_id}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o período" />
@@ -198,7 +186,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Área (Opcional)</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ""} disabled={!canEditArea || ((isGerente || isSupervisor) && initialData && currentUserAreaId !== initialData.area_id)}>
+                  <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione uma área" />
@@ -229,7 +217,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!canEditStatus || (initialData && currentUserAreaId !== initialData.area_id)}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o status" />
@@ -248,7 +236,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
               )}
             />
             <DialogFooter>
-              <Button type="submit" disabled={isLoading || isLoadingAreas || (!canEditAllFields && initialData && currentUserAreaId !== initialData.area_id)}>
+              <Button type="submit" disabled={isLoading || isLoadingAreas}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? "Salvando..." : "Salvar"}
               </Button>

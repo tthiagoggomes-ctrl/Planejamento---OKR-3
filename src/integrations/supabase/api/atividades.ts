@@ -12,7 +12,6 @@ export interface Atividade {
   created_at?: string;
   updated_at?: string;
   key_result_title?: string; // Joined from key_results
-  key_result_objetivo_id?: string; // NEW: Joined from key_results to get parent objective ID
   assignee_name?: string; // Joined from profiles
 }
 
@@ -26,7 +25,7 @@ export const getAtividades = async (limit?: number): Promise<Atividade[] | null>
     .from('atividades')
     .select(`
       *,
-      key_result:key_results(titulo, objetivo_id),
+      key_result:key_results(titulo),
       assignee:usuarios(first_name, last_name)
     `)
     .order('updated_at', { ascending: false }); // Order by updated_at for recent changes
@@ -46,7 +45,6 @@ export const getAtividades = async (limit?: number): Promise<Atividade[] | null>
   return data.map(atividade => ({
     ...atividade,
     key_result_title: (atividade as any).key_result?.titulo || 'N/A',
-    key_result_objetivo_id: (atividade as any).key_result?.objetivo_id || null, // Extract objective ID
     assignee_name: (atividade as any).assignee ? `${(atividade as any).assignee.first_name} ${(atividade as any).assignee.last_name}` : 'N/A',
   }));
 };
@@ -56,7 +54,7 @@ export const getAtividadesByKeyResultId = async (key_result_id: string): Promise
     .from('atividades')
     .select(`
       *,
-      key_result:key_results(titulo, objetivo_id),
+      key_result:key_results(titulo),
       assignee:usuarios(first_name, last_name)
     `)
     .eq('key_result_id', key_result_id)
@@ -71,7 +69,6 @@ export const getAtividadesByKeyResultId = async (key_result_id: string): Promise
   return data.map(atividade => ({
     ...atividade,
     key_result_title: (atividade as any).key_result?.titulo || 'N/A',
-    key_result_objetivo_id: (atividade as any).key_result?.objetivo_id || null, // Extract objective ID
     assignee_name: (atividade as any).assignee ? `${(atividade as any).assignee.first_name} ${(atividade as any).assignee.last_name}` : 'N/A',
   }));
 };
@@ -110,7 +107,7 @@ export const createAtividade = async (
     .insert({ key_result_id, user_id, titulo, descricao, due_date, status })
     .select(`
       *,
-      key_result:key_results(titulo, objetivo_id),
+      key_result:key_results(titulo),
       assignee:usuarios(first_name, last_name)
     `)
     .single();
@@ -123,7 +120,6 @@ export const createAtividade = async (
   return {
     ...data,
     key_result_title: (data as any).key_result?.titulo || 'N/A',
-    key_result_objetivo_id: (data as any).key_result?.objetivo_id || null,
     assignee_name: (data as any).assignee ? `${(data as any).assignee.first_name} ${(data as any).assignee.last_name}` : 'N/A',
   };
 };
@@ -143,7 +139,7 @@ export const updateAtividade = async (
     .eq('id', id)
     .select(`
       *,
-      key_result:key_results(titulo, objetivo_id),
+      key_result:key_results(titulo),
       assignee:usuarios(first_name, last_name)
     `)
     .single();
@@ -156,7 +152,6 @@ export const updateAtividade = async (
   return {
     ...data,
     key_result_title: (data as any).key_result?.titulo || 'N/A',
-    key_result_objetivo_id: (data as any).key_result?.objetivo_id || null,
     assignee_name: (data as any).assignee ? `${(data as any).assignee.first_name} ${(data as any).assignee.last_name}` : 'N/A',
   };
 };

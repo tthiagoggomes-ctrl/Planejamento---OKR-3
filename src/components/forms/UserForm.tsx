@@ -21,7 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { UserProfile, UserPermission } from "@/integrations/supabase/api/users"; // Import UserPermission
+import { UserProfile } from "@/integrations/supabase/api/users";
 import { Area, getAreas } from "@/integrations/supabase/api/areas";
 import { Loader2 } from "lucide-react";
 import {
@@ -32,7 +32,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
-import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
 
 export const userFormSchema = z.object({
   first_name: z.string().min(2, {
@@ -48,7 +47,7 @@ export const userFormSchema = z.object({
     message: "A senha deve ter pelo menos 6 caracteres.",
   }).optional().or(z.literal("")), // Optional for edit, required for create
   area_id: z.string().uuid({ message: "Selecione uma área válida." }).nullable(),
-  permissao: z.enum(["administrador", "diretoria", "gerente", "supervisor", "usuario"], { // Updated enum
+  permissao: z.enum(["admin", "member"], {
     message: "Selecione uma permissão válida.",
   }),
   status: z.enum(["active", "blocked"], {
@@ -73,10 +72,6 @@ export const UserForm: React.FC<UserFormProps> = ({
   initialData,
   isLoading,
 }) => {
-  const { userProfile: currentUserProfile } = useSession(); // Get current user's profile
-  const isAdmin = currentUserProfile?.permissao === 'administrador';
-  const isEditingSelf = initialData && currentUserProfile?.id === initialData.id;
-
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
@@ -85,7 +80,7 @@ export const UserForm: React.FC<UserFormProps> = ({
       email: initialData?.email || "",
       password: "", // Always empty for security
       area_id: initialData?.area_id || null,
-      permissao: initialData?.permissao || "usuario", // Default to 'usuario'
+      permissao: initialData?.permissao || "member",
       status: initialData?.status || "active",
     },
   });
@@ -113,7 +108,7 @@ export const UserForm: React.FC<UserFormProps> = ({
         email: "",
         password: "",
         area_id: null,
-        permissao: "usuario", // Default to 'usuario' for new users
+        permissao: "member",
         status: "active",
       });
     }
@@ -128,7 +123,7 @@ export const UserForm: React.FC<UserFormProps> = ({
         email: "",
         password: "",
         area_id: null,
-        permissao: "usuario",
+        permissao: "member",
         status: "active",
       });
     }
@@ -149,7 +144,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                 <FormItem>
                   <FormLabel>Nome</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nome" {...field} disabled={!isAdmin && !isEditingSelf} />
+                    <Input placeholder="Nome" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -162,7 +157,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                 <FormItem>
                   <FormLabel>Sobrenome</FormLabel>
                   <FormControl>
-                    <Input placeholder="Sobrenome" {...field} disabled={!isAdmin && !isEditingSelf} />
+                    <Input placeholder="Sobrenome" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -175,7 +170,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                 <FormItem>
                   <FormLabel>E-mail</FormLabel>
                   <FormControl>
-                    <Input placeholder="email@exemplo.com" type="email" {...field} disabled={true} /> {/* Email is never editable via this form */}
+                    <Input placeholder="email@exemplo.com" type="email" {...field} disabled={!!initialData} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -189,7 +184,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                   <FormItem>
                     <FormLabel>Senha</FormLabel>
                     <FormControl>
-                      <Input placeholder="********" type="password" {...field} disabled={!isAdmin} />
+                      <Input placeholder="********" type="password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -202,7 +197,7 @@ export const UserForm: React.FC<UserFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Área</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ""} disabled={!isAdmin && !isEditingSelf}>
+                  <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione uma área" />
@@ -233,18 +228,15 @@ export const UserForm: React.FC<UserFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Permissão</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!isAdmin}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione uma permissão" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="administrador">Administrador</SelectItem>
-                      <SelectItem value="diretoria">Diretoria</SelectItem>
-                      <SelectItem value="gerente">Gerente</SelectItem>
-                      <SelectItem value="supervisor">Supervisor</SelectItem>
-                      <SelectItem value="usuario">Usuário</SelectItem>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="member">Membro</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -258,24 +250,24 @@ export const UserForm: React.FC<UserFormProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={!isAdmin}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um status" />
                         </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="active">Ativo</SelectItem>
-                      <SelectItem value="blocked">Bloqueado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="active">Ativo</SelectItem>
+                        <SelectItem value="blocked">Bloqueado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
             <DialogFooter>
-              <Button type="submit" disabled={isLoading || isLoadingAreas || (!isAdmin && !isEditingSelf)}>
+              <Button type="submit" disabled={isLoading || isLoadingAreas}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? "Salvando..." : "Salvar"}
               </Button>

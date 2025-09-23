@@ -31,18 +31,10 @@ import { useSession } from "@/components/auth/SessionContextProvider";
 import { format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea"; // Import Textarea for inline form
 import { ComentarioItem } from "@/components/ComentarioItem"; // Import the new ComentarioItem
-import { getObjetivos, Objetivo } from "@/integrations/supabase/api/objetivos"; // Import Objetivo
-import { getAllKeyResults, KeyResult } from "@/integrations/supabase/api/key_results"; // Import KeyResult
 
 const Comentarios = () => {
   const queryClient = useQueryClient();
-  const { user, userProfile: currentUserProfile } = useSession();
-  const isAdmin = currentUserProfile?.permissao === 'administrador';
-  const isDiretoria = currentUserProfile?.permissao === 'diretoria';
-  const isGerente = currentUserProfile?.permissao === 'gerente';
-  const isSupervisor = currentUserProfile?.permissao === 'supervisor';
-  const isUsuario = currentUserProfile?.permissao === 'usuario';
-  const currentUserAreaId = currentUserProfile?.area_id;
+  const { user } = useSession();
 
   const [isFormOpen, setIsFormOpen] = React.useState(false); // For editing existing comments
   const [editingComentario, setEditingComentario] = React.useState<Comentario | null>(null);
@@ -55,24 +47,6 @@ const Comentarios = () => {
     queryKey: ["atividades"],
     queryFn: getAtividades,
   });
-
-  const { data: objetivos, isLoading: isLoadingObjetivos } = useQuery<Objetivo[], Error>({
-    queryKey: ["objetivos"],
-    queryFn: getObjetivos,
-  });
-
-  const { data: keyResults, isLoading: isLoadingKeyResults } = useQuery<KeyResult[], Error>({
-    queryKey: ["allKeyResults"],
-    queryFn: getAllKeyResults,
-  });
-
-  const objetivosMap = React.useMemo(() => {
-    return new Map(objetivos?.map(obj => [obj.id, obj]) || []);
-  }, [objetivos]);
-
-  const keyResultsMap = React.useMemo(() => {
-    return new Map(keyResults?.map(kr => [kr.id, kr]) || []);
-  }, [keyResults]);
 
   const { data: comentariosMap, isLoading: isLoadingComentarios } = useQuery<Map<string, Comentario[]>, Error>({
     queryKey: ["comentarios_by_atividade"],
@@ -175,17 +149,7 @@ const Comentarios = () => {
     });
   };
 
-  // Permission checks for UI
-  const canAddComment = (atividade: Atividade) => {
-    const parentKr = keyResultsMap.get(atividade.key_result_id);
-    const parentObjetivo = parentKr ? objetivosMap.get(parentKr.objetivo_id) : null;
-
-    return isAdmin || isDiretoria ||
-      ((isGerente || isSupervisor || isUsuario) && parentObjetivo && currentUserAreaId === parentObjetivo.area_id) ||
-      (isUsuario && atividade.user_id === user?.id);
-  };
-
-  if (isLoadingAtividades || isLoadingObjetivos || isLoadingKeyResults) {
+  if (isLoadingAtividades) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -269,29 +233,26 @@ const Comentarios = () => {
                                 <p className="text-gray-600 text-center py-4">Nenhum comentário para esta atividade.</p>
                               )
                             )}
-                            {canAddComment(atividade) && (
-                              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                <h5 className="text-md font-semibold mb-2">Adicionar novo comentário</h5>
-                                <Textarea
-                                  placeholder="Escreva seu comentário aqui..."
-                                  value={inlineCommentContent[atividade.id] || ""}
-                                  onChange={(e) => setInlineCommentContent((prev) => ({ ...prev, [atividade.id]: e.target.value }))}
-                                  className="mb-2"
-                                  disabled={!canAddComment(atividade)}
-                                />
-                                <Button
-                                  onClick={() => handleAddInlineComment(atividade.id)}
-                                  disabled={createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id}
-                                >
-                                  {createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <MessageSquare className="mr-2 h-4 w-4" />
-                                  )}
-                                  {createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id ? "Adicionando..." : "Adicionar Comentário"}
-                                </Button>
-                              </div>
-                            )}
+                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                              <h5 className="text-md font-semibold mb-2">Adicionar novo comentário</h5>
+                              <Textarea
+                                placeholder="Escreva seu comentário aqui..."
+                                value={inlineCommentContent[atividade.id] || ""}
+                                onChange={(e) => setInlineCommentContent((prev) => ({ ...prev, [atividade.id]: e.target.value }))}
+                                className="mb-2"
+                              />
+                              <Button
+                                onClick={() => handleAddInlineComment(atividade.id)}
+                                disabled={createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id}
+                              >
+                                {createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <MessageSquare className="mr-2 h-4 w-4" />
+                                )}
+                                {createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id ? "Adicionando..." : "Adicionar Comentário"}
+                              </Button>
+                            </div>
                           </div>
                         </TableCell>
                       </TableRow>

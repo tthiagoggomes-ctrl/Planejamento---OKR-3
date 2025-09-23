@@ -8,17 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ListTodo, Hourglass, CheckCircle, Edit, Trash2, Kanban, StopCircle } from "lucide-react"; // Adicionado StopCircle
 import { Button } from "@/components/ui/button";
-import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
-import { Objetivo } from "@/integrations/supabase/api/objetivos"; // Import Objetivo
-import { KeyResult } from "@/integrations/supabase/api/key_results"; // Import KeyResult
 
 interface KanbanBoardProps {
   atividades: Atividade[];
   onStatusChange: (atividadeId: string, newStatus: Atividade['status']) => void;
   onEdit: (atividade: Atividade) => void;
   onDelete: (atividadeId: string) => void;
-  objetivosMap: Map<string, Objetivo>; // Pass objectives map for area check
-  keyResultsMap: Map<string, KeyResult>; // Pass key results map for objective_id
 }
 
 type ColumnId = Atividade['status'];
@@ -57,15 +52,7 @@ const columns: Record<ColumnId, Column> = {
   },
 };
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusChange, onEdit, onDelete, objetivosMap, keyResultsMap }) => {
-  const { user, userProfile: currentUserProfile } = useSession();
-  const isAdmin = currentUserProfile?.permissao === 'administrador';
-  const isDiretoria = currentUserProfile?.permissao === 'diretoria';
-  const isGerente = currentUserProfile?.permissao === 'gerente';
-  const isSupervisor = currentUserProfile?.permissao === 'supervisor';
-  const isUsuario = currentUserProfile?.permissao === 'usuario';
-  const currentUserAreaId = currentUserProfile?.area_id;
-
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusChange, onEdit, onDelete }) => {
   const [orderedAtividades, setOrderedAtividades] = React.useState<Atividade[]>(atividades);
 
   React.useEffect(() => {
@@ -74,22 +61,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusCh
 
   const getActivitiesByStatus = (status: ColumnId) => {
     return orderedAtividades.filter(atividade => atividade.status === status);
-  };
-
-  const canEditAtividade = (atividade: Atividade) => {
-    const parentKr = keyResultsMap.get(atividade.key_result_id);
-    const parentObjetivo = parentKr ? objetivosMap.get(parentKr.objetivo_id) : null;
-
-    return isAdmin || isDiretoria ||
-      ((isGerente || isSupervisor) && parentObjetivo && currentUserAreaId === parentObjetivo.area_id) ||
-      (isUsuario && atividade.user_id === user?.id);
-  };
-
-  const canDeleteAtividade = (atividade: Atividade) => {
-    const parentKr = keyResultsMap.get(atividade.key_result_id);
-    const parentObjetivo = parentKr ? objetivosMap.get(parentKr.objetivo_id) : null;
-
-    return isAdmin || isDiretoria || ((isGerente || isSupervisor) && parentObjetivo && currentUserAreaId === parentObjetivo.area_id);
   };
 
   const onDragEnd = (result: DropResult) => {
@@ -108,12 +79,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusCh
 
     const draggedAtividade = orderedAtividades.find(ativ => ativ.id === draggableId);
     if (!draggedAtividade) return;
-
-    // Check if the user has permission to change the status of this activity
-    if (!canEditAtividade(draggedAtividade)) {
-      showError("Você não tem permissão para alterar o status desta atividade.");
-      return;
-    }
 
     // Temporarily update local state for immediate visual feedback
     const newOrderedAtividades = Array.from(orderedAtividades);
@@ -144,7 +109,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusCh
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4"> {/* Alterado para 4 colunas */}
         {Object.values(columns).map(column => (
-          <Droppable droppableId={column.id} key={column.id} isDropDisabled={!isAdmin && !isDiretoria && !isGerente && !isSupervisor && !isUsuario}>
+          <Droppable droppableId={column.id} key={column.id}>
             {(provided) => (
               <Card
                 className="flex flex-col h-full"
@@ -161,7 +126,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusCh
                 </CardHeader>
                 <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto">
                   {getActivitiesByStatus(column.id).map((atividade, index) => (
-                    <Draggable key={atividade.id} draggableId={atividade.id} index={index} isDragDisabled={!canEditAtividade(atividade)}>
+                    <Draggable key={atividade.id} draggableId={atividade.id} index={index}>
                       {(provided) => (
                         <div
                           ref={provided.innerRef}
@@ -173,28 +138,24 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusCh
                               <div className="flex justify-between items-start mb-2">
                                 <h4 className="font-semibold text-base">{atividade.titulo}</h4>
                                 <div className="flex space-x-1">
-                                  {canEditAtividade(atividade) && (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => onEdit(atividade)}
-                                      className="h-7 w-7"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                      <span className="sr-only">Editar Atividade</span>
-                                    </Button>
-                                  )}
-                                  {canDeleteAtividade(atividade) && (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => onDelete(atividade.id)}
-                                      className="h-7 w-7"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                      <span className="sr-only">Excluir Atividade</span>
-                                    </Button>
-                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => onEdit(atividade)}
+                                    className="h-7 w-7"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                    <span className="sr-only">Editar Atividade</span>
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => onDelete(atividade.id)}
+                                    className="h-7 w-7"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span className="sr-only">Excluir Atividade</span>
+                                  </Button>
                                 </div>
                               </div>
                               <p className="text-sm text-muted-foreground mb-1">

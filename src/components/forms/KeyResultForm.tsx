@@ -30,8 +30,6 @@ import {
 } from "@/components/ui/select";
 import { KeyResult } from "@/integrations/supabase/api/key_results";
 import { Loader2 } from "lucide-react";
-import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
-import { Objetivo } from "@/integrations/supabase/api/objetivos"; // Import Objetivo for context
 
 const formSchema = z.object({
   titulo: z.string().min(5, {
@@ -57,7 +55,6 @@ interface KeyResultFormProps {
   onSubmit: (values: KeyResultFormValues) => void;
   initialData?: KeyResult | null;
   isLoading?: boolean;
-  objetivo?: Objetivo | null; // Pass the parent objective for permission checks
 }
 
 export const KeyResultForm: React.FC<KeyResultFormProps> = ({
@@ -66,15 +63,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
   onSubmit,
   initialData,
   isLoading,
-  objetivo, // Use the passed objective
 }) => {
-  const { userProfile: currentUserProfile } = useSession();
-  const isAdmin = currentUserProfile?.permissao === 'administrador';
-  const isDiretoria = currentUserProfile?.permissao === 'diretoria';
-  const isGerente = currentUserProfile?.permissao === 'gerente';
-  const isSupervisor = currentUserProfile?.permissao === 'supervisor';
-  const currentUserAreaId = currentUserProfile?.area_id;
-
   const form = useForm<KeyResultFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -125,9 +114,6 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
     { value: "percentage", label: "Porcentagem" },
   ];
 
-  // Determine if the current user can edit this KR based on objective's area
-  const canEditKR = isAdmin || isDiretoria || ((isGerente || isSupervisor) && objetivo && currentUserAreaId === objetivo.area_id);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -143,7 +129,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
                 <FormItem>
                   <FormLabel>Título do Key Result</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Reduzir o tempo de resposta do suporte" {...field} disabled={!canEditKR} />
+                    <Input placeholder="Ex: Reduzir o tempo de resposta do suporte" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -155,7 +141,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!canEditKR}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o tipo" />
@@ -181,7 +167,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
                   <FormItem>
                     <FormLabel>Valor Inicial</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" {...field} disabled={!canEditKR} />
+                      <Input type="number" step="0.01" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -194,7 +180,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
                   <FormItem>
                     <FormLabel>Valor Meta</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" {...field} disabled={!canEditKR} />
+                      <Input type="number" step="0.01" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -208,14 +194,14 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
                 <FormItem>
                   <FormLabel>Unidade (Opcional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: %, R$, horas" {...field} value={field.value || ""} disabled={!canEditKR} />
+                    <Input placeholder="Ex: %, R$, horas" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-              <Button type="submit" disabled={isLoading || !canEditKR}>
+              <Button type="submit" disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? "Salvando..." : "Salvar"}
               </Button>

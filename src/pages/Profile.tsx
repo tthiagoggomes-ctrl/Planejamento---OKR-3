@@ -8,12 +8,9 @@ import { getCurrentUserProfile, updateUserProfile, UserProfile } from "@/integra
 import { ProfileForm, ProfileFormValues } from "@/components/forms/ProfileForm";
 import { showSuccess, showError } from "@/utils/toast";
 import { Separator } from "@/components/ui/separator";
-import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
 
 const Profile = () => {
   const queryClient = useQueryClient();
-  const { user, userProfile: currentUserProfile } = useSession(); // Get current user and profile
-  const isAdmin = currentUserProfile?.permissao === 'administrador';
 
   const { data: userProfile, isLoading, error } = useQuery<UserProfile, Error>({
     queryKey: ["currentUserProfile"],
@@ -46,17 +43,6 @@ const Profile = () => {
     updateUserProfileMutation.mutate(values);
   };
 
-  const getPermissaoLabel = (permissao: UserProfile['permissao']) => {
-    switch (permissao) {
-      case 'administrador': return 'Administrador';
-      case 'diretoria': return 'Diretoria';
-      case 'gerente': return 'Gerente';
-      case 'supervisor': return 'Supervisor';
-      case 'usuario': return 'Usuário';
-      default: return 'Desconhecido';
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -81,9 +67,6 @@ const Profile = () => {
     );
   }
 
-  // Determine if the current user can edit this profile
-  const canEditProfile = isAdmin || (userProfile.id === user?.id);
-
   return (
     <div className="container mx-auto py-6">
       <Card className="max-w-2xl mx-auto">
@@ -104,7 +87,7 @@ const Profile = () => {
               <p className="text-sm font-medium text-muted-foreground">Permissão</p>
               <p className="flex items-center text-lg font-semibold">
                 <Shield className="mr-2 h-5 w-5 text-gray-500" />
-                {getPermissaoLabel(userProfile.permissao)}
+                {userProfile.permissao === 'admin' ? 'Administrador' : 'Membro'}
               </p>
             </div>
             <div>

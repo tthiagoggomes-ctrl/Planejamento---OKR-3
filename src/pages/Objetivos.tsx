@@ -523,75 +523,74 @@ const Objetivos = () => {
   ];
 
   return (
-    <>
-      <div className="container mx-auto py-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-2xl font-bold">Gestão de Objetivos & KRs</CardTitle>
-            <Button onClick={() => { setEditingObjetivo(null); setIsObjetivoFormOpen(true); }}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Novo Objetivo
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap items-center gap-4 mb-4">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar objetivos..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-
-              <Select value={statusFilter} onValueChange={(value: Objetivo['status'] | 'all') => setStatusFilter(value)}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filtrar por Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Status</SelectItem>
-                  {statuses.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={areaFilter} onValueChange={(value: string | 'all') => setAreaFilter(value)}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filtrar por Área" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as Áreas</SelectItem>
-                  <SelectItem value="null">Nenhuma Área</SelectItem>
-                  {areas?.map((area) => (
-                    <SelectItem key={area.id} value={area.id}>{area.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button variant="outline" size="icon" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
-                {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
-                <span className="sr-only">Alterar Ordem</span>
-              </Button>
+    <div className="container mx-auto py-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-2xl font-bold">Gestão de Objetivos & KRs</CardTitle>
+          <Button onClick={() => { setEditingObjetivo(null); setIsObjetivoFormOpen(true); }}>
+            <PlusCircle className="mr-2 h-4 w-4" /> Novo Objetivo
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-4 mb-4">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar objetivos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
             </div>
 
-            {objetivos && objetivos.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]"></TableHead> {/* For expand/collapse button */}
-                    <TableHead>Título</TableHead>
-                    <TableHead>Área</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Progresso</TableHead> {/* New column for Objective progress */}
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {objetivos.map((objetivo) => {
-                    const objectiveProgress = calculateObjetivoOverallProgress(objetivo.id);
-                    return (
-                      <React.Fragment key={objetivo.id}>
+            <Select value={statusFilter} onValueChange={(value: Objetivo['status'] | 'all') => setStatusFilter(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Status</SelectItem>
+                {statuses.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={areaFilter} onValueChange={(value: string | 'all') => setAreaFilter(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por Área" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Áreas</SelectItem>
+                <SelectItem value="null">Nenhuma Área</SelectItem>
+                {areas?.map((area) => (
+                  <SelectItem key={area.id} value={area.id}>{area.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button variant="outline" size="icon" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
+              {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+              <span className="sr-only">Alterar Ordem</span>
+            </Button>
+          </div>
+
+          {objetivos && objetivos.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]"></TableHead> {/* For expand/collapse button */}
+                  <TableHead>Título</TableHead>
+                  <TableHead>Área</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Progresso</TableHead> {/* New column for Objective progress */}
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {objetivos.map((objetivo) => {
+                  const objectiveProgress = calculateObjetivoOverallProgress(objetivo.id);
+                  return (
+                    <React.Fragment key={objetivo.id}>
                         <TableRow>
                           <TableCell>
                             <Button
@@ -890,13 +889,14 @@ const Objetivos = () => {
         </AlertDialog>
 
         {/* Atividade Form */}
+        {/* NOVO: Passando o ID do KR */}
         <AtividadeForm
           open={isAtividadeFormOpen}
           onOpenChange={setIsAtividadeFormOpen}
           onSubmit={handleCreateOrUpdateAtividade}
           initialData={editingAtividade}
           isLoading={createAtividadeMutation.isPending || updateAtividadeMutation.isPending}
-          preselectedKeyResultId={selectedKeyResultForAtividade?.id} {/* NOVO: Passando o ID do KR */}
+          preselectedKeyResultId={selectedKeyResultForAtividade?.id}
         />
 
         {/* Atividade Delete Confirmation */}
@@ -918,7 +918,6 @@ const Objetivos = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </>
   );
 };
 

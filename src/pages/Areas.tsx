@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2, ArrowUp, ArrowDown } from "lucide-react"; // Import ArrowUp/Down
 import {
   Table,
   TableBody,
@@ -34,9 +34,13 @@ const Areas = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [areaToDelete, setAreaToDelete] = React.useState<string | null>(null);
 
+  // NOVO: Estados para ordenação
+  const [sortBy, setSortBy] = React.useState<keyof Area>('nome');
+  const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
+
   const { data: areas, isLoading, error } = useQuery<Area[], Error>({
-    queryKey: ["areas"],
-    queryFn: getAreas,
+    queryKey: ["areas", { sortBy, sortOrder }], // Incluir ordenação na chave da query
+    queryFn: () => getAreas({ sortBy, sortOrder }),
   });
 
   const createAreaMutation = useMutation({
@@ -101,6 +105,16 @@ const Areas = () => {
     }
   };
 
+  // NOVO: Função para alternar a ordenação
+  const handleSort = (column: keyof Area) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -131,7 +145,18 @@ const Areas = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('nome')}
+                      className="flex items-center px-0 py-0 h-auto"
+                    >
+                      Nome
+                      {sortBy === 'nome' && (
+                        sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>

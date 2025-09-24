@@ -8,8 +8,20 @@ export interface Area {
   updated_at?: string;
 }
 
-export const getAreas = async (): Promise<Area[] | null> => {
-  const { data, error } = await supabase.from('areas').select('*').order('nome', { ascending: true });
+interface GetAreasParams {
+  sortBy?: keyof Area;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export const getAreas = async (params?: GetAreasParams): Promise<Area[] | null> => {
+  let query = supabase.from('areas').select('*');
+
+  const sortByColumn = params?.sortBy || 'nome'; // Default sort by 'nome'
+  const sortAscending = params?.sortOrder === 'asc';
+
+  query = query.order(sortByColumn, { ascending: sortAscending });
+
+  const { data, error } = await query;
   if (error) {
     console.error('Error fetching areas:', error.message);
     showError('Erro ao carregar áreas.');

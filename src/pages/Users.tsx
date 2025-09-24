@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, Lock, Unlock, Mail } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2, Lock, Unlock, Mail, ArrowUp, ArrowDown } from "lucide-react"; // Import ArrowUp/Down
 import {
   Table,
   TableBody,
@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { UserForm, UserFormValues } from "@/components/forms/UserForm"; // Import UserFormValues
+import { UserForm, UserFormValues } from "@/components/forms/UserForm";
 import {
   getUsers,
   createUser,
@@ -48,20 +48,24 @@ const Users = () => {
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = React.useState(false);
   const [userToResetPassword, setUserToResetPassword] = React.useState<UserProfile | null>(null);
 
+  // NOVO: Estados para ordenação
+  const [sortBy, setSortBy] = React.useState<keyof UserProfile | 'area_name' | 'email'>('first_name');
+  const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
+
   const { data: users, isLoading, error } = useQuery<UserProfile[], Error>({
-    queryKey: ["users"],
-    queryFn: getUsers,
+    queryKey: ["users", { sortBy, sortOrder }], // Incluir ordenação na chave da query
+    queryFn: () => getUsers({ sortBy, sortOrder }),
   });
 
   const createUserMutation = useMutation({
-    mutationFn: (values: UserFormValues) => createUser( // Usando UserFormValues
+    mutationFn: (values: UserFormValues) => createUser(
       values.email,
       values.password,
       values.first_name,
       values.last_name,
       values.area_id,
       values.permissao,
-      values.selected_permissions // Passar as permissões selecionadas
+      values.selected_permissions
     ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -74,8 +78,8 @@ const Users = () => {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ id, first_name, last_name, area_id, permissao, status, selected_permissions }: UpdateUserMutationArgs) => // Usando UpdateUserMutationArgs
-      updateUserProfile(id, first_name, last_name, area_id, permissao, status, selected_permissions), // Passar as permissões selecionadas
+    mutationFn: ({ id, first_name, last_name, area_id, permissao, status, selected_permissions }: UpdateUserMutationArgs) =>
+      updateUserProfile(id, first_name, last_name, area_id, permissao, status, selected_permissions),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setIsFormOpen(false);
@@ -134,7 +138,7 @@ const Users = () => {
     },
   });
 
-  const handleCreateOrUpdateUser = (values: UserFormValues) => { // Usando UserFormValues
+  const handleCreateOrUpdateUser = (values: UserFormValues) => {
     if (editingUser) {
       updateUserMutation.mutate({
         id: editingUser.id,
@@ -142,8 +146,8 @@ const Users = () => {
         last_name: values.last_name,
         area_id: values.area_id,
         permissao: values.permissao,
-        status: values.status || 'active', // Garante que o status seja 'active' se não for fornecido (embora o formulário deva fornecer)
-        selected_permissions: values.selected_permissions, // Passar as permissões selecionadas
+        status: values.status || 'active',
+        selected_permissions: values.selected_permissions,
       });
     } else {
       createUserMutation.mutate({
@@ -153,8 +157,8 @@ const Users = () => {
         last_name: values.last_name,
         area_id: values.area_id,
         permissao: values.permissao,
-        status: 'active', // Status padrão para novos usuários
-        selected_permissions: values.selected_permissions, // Passar as permissões selecionadas
+        status: 'active',
+        selected_permissions: values.selected_permissions,
       });
     }
   };
@@ -205,6 +209,16 @@ const Users = () => {
     }
   };
 
+  // NOVO: Função para alternar a ordenação
+  const handleSort = (column: keyof UserProfile | 'area_name' | 'email') => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -235,11 +249,66 @@ const Users = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome Completo</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Área</TableHead>
-                  <TableHead>Permissão</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('first_name')}
+                      className="flex items-center px-0 py-0 h-auto"
+                    >
+                      Nome Completo
+                      {sortBy === 'first_name' && (
+                        sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('email')}
+                      className="flex items-center px-0 py-0 h-auto"
+                    >
+                      E-mail
+                      {sortBy === 'email' && (
+                        sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('area_name')}
+                      className="flex items-center px-0 py-0 h-auto"
+                    >
+                      Área
+                      {sortBy === 'area_name' && (
+                        sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('permissao')}
+                      className="flex items-center px-0 py-0 h-auto"
+                    >
+                      Permissão
+                      {sortBy === 'permissao' && (
+                        sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('status')}
+                      className="flex items-center px-0 py-0 h-auto"
+                    >
+                      Status
+                      {sortBy === 'status' && (
+                        sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>

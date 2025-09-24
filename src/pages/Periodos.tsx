@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2, CalendarDays, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from "lucide-react"; // Import ArrowUp/Down
 import {
   Table,
   TableBody,
@@ -40,12 +40,16 @@ const Periodos = () => {
   const [editingPeriodo, setEditingPeriodo] = React.useState<Periodo | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [periodoToDelete, setPeriodoToDelete] = React.useState<string | null>(null);
-  const [parentPeriodIdForNewQuarter, setParentPeriodIdForNewQuarter] = React.useState<string | null>(null); // NOVO: Para criar trimestres
-  const [expandedAnnualPeriods, setExpandedAnnualPeriods] = React.useState<Set<string>>(new Set()); // NOVO: Para expandir/colapsar
+  const [parentPeriodIdForNewQuarter, setParentPeriodIdForNewQuarter] = React.useState<string | null>(null);
+  const [expandedAnnualPeriods, setExpandedAnnualPeriods] = React.useState<Set<string>>(new Set());
+
+  // NOVO: Estados para ordenação
+  const [sortBy, setSortBy] = React.useState<keyof Periodo>('nome');
+  const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
 
   const { data: allPeriods, isLoading, error } = useQuery<Periodo[], Error>({
-    queryKey: ["periodos"],
-    queryFn: getPeriodos,
+    queryKey: ["periodos", { sortBy, sortOrder }], // Incluir ordenação na chave da query
+    queryFn: () => getPeriodos({ sortBy, sortOrder }),
   });
 
   // Group periods into annual and quarterly
@@ -89,12 +93,12 @@ const Periodos = () => {
         values.start_date.toISOString(),
         values.end_date.toISOString(),
         values.status,
-        values.parent_id // NOVO: Passar parent_id
+        values.parent_id
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["periodos"] });
       setIsFormOpen(false);
-      setParentPeriodIdForNewQuarter(null); // Reset
+      setParentPeriodIdForNewQuarter(null);
       showSuccess("Período criado com sucesso!");
     },
     onError: (err) => {
@@ -110,13 +114,13 @@ const Periodos = () => {
         values.start_date.toISOString(),
         values.end_date.toISOString(),
         values.status,
-        values.parent_id // NOVO: Passar parent_id
+        values.parent_id
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["periodos"] });
       setIsFormOpen(false);
       setEditingPeriodo(null);
-      setParentPeriodIdForNewQuarter(null); // Reset
+      setParentPeriodIdForNewQuarter(null);
       showSuccess("Período atualizado com sucesso!");
     },
     onError: (err) => {
@@ -147,7 +151,7 @@ const Periodos = () => {
 
   const handleAddAnnualPeriodClick = () => {
     setEditingPeriodo(null);
-    setParentPeriodIdForNewQuarter(null); // Ensure no parent_id for annual
+    setParentPeriodIdForNewQuarter(null);
     setIsFormOpen(true);
   };
 
@@ -159,7 +163,7 @@ const Periodos = () => {
 
   const handleEditClick = (periodo: Periodo) => {
     setEditingPeriodo(periodo);
-    setParentPeriodIdForNewQuarter(periodo.parent_id || null); // Set parent_id if editing a quarter
+    setParentPeriodIdForNewQuarter(periodo.parent_id || null);
     setIsFormOpen(true);
   };
 
@@ -184,6 +188,16 @@ const Periodos = () => {
       }
       return newSet;
     });
+  };
+
+  // NOVO: Função para alternar a ordenação
+  const handleSort = (column: keyof Periodo) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
   };
 
   if (isLoading) {
@@ -216,18 +230,62 @@ const Periodos = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50px]"></TableHead> {/* For expand/collapse button */}
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Início</TableHead>
-                  <TableHead>Término</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('nome')}
+                      className="flex items-center px-0 py-0 h-auto"
+                    >
+                      Nome
+                      {sortBy === 'nome' && (
+                        sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('start_date')}
+                      className="flex items-center px-0 py-0 h-auto"
+                    >
+                      Início
+                      {sortBy === 'start_date' && (
+                        sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('end_date')}
+                      className="flex items-center px-0 py-0 h-auto"
+                    >
+                      Término
+                      {sortBy === 'end_date' && (
+                        sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('status')}
+                      className="flex items-center px-0 py-0 h-auto"
+                    >
+                      Status
+                      {sortBy === 'status' && (
+                        sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {annualPeriods.map((annualPeriod) => (
                   <React.Fragment key={annualPeriod.id}>
-                    <TableRow className="bg-gray-50 dark:bg-gray-800"> {/* Highlight annual periods */}
+                    <TableRow className="bg-gray-50 dark:bg-gray-800">
                       <TableCell>
                         <Button
                           variant="ghost"
@@ -286,10 +344,54 @@ const Periodos = () => {
                               <Table className="bg-white dark:bg-gray-900">
                                 <TableHeader>
                                   <TableRow>
-                                    <TableHead className="pl-8">Nome</TableHead> {/* Indent for sub-items */}
-                                    <TableHead>Início</TableHead>
-                                    <TableHead>Término</TableHead>
-                                    <TableHead>Status</TableHead>
+                                    <TableHead className="pl-8">
+                                      <Button
+                                        variant="ghost"
+                                        onClick={() => handleSort('nome')}
+                                        className="flex items-center px-0 py-0 h-auto"
+                                      >
+                                        Nome
+                                        {sortBy === 'nome' && (
+                                          sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </TableHead>
+                                    <TableHead>
+                                      <Button
+                                        variant="ghost"
+                                        onClick={() => handleSort('start_date')}
+                                        className="flex items-center px-0 py-0 h-auto"
+                                      >
+                                        Início
+                                        {sortBy === 'start_date' && (
+                                          sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </TableHead>
+                                    <TableHead>
+                                      <Button
+                                        variant="ghost"
+                                        onClick={() => handleSort('end_date')}
+                                        className="flex items-center px-0 py-0 h-auto"
+                                      >
+                                        Término
+                                        {sortBy === 'end_date' && (
+                                          sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </TableHead>
+                                    <TableHead>
+                                      <Button
+                                        variant="ghost"
+                                        onClick={() => handleSort('status')}
+                                        className="flex items-center px-0 py-0 h-auto"
+                                      >
+                                        Status
+                                        {sortBy === 'status' && (
+                                          sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </TableHead>
                                     <TableHead className="text-right">Ações</TableHead>
                                   </TableRow>
                                 </TableHeader>
@@ -352,7 +454,7 @@ const Periodos = () => {
         onSubmit={handleCreateOrUpdatePeriodo}
         initialData={editingPeriodo}
         isLoading={createPeriodoMutation.isPending || updatePeriodoMutation.isPending}
-        parentPeriodIdForNew={parentPeriodIdForNewQuarter} // NOVO: Passar parent_id para o formulário
+        parentPeriodIdForNew={parentPeriodIdForNewQuarter}
       />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

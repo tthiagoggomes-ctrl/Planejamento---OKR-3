@@ -14,8 +14,15 @@ export interface Periodo {
   updated_at?: string;
 }
 
-export const getPeriodos = async (): Promise<Periodo[] | null> => {
-  const { data, error } = await supabase.from('periodos').select('*');
+interface GetPeriodosParams {
+  sortBy?: keyof Periodo;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export const getPeriodos = async (params?: GetPeriodosParams): Promise<Periodo[] | null> => {
+  let query = supabase.from('periodos').select('*');
+
+  const { data, error } = await query;
   if (error) {
     console.error('Error fetching periods:', error.message);
     showError('Erro ao carregar períodos.');
@@ -26,6 +33,21 @@ export const getPeriodos = async (): Promise<Periodo[] | null> => {
 
   // Custom sorting logic to prioritize annual periods and then quarters
   const sortedData = data.sort((a, b) => {
+    // If a specific sortBy is provided, use it first
+    if (params?.sortBy) {
+      const aValue = a[params.sortBy];
+      const bValue = b[params.sortBy];
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return params.sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      }
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return params.sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      // Fallback for other types or if values are not comparable
+    }
+
+    // Default sorting logic (existing hierarchical sort)
     // Sort by year descending first
     const yearA = parseInt(a.nome.match(/\d{4}/)?.[0] || '0', 10);
     const yearB = parseInt(b.nome.match(/\d{4}/)?.[0] || '0', 10);

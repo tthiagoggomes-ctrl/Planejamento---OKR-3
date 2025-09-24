@@ -17,9 +17,22 @@ export interface UserProfile {
   updated_at?: string;
 }
 
-export const getUsers = async (): Promise<UserProfile[] | null> => {
+interface GetUsersParams {
+  sortBy?: keyof UserProfile | 'area_name' | 'email'; // Added 'email' and 'area_name' for sorting
+  sortOrder?: 'asc' | 'desc';
+}
+
+export const getUsers = async (params?: GetUsersParams): Promise<UserProfile[] | null> => {
   try {
-    const { data, error } = await supabase.functions.invoke('list-users', {
+    const queryParams = new URLSearchParams();
+    if (params?.sortBy) {
+      queryParams.append('sortBy', params.sortBy);
+    }
+    if (params?.sortOrder) {
+      queryParams.append('sortOrder', params.sortOrder);
+    }
+
+    const { data, error } = await supabase.functions.invoke(`list-users?${queryParams.toString()}`, {
       method: 'GET',
     });
 

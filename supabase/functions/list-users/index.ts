@@ -12,6 +12,10 @@ serve(async (req) => {
   }
 
   try {
+    const { searchParams } = new URL(req.url);
+    const sortBy = searchParams.get('sortBy') || 'first_name'; // Default sort by first_name
+    const sortOrder = searchParams.get('sortOrder') || 'asc'; // Default sort order asc
+
     // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -35,10 +39,22 @@ serve(async (req) => {
     const authUsersMap = new Map(authUsersData.users.map(user => [user.id, user]))
 
     // Fetch user profiles from public.usuarios, joining with areas
-    const { data: profilesData, error: profilesError } = await supabaseAdmin
+    let profilesQuery = supabaseAdmin
       .from('usuarios')
-      .select('*, area:areas(nome)')
-      .order('first_name', { ascending: true })
+      .select('*, area:areas(nome)');
+
+    // Apply sorting based on parameters
+    if (sortBy === 'area_name') {
+      profilesQuery = profilesQuery.order('area.nome', { ascending: sortOrder === 'asc' });
+    } else if (sortBy === 'email') {
+      // Sorting by email needs to be done client-side after combining auth and profile data
+      // For now, we'll sort by first_name as a fallback for email in DB query
+      profilesQuery = profilesQuery.order('first_name', { ascending: sortOrder === 'asc' });
+    } else {
+      profilesQuery = profilesQuery.order(sortBy, { ascending: sortOrder === 'asc' });
+    }
+
+    const { data: profilesData, error: profilesError } = await profilesQuery;
 
     if (profilesError) {
       console.error('Error fetching user profiles:', profilesError.message)
@@ -49,11 +65,20 @@ serve(async (req) => {
     }
 
     // Combine data
-    const combinedUsers = profilesData.map(profile => ({
+    let combinedUsers = profilesData.map(profile => ({
       ...profile,
       email: authUsersMap.get(profile.id)?.email || 'N/A',
       area_name: (profile as any).area?.nome || 'N/A',
     }))
+
+    // If sorting by email, do it client-side after combining
+    if (sortBy === 'email') {
+      combinedUsers.sort((a, b) => {
+        const emailA = a.email || '';
+        const emailB = b.email || '';
+        return sortOrder === 'asc' ? emailA.localeCompare(emailB) : emailB.localeCompare(emailA);
+      });
+    }
 
     return new Response(JSON.stringify(combinedUsers), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

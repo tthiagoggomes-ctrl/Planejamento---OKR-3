@@ -24,14 +24,16 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectGroup, // Adicionado
   SelectItem,
+  SelectLabel, // Adicionado
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { KeyResult } from "@/integrations/supabase/api/key_results";
-import { Periodo, getPeriodos } from "@/integrations/supabase/api/periodos"; // Import Periodo and getPeriodos
+import { Periodo, getPeriodos } from "@/integrations/supabase/api/periodos";
 import { Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query"; // Import useQuery
+import { useQuery } from "@tanstack/react-query";
 
 const formSchema = z.object({
   titulo: z.string().min(5, {
@@ -47,7 +49,7 @@ const formSchema = z.object({
     message: "O valor meta não pode ser negativo.",
   }),
   unidade: z.string().nullable(),
-  periodo: z.string().min(1, { // NOVO: Campo de período
+  periodo: z.string().min(1, {
     message: "Selecione um período para o Key Result.",
   }),
 });
@@ -77,7 +79,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
       valor_inicial: initialData?.valor_inicial || 0,
       valor_meta: initialData?.valor_meta || 0,
       unidade: initialData?.unidade || "",
-      periodo: initialData?.periodo || "", // NOVO: Default value for periodo
+      periodo: initialData?.periodo || "",
     },
   });
 
@@ -94,7 +96,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
         valor_inicial: initialData.valor_inicial,
         valor_meta: initialData.valor_meta,
         unidade: initialData.unidade,
-        periodo: initialData.periodo, // NOVO: Reset periodo
+        periodo: initialData.periodo,
       });
     } else {
       form.reset({
@@ -103,7 +105,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
         valor_inicial: 0,
         valor_meta: 0,
         unidade: "",
-        periodo: "", // NOVO: Reset periodo
+        periodo: "",
       });
     }
   }, [initialData, form]);
@@ -117,7 +119,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
         valor_inicial: 0,
         valor_meta: 0,
         unidade: "",
-        periodo: "", // NOVO: Reset periodo
+        periodo: "",
       });
     }
   };
@@ -127,6 +129,34 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
     { value: "boolean", label: "Booleano (Sim/Não)" },
     { value: "percentage", label: "Porcentagem" },
   ];
+
+  // Lógica para agrupar os períodos
+  const groupedPeriods = React.useMemo(() => {
+    if (!periods) return [];
+
+    const groups: { label: string; items: Periodo[] }[] = [];
+    let currentAnnualGroup: { label: string; items: Periodo[] } | null = null;
+
+    periods.forEach(period => {
+      if (period.nome.startsWith('Anual')) {
+        // Se um novo período anual é encontrado, inicia um novo grupo
+        currentAnnualGroup = { label: period.nome, items: [period] };
+        groups.push(currentAnnualGroup);
+      } else if (currentAnnualGroup && period.nome.includes(currentAnnualGroup.label.split(' ')[1])) {
+        // Se é um período trimestral e pertence ao grupo anual atual, adiciona
+        currentAnnualGroup.items.push(period);
+      } else {
+        // Para períodos que não se encaixam ou aparecem antes de um anual
+        let genericGroup = groups.find(g => g.label === 'Outros Períodos');
+        if (!genericGroup) {
+          genericGroup = { label: 'Outros Períodos', items: [] };
+          groups.push(genericGroup);
+        }
+        genericGroup.items.push(period);
+      }
+    });
+    return groups;
+  }, [periods]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -214,7 +244,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
                 </FormItem>
               )}
             />
-            <FormField // NOVO: Campo de Período
+            <FormField
               control={form.control}
               name="periodo"
               render={({ field }) => (
@@ -230,10 +260,15 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
                       {isLoadingPeriods ? (
                         <SelectItem value="" disabled>Carregando períodos...</SelectItem>
                       ) : (
-                        periods?.map((period) => (
-                          <SelectItem key={period.id} value={period.nome}>
-                            {period.nome}
-                          </SelectItem>
+                        groupedPeriods.map(group => (
+                          <SelectGroup key={group.label}>
+                            <SelectLabel>{group.label}</SelectLabel>
+                            {group.items.map(period => (
+                              <SelectItem key={period.id} value={period.nome}>
+                                {period.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
                         ))
                       )}
                     </SelectContent>
@@ -243,7 +278,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
               )}
             />
             <DialogFooter>
-              <Button type="submit" disabled={isLoading || isLoadingPeriods}> {/* isLoadingPeriods adicionado */}
+              <Button type="submit" disabled={isLoading || isLoadingPeriods}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? "Salvando..." : "Salvar"}
               </Button>

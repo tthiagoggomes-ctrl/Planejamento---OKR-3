@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } = "@hookform/resolvers/zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -173,7 +173,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
                         <SelectValue placeholder="Selecione o período" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent className="max-h-[200px] overflow-y-auto"> {/* Adicionado max-h e overflow-y-auto */}
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
                       {isLoadingPeriods ? (
                         <SelectItem value="" disabled>Carregando períodos...</SelectItem>
                       ) : (

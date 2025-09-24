@@ -62,6 +62,7 @@ interface AtividadeFormProps {
   onSubmit: (values: AtividadeFormValues) => void;
   initialData?: Atividade | null;
   isLoading?: boolean;
+  preselectedKeyResultId?: string; // NOVO: Prop para pré-selecionar o KR
 }
 
 export const AtividadeForm: React.FC<AtividadeFormProps> = ({
@@ -70,6 +71,7 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
   onSubmit,
   initialData,
   isLoading,
+  preselectedKeyResultId, // NOVO: Receber a prop
 }) => {
   const form = useForm<AtividadeFormValues>({
     resolver: zodResolver(formSchema),
@@ -78,7 +80,7 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
       descricao: initialData?.descricao || "",
       due_date: initialData?.due_date ? new Date(initialData.due_date) : null,
       status: initialData?.status || "todo",
-      key_result_id: initialData?.key_result_id || "",
+      key_result_id: initialData?.key_result_id || preselectedKeyResultId || "", // Usar preselectedKeyResultId
       user_id: initialData?.user_id || "",
     },
   });
@@ -120,11 +122,11 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
         descricao: "",
         due_date: null,
         status: "todo",
-        key_result_id: "",
+        key_result_id: preselectedKeyResultId || "", // Usar preselectedKeyResultId aqui também
         user_id: "",
       });
     }
-  }, [initialData, form]);
+  }, [initialData, form, preselectedKeyResultId]); // Adicionar preselectedKeyResultId como dependência
 
   const handleSubmit = (values: AtividadeFormValues) => {
     onSubmit(values);
@@ -134,7 +136,7 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
         descricao: "",
         due_date: null,
         status: "todo",
-        key_result_id: "",
+        key_result_id: preselectedKeyResultId || "", // Manter o KR pré-selecionado após o reset
         user_id: "",
       });
     }

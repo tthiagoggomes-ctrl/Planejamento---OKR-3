@@ -895,6 +895,7 @@ const Objetivos = () => {
         onSubmit={handleCreateOrUpdateAtividade}
         initialData={editingAtividade}
         isLoading={createAtividadeMutation.isPending || updateAtividadeMutation.isPending}
+        preselectedKeyResultId={selectedKeyResultForAtividade?.id} {/* NOVO: Passando o ID do KR */}
       />
 
       {/* Atividade Delete Confirmation */}

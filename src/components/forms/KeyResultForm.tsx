@@ -110,6 +110,19 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
     }
   }, [initialData, form]);
 
+  // Watch for changes in the 'tipo' field
+  const krType = form.watch("tipo");
+
+  // Effect to set valor_meta to 100 when tipo is 'percentage'
+  React.useEffect(() => {
+    if (krType === "percentage") {
+      form.setValue("valor_meta", 100, { shouldValidate: true });
+      form.setValue("unidade", "%", { shouldValidate: true }); // Also set unit to %
+    } else if (form.getValues("unidade") === "%") {
+      form.setValue("unidade", "", { shouldValidate: true }); // Clear unit if not percentage
+    }
+  }, [krType, form]);
+
   const handleSubmit = (values: KeyResultFormValues) => {
     onSubmit(values);
     if (!initialData) {

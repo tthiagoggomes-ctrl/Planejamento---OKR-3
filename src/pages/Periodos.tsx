@@ -73,10 +73,10 @@ const Periodos = () => {
     quarterlyMap.forEach((quarters) => {
       quarters.sort((a, b) => {
         const getQuarterOrder = (name: string) => {
-          if (name.includes('Q1')) return 1;
-          if (name.includes('Q2')) return 2;
-          if (name.includes('Q3')) return 3;
-          if (name.includes('Q4')) return 4;
+          if (name.includes('1º Trimestre')) return 1;
+          if (name.includes('2º Trimestre')) return 2;
+          if (name.includes('3º Trimestre')) return 3;
+          if (name.includes('4º Trimestre')) return 4;
           return 99;
         };
         return getQuarterOrder(a.nome) - getQuarterOrder(b.nome);
@@ -246,30 +246,6 @@ const Periodos = () => {
                   <TableHead>
                     <Button
                       variant="ghost"
-                      onClick={() => handleSort('start_date')}
-                      className="flex items-center px-0 py-0 h-auto"
-                    >
-                      Início
-                      {sortBy === 'start_date' && (
-                        sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
-                      )}
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSort('end_date')}
-                      className="flex items-center px-0 py-0 h-auto"
-                    >
-                      Término
-                      {sortBy === 'end_date' && (
-                        sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
-                      )}
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
                       onClick={() => handleSort('status')}
                       className="flex items-center px-0 py-0 h-auto"
                     >
@@ -301,8 +277,6 @@ const Periodos = () => {
                         </Button>
                       </TableCell>
                       <TableCell className="font-medium">{annualPeriod.nome}</TableCell>
-                      <TableCell>{format(new Date(annualPeriod.start_date), "PPP", { locale: ptBR })}</TableCell>
-                      <TableCell>{format(new Date(annualPeriod.end_date), "PPP", { locale: ptBR })}</TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                           annualPeriod.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
@@ -332,7 +306,7 @@ const Periodos = () => {
                     </TableRow>
                     {expandedAnnualPeriods.has(annualPeriod.id) && (
                       <TableRow>
-                        <TableCell colSpan={6} className="p-0">
+                        <TableCell colSpan={4} className="p-0"> {/* Adjusted colSpan */}
                           <div className="bg-gray-100 dark:bg-gray-700 p-4 border-t border-b">
                             <div className="flex justify-between items-center mb-3">
                               <h4 className="text-md font-semibold">Trimestres para "{annualPeriod.nome}"</h4>
@@ -359,30 +333,6 @@ const Periodos = () => {
                                     <TableHead>
                                       <Button
                                         variant="ghost"
-                                        onClick={() => handleSort('start_date')}
-                                        className="flex items-center px-0 py-0 h-auto"
-                                      >
-                                        Início
-                                        {sortBy === 'start_date' && (
-                                          sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
-                                        )}
-                                      </Button>
-                                    </TableHead>
-                                    <TableHead>
-                                      <Button
-                                        variant="ghost"
-                                        onClick={() => handleSort('end_date')}
-                                        className="flex items-center px-0 py-0 h-auto"
-                                      >
-                                        Término
-                                        {sortBy === 'end_date' && (
-                                          sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
-                                        )}
-                                      </Button>
-                                    </TableHead>
-                                    <TableHead>
-                                      <Button
-                                        variant="ghost"
                                         onClick={() => handleSort('status')}
                                         className="flex items-center px-0 py-0 h-auto"
                                       >
@@ -399,8 +349,6 @@ const Periodos = () => {
                                   {quarterlyPeriodsMap.get(annualPeriod.id)?.map((quarterPeriod) => (
                                     <TableRow key={quarterPeriod.id}>
                                       <TableCell className="font-medium pl-8">{quarterPeriod.nome}</TableCell>
-                                      <TableCell>{format(new Date(quarterPeriod.start_date), "PPP", { locale: ptBR })}</TableCell>
-                                      <TableCell>{format(new Date(quarterPeriod.end_date), "PPP", { locale: ptBR })}</TableCell>
                                       <TableCell>
                                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                           quarterPeriod.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'

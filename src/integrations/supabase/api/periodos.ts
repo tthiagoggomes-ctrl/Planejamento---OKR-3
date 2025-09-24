@@ -1,6 +1,6 @@
 import { supabase } from '../client';
 import { showError, showSuccess } from '@/utils/toast';
-import { getYear } from 'date-fns'; // Importar funções de data
+import { getYear, format } from 'date-fns'; // Importar funções de data
 
 export type PeriodoStatus = 'active' | 'archived';
 
@@ -64,10 +64,10 @@ export const getPeriodos = async (params?: GetPeriodosParams): Promise<Periodo[]
     // Then sort by period type (Anual, Q1, Q2, Q3, Q4)
     const getPeriodTypeOrder = (name: string) => {
       if (name.includes('Anual')) return 0;
-      if (name.includes('Q1')) return 1;
-      if (name.includes('Q2')) return 2;
-      if (name.includes('Q3')) return 3;
-      if (name.includes('Q4')) return 4;
+      if (name.includes('1º Trimestre')) return 1;
+      if (name.includes('2º Trimestre')) return 2;
+      if (name.includes('3º Trimestre')) return 3;
+      if (name.includes('4º Trimestre')) return 4;
       return 99; // Fallback for unknown types
     };
 
@@ -94,6 +94,7 @@ export const createPeriodo = async (
 ): Promise<Periodo | null> => {
   let finalStartDate = start_date;
   let finalEndDate = end_date;
+  let finalNome = nome;
   let year: number;
 
   // Se o período for anual (parent_id é null), fixar as datas e extrair o ano do nome
@@ -107,6 +108,7 @@ export const createPeriodo = async (
 
     finalStartDate = fixedAnnualStartDate.toISOString();
     finalEndDate = fixedAnnualEndDate.toISOString();
+    finalNome = `Anual ${year} - Janeiro a Dezembro ${year}`; // NOVO: Formato de nome
   } else {
     // Para trimestres, o ano é derivado do período pai ou do nome, mas as datas são fixas
     const yearMatch = nome.match(/\d{4}/);
@@ -115,7 +117,7 @@ export const createPeriodo = async (
 
   const { data, error } = await supabase
     .from('periodos')
-    .insert({ nome, start_date: finalStartDate, end_date: finalEndDate, status, parent_id })
+    .insert({ nome: finalNome, start_date: finalStartDate, end_date: finalEndDate, status, parent_id })
     .select()
     .single();
 
@@ -132,19 +134,24 @@ export const createPeriodo = async (
     const annualPeriodId = createdPeriod.id;
     
     const quartersToCreate = [
-      { name: `1º Trimestre ${year}`, start: new Date(year, 0, 1, 0, 0, 0, 0), end: new Date(year, 2, 31, 23, 59, 59, 999) }, // Jan 1 - Mar 31 local time
-      { name: `2º Trimestre ${year}`, start: new Date(year, 3, 1, 0, 0, 0, 0), end: new Date(year, 5, 30, 23, 59, 59, 999) }, // Apr 1 - Jun 30 local time
-      { name: `3º Trimestre ${year}`, start: new Date(year, 6, 1, 0, 0, 0, 0), end: new Date(year, 8, 30, 23, 59, 59, 999) }, // Jul 1 - Sep 30 local time
-      { name: `4º Trimestre ${year}`, start: new Date(year, 9, 1, 0, 0, 0, 0), end: new Date(year, 11, 31, 23, 59, 59, 999) }, // Oct 1 - Dec 31 local time
+      { quarterNum: 1, startMonth: 0, endMonth: 2 }, // Jan-Mar
+      { quarterNum: 2, startMonth: 3, endMonth: 5 }, // Apr-Jun
+      { quarterNum: 3, startMonth: 6, endMonth: 8 }, // Jul-Sep
+      { quarterNum: 4, startMonth: 9, endMonth: 11 }, // Oct-Dec
     ];
 
     for (const quarter of quartersToCreate) {
+      const quarterStartDate = new Date(year, quarter.startMonth, 1, 0, 0, 0, 0);
+      const quarterEndDate = new Date(year, quarter.endMonth + 1, 0, 23, 59, 59, 999); // Last day of the month
+
+      const quarterName = `${quarter.quarterNum}º Trimestre ${year} - ${format(quarterStartDate, 'MMMM', { locale: require('date-fns/locale/pt-BR') })} a ${format(quarterEndDate, 'MMMM', { locale: require('date-fns/locale/pt-BR') })} ${year}`;
+
       const { error: quarterError } = await supabase
         .from('periodos')
         .insert({
-          nome: quarter.name,
-          start_date: quarter.start.toISOString(),
-          end_date: quarter.end.toISOString(),
+          nome: quarterName,
+          start_date: quarterStartDate.toISOString(),
+          end_date: quarterEndDate.toISOString(),
           status: 'active',
           parent_id: annualPeriodId,
         });
@@ -166,9 +173,43 @@ export const updatePeriodo = async (
   status: PeriodoStatus,
   parent_id: string | null = null
 ): Promise<Periodo | null> => {
+  let finalNome = nome;
+  let finalStartDate = start_date;
+  let finalEndDate = end_date;
+
+  // If it's an annual period (or being updated to be one), re-derive its name and dates
+  if (parent_id === null) {
+    const yearMatch = nome.match(/\d{4}/);
+    const year = yearMatch ? parseInt(yearMatch[0], 10) : getYear(new Date(start_date));
+    finalNome = `Anual ${year} - Janeiro a Dezembro ${year}`;
+    finalStartDate = new Date(year, 0, 1, 0, 0, 0, 0).toISOString();
+    finalEndDate = new Date(year, 11, 31, 23, 59, 59, 999).toISOString();
+  } else {
+    // For quarterly periods, if start_date and end_date are provided, re-derive name
+    const startDateObj = new Date(start_date);
+    const endDateObj = new Date(end_date);
+    const year = getYear(startDateObj);
+    const startMonthName = format(startDateObj, 'MMMM', { locale: require('date-fns/locale/pt-BR') });
+    const endMonthName = format(endDateObj, 'MMMM', { locale: require('date-fns/locale/pt-BR') });
+
+    // Attempt to infer quarter number from name if it exists, otherwise default
+    let quarterNum = 0;
+    if (nome.includes('1º Trimestre')) quarterNum = 1;
+    else if (nome.includes('2º Trimestre')) quarterNum = 2;
+    else if (nome.includes('3º Trimestre')) quarterNum = 3;
+    else if (nome.includes('4º Trimestre')) quarterNum = 4;
+
+    if (quarterNum > 0) {
+      finalNome = `${quarterNum}º Trimestre ${year} - ${startMonthName} a ${endMonthName} ${year}`;
+    } else {
+      // Fallback if quarter number cannot be inferred
+      finalNome = `${startMonthName} a ${endMonthName} ${year}`;
+    }
+  }
+
   const { data, error } = await supabase
     .from('periodos')
-    .update({ nome, start_date, end_date, status, parent_id, updated_at: new Date().toISOString() })
+    .update({ nome: finalNome, start_date: finalStartDate, end_date: finalEndDate, status, parent_id, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single();

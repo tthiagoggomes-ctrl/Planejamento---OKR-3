@@ -32,7 +32,7 @@ import { Periodo, PeriodoStatus } from "@/integrations/supabase/api/periodos";
 import { Loader2, CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, parse, isValid } from "date-fns";
+import { format, parse, isValid, getYear, getMonth } from "date-fns"; // Import getMonth
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
@@ -131,6 +131,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
     }
   }, [initialData, form, parentPeriodIdForNew]);
 
+  // Effect to handle annual period name and date auto-generation
   React.useEffect(() => {
     if (isAnnualPeriod) {
       const nomeValue = form.getValues('nome');
@@ -145,14 +146,57 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
         form.setValue('end_date', newEndDate);
         setStartDateString(format(newStartDate, "dd/MM/yyyy", { locale: ptBR }));
         setEndDateString(format(newEndDate, "dd/MM/yyyy", { locale: ptBR }));
+        
+        // Auto-set name for annual period
+        form.setValue('nome', `Anual ${year} - Janeiro a Dezembro ${year}`);
       } else {
         form.setValue('start_date', undefined);
         form.setValue('end_date', undefined);
         setStartDateString("");
         setEndDateString("");
+        form.setValue('nome', ''); // Clear name if year is not found
       }
     }
-  }, [form.watch('nome'), isAnnualPeriod]);
+  }, [form.watch('nome'), isAnnualPeriod]); // Watch 'nome' to update dates for annual periods
+
+  // Effect to handle quarterly period name auto-generation based on dates
+  React.useEffect(() => {
+    if (!isAnnualPeriod) {
+      const startDate = form.watch('start_date');
+      const endDate = form.watch('end_date');
+
+      if (startDate && endDate && isValid(startDate) && isValid(endDate)) {
+        const year = getYear(startDate);
+        const startMonthName = format(startDate, 'MMMM', { locale: ptBR });
+        const endMonthName = format(endDate, 'MMMM', { locale: ptBR });
+
+        // Attempt to infer quarter number from existing name if editing, or from months
+        let quarterNum = 0;
+        const currentNome = form.getValues('nome');
+        if (currentNome.includes('1º Trimestre')) quarterNum = 1;
+        else if (currentNome.includes('2º Trimestre')) quarterNum = 2;
+        else if (currentNome.includes('3º Trimestre')) quarterNum = 3;
+        else if (currentNome.includes('4º Trimestre')) quarterNum = 4;
+        else { // Infer from months if not already set
+          const startMonth = getMonth(startDate);
+          if (startMonth >= 0 && startMonth <= 2) quarterNum = 1; // Jan-Mar
+          else if (startMonth >= 3 && startMonth <= 5) quarterNum = 2; // Apr-Jun
+          else if (startMonth >= 6 && startMonth <= 8) quarterNum = 3; // Jul-Sep
+          else if (startMonth >= 9 && startMonth <= 11) quarterNum = 4; // Oct-Dec
+        }
+
+        if (quarterNum > 0) {
+          form.setValue('nome', `${quarterNum}º Trimestre ${year} - ${startMonthName} a ${endMonthName} ${year}`);
+        } else {
+          form.setValue('nome', `${startMonthName} a ${endMonthName} ${year}`);
+        }
+      } else {
+        // If dates are invalid or not set, clear the name for quarters
+        form.setValue('nome', '');
+      }
+    }
+  }, [form.watch('start_date'), form.watch('end_date'), isAnnualPeriod]);
+
 
   const handleSubmit = (values: PeriodoFormValues) => {
     onSubmit(values);
@@ -191,7 +235,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                 <FormItem>
                   <FormLabel>Nome do Período</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Anual 2025, Q1 2025" {...field} />
+                    <Input placeholder="Ex: Anual 2025, Q1 2025" {...field} disabled={isAnnualPeriod} /> {/* Disable for annual */}
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } = "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Objetivo } from "@/integrations/supabase/api/objetivos";
 import { Area, getAreas } from "@/integrations/supabase/api/areas";
-import { Periodo, getPeriodos } from "@/integrations/supabase/api/periodos"; // Import Periodo and getPeriodos
+import { Periodo, getPeriodos } from "@/integrations/supabase/api/periodos";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -173,7 +173,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
                         <SelectValue placeholder="Selecione o período" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px] overflow-y-auto"> {/* Adicionado max-h e overflow-y-auto */}
                       {isLoadingPeriods ? (
                         <SelectItem value="" disabled>Carregando períodos...</SelectItem>
                       ) : (

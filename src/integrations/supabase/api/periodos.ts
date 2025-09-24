@@ -9,12 +9,13 @@ export interface Periodo {
   start_date: string; // ISO date string
   end_date: string;   // ISO date string
   status: PeriodoStatus;
+  parent_id?: string | null; // NOVO: Adicionado parent_id
   created_at?: string;
   updated_at?: string;
 }
 
 export const getPeriodos = async (): Promise<Periodo[] | null> => {
-  const { data, error } = await supabase.from('periodos').select('*'); // Fetch all periods without initial ordering
+  const { data, error } = await supabase.from('periodos').select('*');
   if (error) {
     console.error('Error fetching periods:', error.message);
     showError('Erro ao carregar períodos.');
@@ -23,13 +24,21 @@ export const getPeriodos = async (): Promise<Periodo[] | null> => {
 
   if (!data) return [];
 
-  // Custom sorting logic
+  // Custom sorting logic to prioritize annual periods and then quarters
   const sortedData = data.sort((a, b) => {
-    // Extract year from 'nome' (e.g., "Q1 2025" -> 2025, "Anual 2025" -> 2025)
+    // Sort by year descending first
     const yearA = parseInt(a.nome.match(/\d{4}/)?.[0] || '0', 10);
     const yearB = parseInt(b.nome.match(/\d{4}/)?.[0] || '0', 10);
 
-    // Define order for period types
+    if (yearA !== yearB) {
+      return yearB - yearA;
+    }
+
+    // Then sort by parent_id (nulls first for annual periods)
+    if (a.parent_id === null && b.parent_id !== null) return -1;
+    if (a.parent_id !== null && b.parent_id === null) return 1;
+
+    // Then sort by period type (Anual, Q1, Q2, Q3, Q4)
     const getPeriodTypeOrder = (name: string) => {
       if (name.includes('Anual')) return 0;
       if (name.includes('Q1')) return 1;
@@ -42,13 +51,12 @@ export const getPeriodos = async (): Promise<Periodo[] | null> => {
     const typeOrderA = getPeriodTypeOrder(a.nome);
     const typeOrderB = getPeriodTypeOrder(b.nome);
 
-    // Primary sort: year descending
-    if (yearA !== yearB) {
-      return yearB - yearA;
+    if (typeOrderA !== typeOrderB) {
+      return typeOrderA - typeOrderB;
     }
 
-    // Secondary sort: period type ascending (Anual, Q1, Q2, Q3, Q4)
-    return typeOrderA - typeOrderB;
+    // Finally, sort by name alphabetically if all else is equal
+    return a.nome.localeCompare(b.nome);
   });
 
   return sortedData;
@@ -58,11 +66,12 @@ export const createPeriodo = async (
   nome: string,
   start_date: string,
   end_date: string,
-  status: PeriodoStatus
+  status: PeriodoStatus,
+  parent_id: string | null = null // NOVO: Adicionado parent_id
 ): Promise<Periodo | null> => {
   const { data, error } = await supabase
     .from('periodos')
-    .insert({ nome, start_date, end_date, status })
+    .insert({ nome, start_date, end_date, status, parent_id }) // NOVO: Inserindo parent_id
     .select()
     .single();
   if (error) {
@@ -78,11 +87,12 @@ export const updatePeriodo = async (
   nome: string,
   start_date: string,
   end_date: string,
-  status: PeriodoStatus
+  status: PeriodoStatus,
+  parent_id: string | null = null // NOVO: Adicionado parent_id
 ): Promise<Periodo | null> => {
   const { data, error } = await supabase
     .from('periodos')
-    .update({ nome, start_date, end_date, status, updated_at: new Date().toISOString() })
+    .update({ nome, start_date, end_date, status, parent_id, updated_at: new Date().toISOString() }) // NOVO: Atualizando parent_id
     .eq('id', id)
     .select()
     .single();

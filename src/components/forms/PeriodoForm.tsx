@@ -66,6 +66,7 @@ const formSchema = z.object({
   status: z.enum(['active', 'archived'], {
     message: "Selecione um status válido.",
   }),
+  parent_id: z.string().uuid().nullable().optional(), // NOVO: parent_id é opcional
 }).refine((data) => data.end_date >= data.start_date, {
   message: "A data de término não pode ser anterior à data de início.",
   path: ["end_date"],
@@ -79,6 +80,7 @@ interface PeriodoFormProps {
   onSubmit: (values: PeriodoFormValues) => void;
   initialData?: Periodo | null;
   isLoading?: boolean;
+  parentPeriodIdForNew?: string | null; // NOVO: Para preencher parent_id ao criar um trimestre
 }
 
 export const PeriodoForm: React.FC<PeriodoFormProps> = ({
@@ -87,6 +89,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
   onSubmit,
   initialData,
   isLoading,
+  parentPeriodIdForNew = null, // Default to null
 }) => {
   const form = useForm<PeriodoFormValues>({
     resolver: zodResolver(formSchema),
@@ -95,6 +98,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
       start_date: initialData?.start_date ? new Date(initialData.start_date) : undefined,
       end_date: initialData?.end_date ? new Date(initialData.end_date) : undefined,
       status: initialData?.status || "active",
+      parent_id: initialData?.parent_id || parentPeriodIdForNew, // NOVO: Usar parentPeriodIdForNew
     },
   });
 
@@ -108,20 +112,22 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
         start_date: new Date(initialData.start_date),
         end_date: new Date(initialData.end_date),
         status: initialData.status,
+        parent_id: initialData.parent_id,
       });
       setStartDateString(format(new Date(initialData.start_date), "dd/MM/yyyy", { locale: ptBR }));
-      setEndDateString(format(new Date(initialData.end_date), "dd/MM/yyyy", { locale: ptBR }));
+      setEndDateString(format(new Date(initialData.end_date), "dd/MM/yyyy", { locale: ptBR }) );
     } else {
       form.reset({
         nome: "",
         start_date: undefined,
         end_date: undefined,
         status: "active",
+        parent_id: parentPeriodIdForNew, // NOVO: Resetar com parentPeriodIdForNew
       });
       setStartDateString("");
       setEndDateString("");
     }
-  }, [initialData, form]);
+  }, [initialData, form, parentPeriodIdForNew]);
 
   const handleSubmit = (values: PeriodoFormValues) => {
     onSubmit(values);
@@ -131,6 +137,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
         start_date: undefined,
         end_date: undefined,
         status: "active",
+        parent_id: parentPeriodIdForNew, // NOVO: Resetar com parentPeriodIdForNew
       });
       setStartDateString("");
       setEndDateString("");
@@ -146,7 +153,9 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{initialData ? "Editar Período" : "Criar Novo Período"}</DialogTitle>
+          <DialogTitle>
+            {initialData ? "Editar Período" : (parentPeriodIdForNew ? "Criar Novo Trimestre" : "Criar Novo Período Anual")}
+          </DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -157,7 +166,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                 <FormItem>
                   <FormLabel>Nome do Período</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Q1 2024, Anual 2024" {...field} />
+                    <Input placeholder="Ex: Anual 2025, Q1 2025" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -281,6 +290,22 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                 </FormItem>
               )}
             />
+            {/* Hidden parent_id field if it's a new quarter */}
+            {parentPeriodIdForNew && !initialData && (
+              <FormField
+                control={form.control}
+                name="parent_id"
+                render={({ field }) => (
+                  <FormItem className="hidden">
+                    <FormLabel>Parent ID</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             <DialogFooter>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

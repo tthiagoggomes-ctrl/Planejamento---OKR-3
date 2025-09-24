@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, List, Kanban, StopCircle } from "lucide-react"; // Adicionado StopCircle
+import { PlusCircle, Edit, Trash2, Loader2, List, Kanban, StopCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -27,8 +27,8 @@ import { AtividadeForm, AtividadeFormValues } from "@/components/forms/Atividade
 import { getAtividades, createAtividade, updateAtividade, deleteAtividade, Atividade } from "@/integrations/supabase/api/atividades";
 import { showSuccess, showError } from "@/utils/toast";
 import { format } from "date-fns";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"; // Import ToggleGroup
-import { KanbanBoard } from "@/components/KanbanBoard"; // Import KanbanBoard
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { KanbanBoard } from "@/components/KanbanBoard";
 
 const Atividades = () => {
   const queryClient = useQueryClient();
@@ -36,7 +36,7 @@ const Atividades = () => {
   const [editingAtividade, setEditingAtividade] = React.useState<Atividade | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [atividadeToDelete, setAtividadeToDelete] = React.useState<string | null>(null);
-  const [viewMode, setViewMode] = React.useState<'list' | 'kanban'>('list'); // New state for view mode
+  const [viewMode, setViewMode] = React.useState<'list' | 'kanban'>('kanban'); // Alterado para 'kanban' como padrão
 
   const { data: atividades, isLoading, error } = useQuery<Atividade[], Error>({
     queryKey: ["atividades"],

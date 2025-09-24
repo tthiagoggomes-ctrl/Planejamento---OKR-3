@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { useState, useEffect, useMemo } from "react"; // Usar imports nomeados para hooks
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,19 +52,19 @@ const Objetivos = () => {
   const location = useLocation();
 
   // State for Objetivo management
-  const [isObjetivoFormOpen, setIsObjetivoFormOpen] = React.useState(false);
-  const [editingObjetivo, setEditingObjetivo] = React.useState<Objetivo | null>(null);
-  const [isObjetivoDeleteDialogOpen, setIsObjetivoDeleteDialogOpen] = React.useState(false);
-  const [objetivoToDelete, setObjetivoToDelete] = React.useState<string | null>(null);
-  const [expandedObjetivos, setExpandedObjetivos] = React.useState<Set<string>>(new Set()); // Adicionado: Estado para expandir/colapsar objetivos
+  const [isObjetivoFormOpen, setIsObjetivoFormOpen] = useState(false);
+  const [editingObjetivo, setEditingObjetivo] = useState<Objetivo | null>(null);
+  const [isObjetivoDeleteDialogOpen, setIsObjetivoDeleteDialogOpen] = useState(false);
+  const [objetivoToDelete, setObjetivoToDelete] = useState<string | null>(null);
+  const [expandedObjetivos, setExpandedObjetivos] = useState<Set<string>>(new Set()); // Adicionado: Estado para expandir/colapsar objetivos
 
   // State for Key Result management
-  const [isKeyResultFormOpen, setIsKeyResultFormOpen] = React.useState(false);
-  const [editingKeyResult, setEditingKeyResult] = React.useState<KeyResult | null>(null);
-  const [selectedObjetivoForKR, setSelectedObjetivoForKR] = React.useState<Objetivo | null>(null);
-  const [isKeyResultDeleteDialogOpen, setIsKeyResultDeleteDialogOpen] = React.useState(false);
-  const [keyResultToDelete, setKeyResultToDelete] = React.useState<string | null>(null);
-  const [expandedKeyResults, setExpandedKeyResults] = React.useState<Set<string>>(() => {
+  const [isKeyResultFormOpen, setIsKeyResultFormOpen] = useState(false);
+  const [editingKeyResult, setEditingKeyResult] = useState<KeyResult | null>(null);
+  const [selectedObjetivoForKR, setSelectedObjetivoForKR] = useState<Objetivo | null>(null);
+  const [isKeyResultDeleteDialogOpen, setIsKeyResultDeleteDialogOpen] = useState(false);
+  const [keyResultToDelete, setKeyResultToDelete] = useState<string | null>(null);
+  const [expandedKeyResults, setExpandedKeyResults] = useState<Set<string>>(() => {
     const initialState = new Set<string>();
     if (location.state && (location.state as any).keyResultId) {
       initialState.add((location.state as any).keyResultId);
@@ -73,22 +73,22 @@ const Objetivos = () => {
   });
 
   // State for Activity management
-  const [isAtividadeFormOpen, setIsAtividadeFormOpen] = React.useState(false);
-  const [editingAtividade, setEditingAtividade] = React.useState<Atividade | null>(null);
-  const [selectedKeyResultForAtividade, setSelectedKeyResultForAtividade] = React.useState<KeyResult | null>(null);
-  const [isAtividadeDeleteDialogOpen, setIsAtividadeDeleteDialogOpen] = React.useState(false);
-  const [atividadeToDelete, setAtividadeToDelete] = React.useState<string | null>(null);
+  const [isAtividadeFormOpen, setIsAtividadeFormOpen] = useState(false);
+  const [editingAtividade, setEditingAtividade] = useState<Atividade | null>(null);
+  const [selectedKeyResultForAtividade, setSelectedKeyResultForAtividade] = useState<KeyResult | null>(null);
+  const [isAtividadeDeleteDialogOpen, setIsAtividadeDeleteDialogOpen] = useState(false);
+  const [atividadeToDelete, setAtividadeToDelete] = useState<string | null>(null);
 
   // State for filters and sorting
-  const [statusFilter, setStatusFilter] = React.useState<Objetivo['status'] | 'all'>('all');
-  const [areaFilter, setAreaFilter] = React.useState<string | 'all'>('all');
-  const [searchQuery, setSearchQuery] = React.useState('');
+  const [statusFilter, setStatusFilter] = useState<Objetivo['status'] | 'all'>('all');
+  const [areaFilter, setAreaFilter] = useState<string | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
-  const [sortBy, setSortBy] = React.useState<keyof Objetivo | 'area_name'>('created_at');
-  const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
+  const [sortBy, setSortBy] = useState<keyof Objetivo | 'area_name'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Effect to apply area filter from navigation state
-  React.useEffect(() => {
+  useEffect(() => {
     if (location.state && (location.state as any).areaId !== undefined) {
       const areaIdFromState = (location.state as any).areaId;
       setAreaFilter(areaIdFromState === null ? 'null' : areaIdFromState);
@@ -137,7 +137,7 @@ const Objetivos = () => {
   });
 
   // NEW: Effect to expand objective and KR if keyResultId is in location.state
-  React.useEffect(() => {
+  useEffect(() => {
     if (location.state && (location.state as any).keyResultId && keyResultsMap && objetivos) {
       const targetKeyResultId = (location.state as any).keyResultId;
       let foundObjetivoId: string | null = null;
@@ -523,7 +523,7 @@ const Objetivos = () => {
   ];
 
   return (
-    <React.Fragment>
+    <>
       <div className="container mx-auto py-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -918,7 +918,7 @@ const Objetivos = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </React.Fragment>
+    </>
   );
 };
 

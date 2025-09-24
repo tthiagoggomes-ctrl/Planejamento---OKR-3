@@ -123,8 +123,8 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
       if (parentPeriodIdForNew === null) {
         const currentYear = new Date().getFullYear();
         const defaultNome = `Anual ${currentYear} - Janeiro a Dezembro ${currentYear}`;
-        const newStartDate = new Date(currentYear, 0, 1, 0, 0, 0, 0);
-        const newEndDate = new Date(currentYear, 11, 31, 23, 59, 59, 999);
+        const newStartDate = new Date(currentYear, 0, 1, 0, 0, 0, 0); // January 1st, 00:00:00 local time
+        const newEndDate = new Date(currentYear, 11, 31, 23, 59, 59, 999); // December 31st, 23:59:59.999 local time
 
         form.reset({
           nome: defaultNome,

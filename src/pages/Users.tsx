@@ -60,7 +60,8 @@ const Users = () => {
       values.first_name,
       values.last_name,
       values.area_id,
-      values.permissao
+      values.permissao,
+      values.selected_permissions // Passar as permissões selecionadas
     ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -73,8 +74,8 @@ const Users = () => {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ id, first_name, last_name, area_id, permissao, status }: UpdateUserMutationArgs) => // Usando UpdateUserMutationArgs
-      updateUserProfile(id, first_name, last_name, area_id, permissao, status),
+    mutationFn: ({ id, first_name, last_name, area_id, permissao, status, selected_permissions }: UpdateUserMutationArgs) => // Usando UpdateUserMutationArgs
+      updateUserProfile(id, first_name, last_name, area_id, permissao, status, selected_permissions), // Passar as permissões selecionadas
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setIsFormOpen(false);
@@ -142,6 +143,7 @@ const Users = () => {
         area_id: values.area_id,
         permissao: values.permissao,
         status: values.status || 'active', // Garante que o status seja 'active' se não for fornecido (embora o formulário deva fornecer)
+        selected_permissions: values.selected_permissions, // Passar as permissões selecionadas
       });
     } else {
       createUserMutation.mutate({
@@ -152,6 +154,7 @@ const Users = () => {
         area_id: values.area_id,
         permissao: values.permissao,
         status: 'active', // Status padrão para novos usuários
+        selected_permissions: values.selected_permissions, // Passar as permissões selecionadas
       });
     }
   };

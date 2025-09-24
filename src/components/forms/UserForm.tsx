@@ -32,6 +32,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
+import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox
+import { Permission } from "@/hooks/use-user-permissions"; // Import Permission interface
+import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 
 export const userFormSchema = z.object({
   first_name: z.string().min(2, {
@@ -53,6 +56,7 @@ export const userFormSchema = z.object({
   status: z.enum(["active", "blocked"], {
     message: "Selecione um status válido.",
   }),
+  selected_permissions: z.array(z.string()).optional(), // New field for granular permissions
 });
 
 export type UserFormValues = z.infer<typeof userFormSchema>;
@@ -82,12 +86,43 @@ export const UserForm: React.FC<UserFormProps> = ({
       area_id: initialData?.area_id || null,
       permissao: initialData?.permissao || "usuario", // Default to 'usuario'
       status: initialData?.status || "active",
+      selected_permissions: [],
     },
   });
 
   const { data: areas, isLoading: isLoadingAreas } = useQuery<Area[], Error>({
     queryKey: ["areas"],
     queryFn: getAreas,
+  });
+
+  const { data: allPermissions, isLoading: isLoadingPermissions } = useQuery<Permission[], Error>({
+    queryKey: ["allPermissions"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('permissions').select('*');
+      if (error) {
+        console.error('Error fetching all permissions:', error.message);
+        return [];
+      }
+      return data;
+    },
+  });
+
+  const { data: currentUserPermissions, isLoading: isLoadingCurrentUserPermissions } = useQuery<string[], Error>({
+    queryKey: ["currentUserPermissions", initialData?.id],
+    queryFn: async () => {
+      if (!initialData?.id) return [];
+      const { data, error } = await supabase
+        .from('user_permissions')
+        .select('permission_id, permissions(resource, action)')
+        .eq('user_id', initialData.id);
+
+      if (error) {
+        console.error('Error fetching current user permissions:', error.message);
+        return [];
+      }
+      return data.map((up: any) => up.permissions ? `${up.permissions.resource}_${up.permissions.action}` : '');
+    },
+    enabled: !!initialData?.id,
   });
 
   React.useEffect(() => {
@@ -100,6 +135,7 @@ export const UserForm: React.FC<UserFormProps> = ({
         area_id: initialData.area_id,
         permissao: initialData.permissao,
         status: initialData.status,
+        selected_permissions: currentUserPermissions || [],
       });
     } else {
       form.reset({
@@ -110,9 +146,10 @@ export const UserForm: React.FC<UserFormProps> = ({
         area_id: null,
         permissao: "usuario", // Default to 'usuario' for new users
         status: "active",
+        selected_permissions: [],
       });
     }
-  }, [initialData, form]);
+  }, [initialData, form, currentUserPermissions]);
 
   const handleSubmit = (values: UserFormValues) => {
     onSubmit(values);
@@ -125,13 +162,35 @@ export const UserForm: React.FC<UserFormProps> = ({
         area_id: null,
         permissao: "usuario",
         status: "active",
+        selected_permissions: [],
       });
     }
   };
 
+  const groupedPermissions = React.useMemo(() => {
+    if (!allPermissions) return {};
+    return allPermissions.reduce((acc, perm) => {
+      if (!acc[perm.resource]) {
+        acc[perm.resource] = [];
+      }
+      acc[perm.resource].push(perm);
+      return acc;
+    }, {} as Record<string, Permission[]>);
+  }, [allPermissions]);
+
+  const permissionResources = [
+    { key: 'dashboard', label: 'Dashboard' },
+    { key: 'profile', label: 'Meu Perfil' },
+    { key: 'areas', label: 'Áreas' },
+    { key: 'usuarios', label: 'Usuários' },
+    { key: 'objetivos', label: 'Objetivos & KRs' },
+    { key: 'atividades', label: 'Atividades' },
+    { key: 'comentarios', label: 'Comentários' },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initialData ? "Editar Usuário" : "Criar Novo Usuário"}</DialogTitle>
         </DialogHeader>
@@ -227,7 +286,7 @@ export const UserForm: React.FC<UserFormProps> = ({
               name="permissao"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Permissão</FormLabel>
+                  <FormLabel>Permissão (Role)</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -269,8 +328,61 @@ export const UserForm: React.FC<UserFormProps> = ({
               )}
             />
             )}
+
+            {/* Granular Permissions Section */}
+            <h3 className="text-lg font-semibold mt-6 mb-3">Permissões Granulares</h3>
+            {isLoadingPermissions || isLoadingCurrentUserPermissions ? (
+              <div className="flex justify-center items-center h-24">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {permissionResources.map((resource) => (
+                  <div key={resource.key} className="border p-3 rounded-md">
+                    <h4 className="font-medium mb-2">{resource.label}</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {groupedPermissions[resource.key]?.map((perm) => {
+                        const permissionKey = `${perm.resource}_${perm.action}`;
+                        return (
+                          <FormField
+                            key={permissionKey}
+                            control={form.control}
+                            name="selected_permissions"
+                            render={({ field }) => {
+                              return (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(permissionKey)}
+                                      onCheckedChange={(checked) => {
+                                        const currentPermissions = field.value || [];
+                                        return checked
+                                          ? field.onChange([...currentPermissions, permissionKey])
+                                          : field.onChange(
+                                              currentPermissions.filter(
+                                                (value) => value !== permissionKey
+                                              )
+                                            );
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">
+                                    {perm.description}
+                                  </FormLabel>
+                                </FormItem>
+                              );
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <DialogFooter>
-              <Button type="submit" disabled={isLoading || isLoadingAreas}>
+              <Button type="submit" disabled={isLoading || isLoadingAreas || isLoadingPermissions || isLoadingCurrentUserPermissions}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? "Salvando..." : "Salvar"}
               </Button>

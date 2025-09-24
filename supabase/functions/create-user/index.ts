@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email, password, first_name, last_name, area_id, permissao } = await req.json();
+    const { email, password, first_name, last_name, area_id, permissao, selected_permissions } = await req.json();
 
     // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
@@ -58,6 +58,34 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
+    }
+
+    // Handle granular permissions
+    if (selected_permissions && selected_permissions.length > 0) {
+      // Fetch all available permissions to map selected_permissions (string keys) to permission_ids (UUIDs)
+      const { data: allPermissions, error: permissionsError } = await supabaseAdmin.from('permissions').select('id, resource, action');
+      if (permissionsError) {
+        console.error('Error fetching all permissions for new user:', permissionsError.message);
+        // Log error but don't fail user creation entirely if permissions can't be set
+      } else {
+        const permissionMap = new Map<string, string>(); // Map "resource_action" to "id"
+        allPermissions.forEach(p => permissionMap.set(`${p.resource}_${p.action}`, p.id));
+
+        const permissionsToInsert = selected_permissions
+          .map((key: string) => permissionMap.get(key))
+          .filter(Boolean) as string[];
+
+        if (permissionsToInsert.length > 0) {
+          const { error: insertPermissionsError } = await supabaseAdmin
+            .from('user_permissions')
+            .insert(permissionsToInsert.map(pid => ({ user_id: authData.user.id, permission_id: pid })));
+
+          if (insertPermissionsError) {
+            console.error('Error inserting new user granular permissions:', insertPermissionsError.message);
+            // Log error but don't fail user creation entirely
+          }
+        }
+      }
     }
 
     const newUserProfile = {

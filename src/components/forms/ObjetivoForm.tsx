@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Objetivo } from "@/integrations/supabase/api/objetivos";
 import { Area, getAreas } from "@/integrations/supabase/api/areas";
+import { Periodo, getPeriodos } from "@/integrations/supabase/api/periodos"; // Import Periodo and getPeriodos
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -81,6 +82,11 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
     queryFn: getAreas,
   });
 
+  const { data: periods, isLoading: isLoadingPeriods } = useQuery<Periodo[], Error>({
+    queryKey: ["periods"],
+    queryFn: getPeriodos,
+  });
+
   React.useEffect(() => {
     if (initialData) {
       form.reset({
@@ -114,7 +120,6 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
     }
   };
 
-  const periods = ["Q1 2024", "Q2 2024", "Q3 2024", "Q4 2024", "Anual 2024", "Q1 2025", "Q2 2025", "Q3 2025", "Q4 2025", "Anual 2025"];
   const statuses = [
     { value: "draft", label: "Rascunho" },
     { value: "active", label: "Ativo" },
@@ -169,11 +174,15 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {periods.map((period) => (
-                        <SelectItem key={period} value={period}>
-                          {period}
-                        </SelectItem>
-                      ))}
+                      {isLoadingPeriods ? (
+                        <SelectItem value="" disabled>Carregando períodos...</SelectItem>
+                      ) : (
+                        periods?.map((period) => (
+                          <SelectItem key={period.id} value={period.nome}>
+                            {period.nome}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -236,7 +245,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
               )}
             />
             <DialogFooter>
-              <Button type="submit" disabled={isLoading || isLoadingAreas}>
+              <Button type="submit" disabled={isLoading || isLoadingAreas || isLoadingPeriods}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? "Salvando..." : "Salvar"}
               </Button>

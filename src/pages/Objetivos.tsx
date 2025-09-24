@@ -523,400 +523,402 @@ const Objetivos = () => {
   ];
 
   return (
-    <div className="container mx-auto py-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-2xl font-bold">Gestão de Objetivos & KRs</CardTitle>
-          <Button onClick={() => { setEditingObjetivo(null); setIsObjetivoFormOpen(true); }}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Novo Objetivo
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-center gap-4 mb-4">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar objetivos..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
+    <React.Fragment>
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-2xl font-bold">Gestão de Objetivos & KRs</CardTitle>
+            <Button onClick={() => { setEditingObjetivo(null); setIsObjetivoFormOpen(true); }}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Novo Objetivo
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap items-center gap-4 mb-4">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar objetivos..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+
+              <Select value={statusFilter} onValueChange={(value: Objetivo['status'] | 'all') => setStatusFilter(value)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filtrar por Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  {statuses.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={areaFilter} onValueChange={(value: string | 'all') => setAreaFilter(value)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filtrar por Área" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Áreas</SelectItem>
+                  <SelectItem value="null">Nenhuma Área</SelectItem>
+                  {areas?.map((area) => (
+                    <SelectItem key={area.id} value={area.id}>{area.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button variant="outline" size="icon" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
+                {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+                <span className="sr-only">Alterar Ordem</span>
+              </Button>
             </div>
 
-            <Select value={statusFilter} onValueChange={(value: Objetivo['status'] | 'all') => setStatusFilter(value)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filtrar por Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Status</SelectItem>
-                {statuses.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={areaFilter} onValueChange={(value: string | 'all') => setAreaFilter(value)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filtrar por Área" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as Áreas</SelectItem>
-                <SelectItem value="null">Nenhuma Área</SelectItem>
-                {areas?.map((area) => (
-                  <SelectItem key={area.id} value={area.id}>{area.nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button variant="outline" size="icon" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
-              {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
-              <span className="sr-only">Alterar Ordem</span>
-            </Button>
-          </div>
-
-          {objetivos && objetivos.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]"></TableHead> {/* For expand/collapse button */}
-                  <TableHead>Título</TableHead>
-                  <TableHead>Área</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Progresso</TableHead> {/* New column for Objective progress */}
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {objetivos.map((objetivo) => {
-                  const objectiveProgress = calculateObjetivoOverallProgress(objetivo.id);
-                  return (
-                    <React.Fragment key={objetivo.id}>
-                      <TableRow>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => toggleObjetivoExpansion(objetivo.id)}
-                          >
-                            {expandedObjetivos.has(objetivo.id) ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4" />
-                            )}
-                            <span className="sr-only">Expandir/Colapsar KRs</span>
-                          </Button>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <Link to={`/objetivos/${objetivo.id}`} className="text-blue-600 hover:underline">
-                            {objetivo.titulo}
-                          </Link>
-                        </TableCell>
-                        <TableCell>{objetivo.area_name}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getObjetivoStatusBadgeClass(objetivo.status)}`}>
-                            {objetivo.status === 'draft' && 'Rascunho'}
-                            {objetivo.status === 'active' && 'Ativo'}
-                            {objetivo.status === 'completed' && 'Concluído'}
-                            {objetivo.status === 'archived' && 'Arquivado'}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress value={objectiveProgress} className="w-[100px]" />
-                            <span className="text-sm text-muted-foreground">{objectiveProgress}%</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEditObjetivoClick(objetivo)}
-                            className="mr-2"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Editar Objetivo</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteObjetivoClick(objetivo.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Excluir Objetivo</span>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                      {expandedObjetivos.has(objetivo.id) && (
+            {objetivos && objetivos.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]"></TableHead> {/* For expand/collapse button */}
+                    <TableHead>Título</TableHead>
+                    <TableHead>Área</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Progresso</TableHead> {/* New column for Objective progress */}
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {objetivos.map((objetivo) => {
+                    const objectiveProgress = calculateObjetivoOverallProgress(objetivo.id);
+                    return (
+                      <React.Fragment key={objetivo.id}>
                         <TableRow>
-                          <TableCell colSpan={6} className="p-0">
-                            <div className="bg-gray-50 dark:bg-gray-800 p-4 border-t border-b">
-                              <div className="flex justify-between items-center mb-3">
-                                <h4 className="text-lg font-semibold">Key Results para "{objetivo.titulo}"</h4>
-                                <Button size="sm" onClick={() => handleAddKeyResultClick(objetivo)}>
-                                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar KR
-                                </Button>
-                              </div>
-                              {isLoadingKeyResults ? (
-                                <div className="flex justify-center items-center py-4">
-                                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                                </div>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => toggleObjetivoExpansion(objetivo.id)}
+                            >
+                              {expandedObjetivos.has(objetivo.id) ? (
+                                <ChevronUp className="h-4 w-4" />
                               ) : (
-                                keyResultsMap?.get(objetivo.id)?.length > 0 ? (
-                                  <Table className="bg-white dark:bg-gray-900">
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead className="w-[50px]"></TableHead> {/* For expand/collapse button */}
-                                        <TableHead>Título do KR</TableHead>
-                                        <TableHead>Período</TableHead>
-                                        <TableHead>Tipo</TableHead>
-                                        <TableHead>Meta</TableHead>
-                                        <TableHead>Progresso (%)</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Ações</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {keyResultsMap.get(objetivo.id)?.map((kr) => {
-                                        const krProgress = calculateKeyResultProgress(kr);
-                                        return (
-                                          <React.Fragment key={kr.id}>
-                                            <TableRow>
-                                              <TableCell>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  onClick={() => toggleKeyResultExpansion(kr.id)}
-                                                >
-                                                  {expandedKeyResults.has(kr.id) ? (
-                                                    <ChevronUp className="h-4 w-4" />
-                                                  ) : (
-                                                    <ChevronDown className="h-4 w-4" />
-                                                  )}
-                                                  <span className="sr-only">Detalhar KR</span>
-                                                </Button>
-                                              </TableCell>
-                                              <TableCell className="font-medium">{kr.titulo}</TableCell>
-                                              <TableCell>{kr.periodo}</TableCell>
-                                              <TableCell>
-                                                {kr.tipo === 'numeric' && 'Numérico'}
-                                                {kr.tipo === 'boolean' && 'Booleano'}
-                                                {kr.tipo === 'percentage' && 'Porcentagem'}
-                                              </TableCell>
-                                              <TableCell>
-                                                {kr.valor_inicial} {kr.unidade} para {kr.valor_meta} {kr.unidade}
-                                              </TableCell>
-                                              <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                  <Progress value={krProgress} className="w-[80px]" />
-                                                  <span className="text-sm text-muted-foreground">{krProgress}%</span>
-                                                </div>
-                                              </TableCell>
-                                              <TableCell>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getKeyResultStatusBadgeClass(kr.status)}`}>
-                                                  {kr.status === 'on_track' && 'No Caminho'}
-                                                  {kr.status === 'at_risk' && 'Em Risco'}
-                                                  {kr.status === 'off_track' && 'Fora do Caminho'}
-                                                  {kr.status === 'completed' && 'Concluído'}
-                                                </span>
-                                              </TableCell>
-                                              <TableCell className="text-right">
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  onClick={() => handleEditKeyResultClick(kr, objetivo)}
-                                                  className="mr-2"
-                                                >
-                                                  <Edit className="h-4 w-4" />
-                                                  <span className="sr-only">Editar KR</span>
-                                                </Button>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  onClick={() => handleDeleteKeyResultClick(kr.id)}
-                                                >
-                                                  <Trash2 className="h-4 w-4" />
-                                                  <span className="sr-only">Excluir KR</span>
-                                                </Button>
-                                              </TableCell>
-                                            </TableRow>
-                                            {expandedKeyResults.has(kr.id) && (
-                                              <TableRow>
-                                                <TableCell colSpan={8} className="p-0">
-                                                  <div className="bg-gray-100 dark:bg-gray-700 p-4 border-t border-b">
-                                                    <div className="flex justify-between items-center mb-3">
-                                                      <h5 className="text-md font-semibold flex items-center">
-                                                        <ListTodo className="mr-2 h-4 w-4" /> Atividades para "{kr.titulo}"
-                                                      </h5>
-                                                      <Button size="sm" onClick={() => handleAddAtividadeClick(kr)}>
-                                                        <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Atividade
-                                                      </Button>
-                                                    </div>
-                                                    {kr.atividades && kr.atividades.length > 0 ? (
-                                                        <Table className="bg-white dark:bg-gray-900">
-                                                          <TableHeader>
-                                                            <TableRow>
-                                                              <TableHead>Título da Atividade</TableHead>
-                                                              <TableHead>Responsável</TableHead>
-                                                              <TableHead>Vencimento</TableHead>
-                                                              <TableHead>Status</TableHead>
-                                                              <TableHead className="text-right">Ações</TableHead>
-                                                            </TableRow>
-                                                          </TableHeader>
-                                                          <TableBody>
-                                                            {kr.atividades.map((atividade) => (
-                                                              <TableRow key={atividade.id}>
-                                                                <TableCell>{atividade.titulo}</TableCell>
-                                                                <TableCell>{atividade.assignee_name}</TableCell>
-                                                                <TableCell>
-                                                                  {atividade.due_date ? format(new Date(atividade.due_date), "PPP") : "N/A"}
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getAtividadeStatusBadgeClass(atividade.status)}`}>
-                                                                    {atividade.status === 'todo' && 'A Fazer'}
-                                                                    {atividade.status === 'in_progress' && 'Em Progresso'}
-                                                                    {atividade.status === 'done' && 'Concluído'}
-                                                                    {atividade.status === 'stopped' && 'Parado'}
-                                                                  </span>
-                                                                </TableCell>
-                                                                <TableCell className="text-right">
-                                                                  <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleEditAtividadeClick(atividade, kr)}
-                                                                    className="mr-2"
-                                                                  >
-                                                                    <Edit className="h-4 w-4" />
-                                                                    <span className="sr-only">Editar Atividade</span>
-                                                                  </Button>
-                                                                  <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleDeleteAtividadeClick(atividade.id)}
-                                                                  >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                    <span className="sr-only">Excluir Atividade</span>
-                                                                  </Button>
-                                                                </TableCell>
-                                                              </TableRow>
-                                                            ))}
-                                                          </TableBody>
-                                                        </Table>
-                                                      ) : (
-                                                        <p className="text-gray-600 text-center py-4">Nenhuma atividade cadastrada para este Key Result.</p>
-                                                      )}
-                                                  </div>
-                                                </TableCell>
-                                              </TableRow>
-                                            )}
-                                          </React.Fragment>
-                                        );
-                                      })}
-                                    </TableBody>
-                                  </Table>
-                                ) : (
-                                  <p className="text-gray-600 text-center py-4">Nenhum Key Result cadastrado para este objetivo.</p>
-                                )
+                                <ChevronDown className="h-4 w-4" />
                               )}
+                              <span className="sr-only">Expandir/Colapsar KRs</span>
+                            </Button>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <Link to={`/objetivos/${objetivo.id}`} className="text-blue-600 hover:underline">
+                              {objetivo.titulo}
+                            </Link>
+                          </TableCell>
+                          <TableCell>{objetivo.area_name}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getObjetivoStatusBadgeClass(objetivo.status)}`}>
+                              {objetivo.status === 'draft' && 'Rascunho'}
+                              {objetivo.status === 'active' && 'Ativo'}
+                              {objetivo.status === 'completed' && 'Concluído'}
+                              {objetivo.status === 'archived' && 'Arquivado'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Progress value={objectiveProgress} className="w-[100px]" />
+                              <span className="text-sm text-muted-foreground">{objectiveProgress}%</span>
                             </div>
                           </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditObjetivoClick(objetivo)}
+                              className="mr-2"
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span className="sr-only">Editar Objetivo</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteObjetivoClick(objetivo.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Excluir Objetivo</span>
+                            </Button>
+                          </TableCell>
                         </TableRow>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-gray-600">Nenhum objetivo cadastrado ainda.</p>
-          )}
-        </CardContent>
-      </Card>
+                        {expandedObjetivos.has(objetivo.id) && (
+                          <TableRow>
+                            <TableCell colSpan={6} className="p-0">
+                              <div className="bg-gray-50 dark:bg-gray-800 p-4 border-t border-b">
+                                <div className="flex justify-between items-center mb-3">
+                                  <h4 className="text-lg font-semibold">Key Results para "{objetivo.titulo}"</h4>
+                                  <Button size="sm" onClick={() => handleAddKeyResultClick(objetivo)}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar KR
+                                  </Button>
+                                </div>
+                                {isLoadingKeyResults ? (
+                                  <div className="flex justify-center items-center py-4">
+                                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                  </div>
+                                ) : (
+                                  keyResultsMap?.get(objetivo.id)?.length > 0 ? (
+                                    <Table className="bg-white dark:bg-gray-900">
+                                      <TableHeader>
+                                        <TableRow>
+                                          <TableHead className="w-[50px]"></TableHead> {/* For expand/collapse button */}
+                                          <TableHead>Título do KR</TableHead>
+                                          <TableHead>Período</TableHead>
+                                          <TableHead>Tipo</TableHead>
+                                          <TableHead>Meta</TableHead>
+                                          <TableHead>Progresso (%)</TableHead>
+                                          <TableHead>Status</TableHead>
+                                          <TableHead className="text-right">Ações</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {keyResultsMap.get(objetivo.id)?.map((kr) => {
+                                          const krProgress = calculateKeyResultProgress(kr);
+                                          return (
+                                            <React.Fragment key={kr.id}>
+                                              <TableRow>
+                                                <TableCell>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => toggleKeyResultExpansion(kr.id)}
+                                                  >
+                                                    {expandedKeyResults.has(kr.id) ? (
+                                                      <ChevronUp className="h-4 w-4" />
+                                                    ) : (
+                                                      <ChevronDown className="h-4 w-4" />
+                                                    )}
+                                                    <span className="sr-only">Detalhar KR</span>
+                                                  </Button>
+                                                </TableCell>
+                                                <TableCell className="font-medium">{kr.titulo}</TableCell>
+                                                <TableCell>{kr.periodo}</TableCell>
+                                                <TableCell>
+                                                  {kr.tipo === 'numeric' && 'Numérico'}
+                                                  {kr.tipo === 'boolean' && 'Booleano'}
+                                                  {kr.tipo === 'percentage' && 'Porcentagem'}
+                                                </TableCell>
+                                                <TableCell>
+                                                  {kr.valor_inicial} {kr.unidade} para {kr.valor_meta} {kr.unidade}
+                                                </TableCell>
+                                                <TableCell>
+                                                  <div className="flex items-center gap-2">
+                                                    <Progress value={krProgress} className="w-[80px]" />
+                                                    <span className="text-sm text-muted-foreground">{krProgress}%</span>
+                                                  </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getKeyResultStatusBadgeClass(kr.status)}`}>
+                                                    {kr.status === 'on_track' && 'No Caminho'}
+                                                    {kr.status === 'at_risk' && 'Em Risco'}
+                                                    {kr.status === 'off_track' && 'Fora do Caminho'}
+                                                    {kr.status === 'completed' && 'Concluído'}
+                                                  </span>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleEditKeyResultClick(kr, objetivo)}
+                                                    className="mr-2"
+                                                  >
+                                                    <Edit className="h-4 w-4" />
+                                                    <span className="sr-only">Editar KR</span>
+                                                  </Button>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleDeleteKeyResultClick(kr.id)}
+                                                  >
+                                                    <Trash2 className="h-4 w-4" />
+                                                    <span className="sr-only">Excluir KR</span>
+                                                  </Button>
+                                                </TableCell>
+                                              </TableRow>
+                                              {expandedKeyResults.has(kr.id) && (
+                                                <TableRow>
+                                                  <TableCell colSpan={8} className="p-0">
+                                                    <div className="bg-gray-100 dark:bg-gray-700 p-4 border-t border-b">
+                                                      <div className="flex justify-between items-center mb-3">
+                                                        <h5 className="text-md font-semibold flex items-center">
+                                                          <ListTodo className="mr-2 h-4 w-4" /> Atividades para "{kr.titulo}"
+                                                        </h5>
+                                                        <Button size="sm" onClick={() => handleAddAtividadeClick(kr)}>
+                                                          <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Atividade
+                                                        </Button>
+                                                      </div>
+                                                      {kr.atividades && kr.atividades.length > 0 ? (
+                                                          <Table className="bg-white dark:bg-gray-900">
+                                                            <TableHeader>
+                                                              <TableRow>
+                                                                <TableHead>Título da Atividade</TableHead>
+                                                                <TableHead>Responsável</TableHead>
+                                                                <TableHead>Vencimento</TableHead>
+                                                                <TableHead>Status</TableHead>
+                                                                <TableHead className="text-right">Ações</TableHead>
+                                                            </TableRow>
+                                                            </TableHeader>
+                                                            <TableBody>
+                                                              {kr.atividades.map((atividade) => (
+                                                                <TableRow key={atividade.id}>
+                                                                  <TableCell>{atividade.titulo}</TableCell>
+                                                                  <TableCell>{atividade.assignee_name}</TableCell>
+                                                                  <TableCell>
+                                                                    {atividade.due_date ? format(new Date(atividade.due_date), "PPP") : "N/A"}
+                                                                  </TableCell>
+                                                                  <TableCell>
+                                                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getAtividadeStatusBadgeClass(atividade.status)}`}>
+                                                                      {atividade.status === 'todo' && 'A Fazer'}
+                                                                      {atividade.status === 'in_progress' && 'Em Progresso'}
+                                                                      {atividade.status === 'done' && 'Concluído'}
+                                                                      {atividade.status === 'stopped' && 'Parado'}
+                                                                    </span>
+                                                                  </TableCell>
+                                                                  <TableCell className="text-right">
+                                                                    <Button
+                                                                      variant="ghost"
+                                                                      size="icon"
+                                                                      onClick={() => handleEditAtividadeClick(atividade, kr)}
+                                                                      className="mr-2"
+                                                                    >
+                                                                      <Edit className="h-4 w-4" />
+                                                                      <span className="sr-only">Editar Atividade</span>
+                                                                    </Button>
+                                                                    <Button
+                                                                      variant="ghost"
+                                                                      size="icon"
+                                                                      onClick={() => handleDeleteAtividadeClick(atividade.id)}
+                                                                    >
+                                                                      <Trash2 className="h-4 w-4" />
+                                                                      <span className="sr-only">Excluir Atividade</span>
+                                                                    </Button>
+                                                                  </TableCell>
+                                                                </TableRow>
+                                                              ))}
+                                                            </TableBody>
+                                                          </Table>
+                                                        ) : (
+                                                          <p className="text-gray-600 text-center py-4">Nenhuma atividade cadastrada para este Key Result.</p>
+                                                        )}
+                                                    </div>
+                                                  </TableCell>
+                                                </TableRow>
+                                              )}
+                                            </React.Fragment>
+                                          );
+                                        })}
+                                      </TableBody>
+                                    </Table>
+                                  ) : (
+                                    <p className="text-gray-600 text-center py-4">Nenhum Key Result cadastrado para este objetivo.</p>
+                                  )
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-gray-600">Nenhum objetivo cadastrado ainda.</p>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Objetivo Form */}
-      <ObjetivoForm
-        open={isObjetivoFormOpen}
-        onOpenChange={setIsObjetivoFormOpen}
-        onSubmit={handleCreateOrUpdateObjetivo}
-        initialData={editingObjetivo}
-        isLoading={createObjetivoMutation.isPending || updateObjetivoMutation.isPending}
-      />
+        {/* Objetivo Form */}
+        <ObjetivoForm
+          open={isObjetivoFormOpen}
+          onOpenChange={setIsObjetivoFormOpen}
+          onSubmit={handleCreateOrUpdateObjetivo}
+          initialData={editingObjetivo}
+          isLoading={createObjetivoMutation.isPending || updateObjetivoMutation.isPending}
+        />
 
-      {/* Objetivo Delete Confirmation */}
-      <AlertDialog open={isObjetivoDeleteDialogOpen} onOpenChange={setIsObjetivoDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isso excluirá permanentemente o objetivo e todos os Key Results (KRs) e Atividades associados.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteObjetivo} disabled={deleteObjetivoMutation.isPending}>
-              {deleteObjetivoMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {deleteObjetivoMutation.isPending ? "Excluindo..." : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {/* Objetivo Delete Confirmation */}
+        <AlertDialog open={isObjetivoDeleteDialogOpen} onOpenChange={setIsObjetivoDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente o objetivo e todos os Key Results (KRs) e Atividades associados.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteObjetivo} disabled={deleteObjetivoMutation.isPending}>
+                {deleteObjetivoMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {deleteObjetivoMutation.isPending ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
-      {/* Key Result Form */}
-      <KeyResultForm
-        open={isKeyResultFormOpen}
-        onOpenChange={setIsKeyResultFormOpen}
-        onSubmit={handleCreateOrUpdateKeyResult}
-        initialData={editingKeyResult}
-        isLoading={createKeyResultMutation.isPending || updateKeyResultMutation.isPending}
-      />
+        {/* Key Result Form */}
+        <KeyResultForm
+          open={isKeyResultFormOpen}
+          onOpenChange={setIsKeyResultFormOpen}
+          onSubmit={handleCreateOrUpdateKeyResult}
+          initialData={editingKeyResult}
+          isLoading={createKeyResultMutation.isPending || updateKeyResultMutation.isPending}
+        />
 
-      {/* Key Result Delete Confirmation */}
-      <AlertDialog open={isKeyResultDeleteDialogOpen} onOpenChange={setIsKeyResultDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isso excluirá permanentemente o Key Result selecionado e todas as atividades associadas.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteKeyResult} disabled={deleteKeyResultMutation.isPending}>
-              {deleteKeyResultMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {deleteKeyResultMutation.isPending ? "Excluindo..." : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {/* Key Result Delete Confirmation */}
+        <AlertDialog open={isKeyResultDeleteDialogOpen} onOpenChange={setIsKeyResultDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente o Key Result selecionado e todas as atividades associadas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteKeyResult} disabled={deleteKeyResultMutation.isPending}>
+                {deleteKeyResultMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {deleteKeyResultMutation.isPending ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
-      {/* Atividade Form */}
-      <AtividadeForm
-        open={isAtividadeFormOpen}
-        onOpenChange={setIsAtividadeFormOpen}
-        onSubmit={handleCreateOrUpdateAtividade}
-        initialData={editingAtividade}
-        isLoading={createAtividadeMutation.isPending || updateAtividadeMutation.isPending}
-        preselectedKeyResultId={selectedKeyResultForAtividade?.id} {/* NOVO: Passando o ID do KR */}
-      />
+        {/* Atividade Form */}
+        <AtividadeForm
+          open={isAtividadeFormOpen}
+          onOpenChange={setIsAtividadeFormOpen}
+          onSubmit={handleCreateOrUpdateAtividade}
+          initialData={editingAtividade}
+          isLoading={createAtividadeMutation.isPending || updateAtividadeMutation.isPending}
+          preselectedKeyResultId={selectedKeyResultForAtividade?.id} {/* NOVO: Passando o ID do KR */}
+        />
 
-      {/* Atividade Delete Confirmation */}
-      <AlertDialog open={isAtividadeDeleteDialogOpen} onOpenChange={setIsAtividadeDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isso excluirá permanentemente a atividade selecionada.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteAtividade} disabled={deleteAtividadeMutation.isPending}>
-              {deleteAtividadeMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {deleteAtividadeMutation.isPending ? "Excluindo..." : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        {/* Atividade Delete Confirmation */}
+        <AlertDialog open={isAtividadeDeleteDialogOpen} onOpenChange={setIsAtividadeDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente a atividade selecionada.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteAtividade} disabled={deleteAtividadeMutation.isPending}>
+                {deleteAtividadeMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {deleteAtividadeMutation.isPending ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </React.Fragment>
   );
 };
 

@@ -13,6 +13,7 @@ export interface KeyResult {
   valor_atual: number; // This will now be derived from activities
   unidade: string | null;
   status: 'on_track' | 'at_risk' | 'off_track' | 'completed'; // This will now be derived from activities
+  periodo: string; // NOVO: Período agora está no Key Result
   created_at?: string;
   updated_at?: string;
   atividades?: Atividade[]; // Add activities to the interface
@@ -144,6 +145,7 @@ export const createKeyResult = async (
   valor_inicial: number,
   valor_meta: number,
   unidade: string | null,
+  periodo: string, // NOVO: Adicionado 'periodo'
 ): Promise<KeyResult | null> => {
   // Initial status and valor_atual when no activities exist
   const initialProgress = 0;
@@ -161,6 +163,7 @@ export const createKeyResult = async (
       valor_atual: initialProgress, // Set initial valor_atual to 0
       unidade,
       status: initialStatus, // Use the calculated initial status
+      periodo, // NOVO: Inserir o período
     })
     .select(`
       *,
@@ -186,6 +189,7 @@ export const updateKeyResult = async (
   valor_inicial: number,
   valor_meta: number,
   unidade: string | null,
+  periodo: string, // NOVO: Adicionado 'periodo'
 ): Promise<KeyResult | null> => {
   // When updating, we need to fetch current activities to determine status
   const { data: currentKr, error: fetchError } = await supabase
@@ -213,6 +217,7 @@ export const updateKeyResult = async (
       valor_atual: calculatedProgress, // Update valor_atual with derived value
       unidade,
       status: calculatedStatus, // Update status with derived value
+      periodo, // NOVO: Atualizar o período
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

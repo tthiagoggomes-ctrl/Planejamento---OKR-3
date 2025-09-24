@@ -40,9 +40,9 @@ const formSchema = z.object({
     message: "O título do objetivo deve ter pelo menos 5 caracteres.",
   }),
   descricao: z.string().nullable(),
-  periodo: z.string().min(1, {
-    message: "Selecione um período para o objetivo.",
-  }),
+  // periodo: z.string().min(1, { // REMOVIDO: Período agora está no Key Result
+  //   message: "Selecione um período para o objetivo.",
+  // }),
   area_id: z.string().uuid({ message: "Selecione uma área válida." }).nullable(),
   status: z.enum(['draft', 'active', 'completed', 'archived'], {
     message: "Selecione um status válido.",
@@ -71,7 +71,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
     defaultValues: {
       titulo: initialData?.titulo || "",
       descricao: initialData?.descricao || "",
-      periodo: initialData?.periodo || "",
+      // periodo: initialData?.periodo || "", // REMOVIDO
       area_id: initialData?.area_id || null,
       status: initialData?.status || "draft",
     },
@@ -82,17 +82,17 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
     queryFn: getAreas,
   });
 
-  const { data: periods, isLoading: isLoadingPeriods } = useQuery<Periodo[], Error>({
-    queryKey: ["periods"],
-    queryFn: getPeriodos,
-  });
+  // const { data: periods, isLoading: isLoadingPeriods } = useQuery<Periodo[], Error>({ // REMOVIDO
+  //   queryKey: ["periods"],
+  //   queryFn: getPeriodos,
+  // });
 
   React.useEffect(() => {
     if (initialData) {
       form.reset({
         titulo: initialData.titulo,
         descricao: initialData.descricao,
-        periodo: initialData.periodo,
+        // periodo: initialData.periodo, // REMOVIDO
         area_id: initialData.area_id,
         status: initialData.status,
       });
@@ -100,7 +100,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
       form.reset({
         titulo: "",
         descricao: "",
-        periodo: "",
+        // periodo: "", // REMOVIDO
         area_id: null,
         status: "draft",
       });
@@ -113,7 +113,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
       form.reset({
         titulo: "",
         descricao: "",
-        periodo: "",
+        // periodo: "", // REMOVIDO
         area_id: null,
         status: "draft",
       });
@@ -161,34 +161,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="periodo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Período</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o período" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-h-[200px] overflow-y-auto">
-                      {isLoadingPeriods ? (
-                        <SelectItem value="" disabled>Carregando períodos...</SelectItem>
-                      ) : (
-                        periods?.map((period) => (
-                          <SelectItem key={period.id} value={period.nome}>
-                            {period.nome}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* REMOVIDO: Campo de Período */}
             <FormField
               control={form.control}
               name="area_id"
@@ -245,7 +218,7 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
               )}
             />
             <DialogFooter>
-              <Button type="submit" disabled={isLoading || isLoadingAreas || isLoadingPeriods}>
+              <Button type="submit" disabled={isLoading || isLoadingAreas}> {/* isLoadingPeriods removido */}
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? "Salvando..." : "Salvar"}
               </Button>

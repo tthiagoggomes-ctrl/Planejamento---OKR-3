@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns"; // Import format for dates
+import { Periodo, getPeriodos } from "@/integrations/supabase/api/periodos"; // Import Periodo and getPeriodos
 
 const Objetivos = () => {
   const queryClient = useQueryClient();
@@ -80,7 +81,7 @@ const Objetivos = () => {
 
   // State for filters and sorting
   const [statusFilter, setStatusFilter] = React.useState<Objetivo['status'] | 'all'>('all');
-  const [periodoFilter, setPeriodoFilter] = React.useState<string | 'all'>('all');
+  // const [periodoFilter, setPeriodoFilter] = React.useState<string | 'all'>('all'); // REMOVIDO: Período agora está no Key Result
   const [areaFilter, setAreaFilter] = React.useState<string | 'all'>('all');
   const [searchQuery, setSearchQuery] = React.useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
@@ -98,10 +99,10 @@ const Objetivos = () => {
   }, [location.state]);
 
   const { data: objetivos, isLoading: isLoadingObjetivos, error: objetivosError } = useQuery<Objetivo[], Error>({
-    queryKey: ["objetivos", { statusFilter, periodoFilter, areaFilter, search: debouncedSearchQuery, sortBy, sortOrder }],
+    queryKey: ["objetivos", { statusFilter, areaFilter, search: debouncedSearchQuery, sortBy, sortOrder }], // periodoFilter removido
     queryFn: () => getObjetivos({
       status: statusFilter,
-      periodo: periodoFilter,
+      // periodo: periodoFilter, // periodo removido
       area_id: areaFilter,
       search: debouncedSearchQuery,
       sortBy,
@@ -112,6 +113,11 @@ const Objetivos = () => {
   const { data: areas, isLoading: isLoadingAreas } = useQuery<Area[], Error>({
     queryKey: ["areas"],
     queryFn: getAreas,
+  });
+
+  const { data: periods, isLoading: isLoadingPeriods } = useQuery<Periodo[], Error>({ // Adicionado para KeyResultForm
+    queryKey: ["periods"],
+    queryFn: getPeriodos,
   });
 
   // Fetch Key Results for a specific objective (now includes nested activities)
@@ -146,7 +152,7 @@ const Objetivos = () => {
       if (!user?.id) {
         throw new Error("User not authenticated.");
       }
-      return createObjetivo(values.titulo, values.descricao, values.periodo, values.area_id, user.id);
+      return createObjetivo(values.titulo, values.descricao, values.area_id, user.id); // periodo removido
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["objetivos"] });
@@ -160,7 +166,7 @@ const Objetivos = () => {
 
   const updateObjetivoMutation = useMutation({
     mutationFn: ({ id, ...values }: ObjetivoFormValues & { id: string }) =>
-      updateObjetivo(id, values.titulo, values.descricao, values.periodo, values.area_id, values.status),
+      updateObjetivo(id, values.titulo, values.descricao, values.area_id, values.status), // periodo removido
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["objetivos"] });
       setIsObjetivoFormOpen(false);
@@ -199,6 +205,7 @@ const Objetivos = () => {
         values.valor_inicial,
         values.valor_meta,
         values.unidade,
+        values.periodo, // NOVO: Adicionado periodo
       );
     },
     onSuccess: () => {
@@ -221,6 +228,7 @@ const Objetivos = () => {
         values.valor_inicial,
         values.valor_meta,
         values.unidade,
+        values.periodo, // NOVO: Adicionado periodo
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo"] });
@@ -447,10 +455,10 @@ const Objetivos = () => {
 
   const getAtividadeStatusBadgeClass = (status: Atividade['status']) => {
     switch (status) {
-      case 'todo': return 'bg-gray-900 text-white';
-      case 'in_progress': return 'bg-blue-600 text-white';
-      case 'done': return 'bg-green-600 text-white';
-      case 'stopped': return 'bg-red-600 text-white';
+      case 'todo': return 'bg-gray-900 text-white'; // Preto
+      case 'in_progress': return 'bg-blue-600 text-white'; // Azul
+      case 'done': return 'bg-green-600 text-white'; // Verde
+      case 'stopped': return 'bg-red-600 text-white'; // Vermelho
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -466,7 +474,7 @@ const Objetivos = () => {
   };
 
 
-  if (isLoadingObjetivos || isLoadingAreas || isLoadingKeyResults) {
+  if (isLoadingObjetivos || isLoadingAreas || isLoadingKeyResults || isLoadingPeriods) { // isLoadingPeriods adicionado
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -482,7 +490,7 @@ const Objetivos = () => {
     );
   }
 
-  const periods = ["Q1 2024", "Q2 2024", "Q3 2024", "Q4 2024", "Anual 2024", "Q1 2025", "Q2 2025", "Q3 2025", "Q4 2025", "Anual 2025"];
+  // const periods = ["Q1 2024", "Q2 2024", "Q3 2024", "Q4 2024", "Anual 2024", "Q1 2025", "Q2 2025", "Q3 2025", "Q4 2025", "Anual 2025"]; // REMOVIDO
   const statuses = [
     { value: "draft", label: "Rascunho" },
     { value: "active", label: "Ativo" },
@@ -523,7 +531,8 @@ const Objetivos = () => {
               </SelectContent>
             </Select>
 
-            <Select value={periodoFilter} onValueChange={(value: string | 'all') => setPeriodoFilter(value)}>
+            {/* REMOVIDO: Filtro por Período */}
+            {/* <Select value={periodoFilter} onValueChange={(value: string | 'all') => setPeriodoFilter(value)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filtrar por Período" />
               </SelectTrigger>
@@ -533,7 +542,7 @@ const Objetivos = () => {
                   <SelectItem key={p} value={p}>{p}</SelectItem>
                 ))}
               </SelectContent>
-            </Select>
+            </Select> */}
 
             <Select value={areaFilter} onValueChange={(value: string | 'all') => setAreaFilter(value)}>
               <SelectTrigger className="w-[180px]">
@@ -560,7 +569,7 @@ const Objetivos = () => {
                 <TableRow>
                   <TableHead className="w-[50px]"></TableHead> {/* For expand/collapse button */}
                   <TableHead>Título</TableHead>
-                  <TableHead>Período</TableHead>
+                  {/* <TableHead>Período</TableHead> REMOVIDO */}
                   <TableHead>Área</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Progresso</TableHead> {/* New column for Objective progress */}
@@ -592,7 +601,7 @@ const Objetivos = () => {
                             {objetivo.titulo}
                           </Link>
                         </TableCell>
-                        <TableCell>{objetivo.periodo}</TableCell>
+                        {/* <TableCell>{objetivo.periodo}</TableCell> REMOVIDO */}
                         <TableCell>{objetivo.area_name}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getObjetivoStatusBadgeClass(objetivo.status)}`}>
@@ -630,7 +639,7 @@ const Objetivos = () => {
                       </TableRow>
                       {expandedObjetivos.has(objetivo.id) && (
                         <TableRow>
-                          <TableCell colSpan={7} className="p-0">
+                          <TableCell colSpan={6} className="p-0"> {/* colSpan ajustado */}
                             <div className="bg-gray-50 dark:bg-gray-800 p-4 border-t border-b">
                               <div className="flex justify-between items-center mb-3">
                                 <h4 className="text-lg font-semibold">Key Results para "{objetivo.titulo}"</h4>
@@ -649,6 +658,7 @@ const Objetivos = () => {
                                       <TableRow>
                                         <TableHead className="w-[50px]"></TableHead> {/* For expand/collapse button */}
                                         <TableHead>Título do KR</TableHead>
+                                        <TableHead>Período</TableHead> {/* NOVO: Coluna de Período */}
                                         <TableHead>Tipo</TableHead>
                                         <TableHead>Meta</TableHead>
                                         <TableHead>Progresso (%)</TableHead>
@@ -677,6 +687,7 @@ const Objetivos = () => {
                                                 </Button>
                                               </TableCell>
                                               <TableCell className="font-medium">{kr.titulo}</TableCell>
+                                              <TableCell>{kr.periodo}</TableCell> {/* NOVO: Exibir período */}
                                               <TableCell>
                                                 {kr.tipo === 'numeric' && 'Numérico'}
                                                 {kr.tipo === 'boolean' && 'Booleano'}
@@ -721,7 +732,7 @@ const Objetivos = () => {
                                             </TableRow>
                                             {expandedKeyResults.has(kr.id) && (
                                               <TableRow>
-                                                <TableCell colSpan={7} className="p-0">
+                                                <TableCell colSpan={8} className="p-0"> {/* colSpan ajustado */}
                                                   <div className="bg-gray-100 dark:bg-gray-700 p-4 border-t border-b">
                                                     <div className="flex justify-between items-center mb-3">
                                                       <h5 className="text-md font-semibold flex items-center">

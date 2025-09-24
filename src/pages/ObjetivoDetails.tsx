@@ -39,6 +39,7 @@ const ObjetivoDetails = () => {
       <h1>Detalhes do Objetivo: {objetivo.titulo}</h1>
       <p>ID: {objetivo.id}</p>
       <p>Descrição: {objetivo.descricao || 'N/A'}</p>
+      {/* <p>Período: {objetivo.periodo}</p> REMOVIDO */}
     </div>
   );
 };

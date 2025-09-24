@@ -29,7 +29,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { KeyResult } from "@/integrations/supabase/api/key_results";
+import { Periodo, getPeriodos } from "@/integrations/supabase/api/periodos"; // Import Periodo and getPeriodos
 import { Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query"; // Import useQuery
 
 const formSchema = z.object({
   titulo: z.string().min(5, {
@@ -45,6 +47,9 @@ const formSchema = z.object({
     message: "O valor meta não pode ser negativo.",
   }),
   unidade: z.string().nullable(),
+  periodo: z.string().min(1, { // NOVO: Campo de período
+    message: "Selecione um período para o Key Result.",
+  }),
 });
 
 export type KeyResultFormValues = z.infer<typeof formSchema>;
@@ -72,7 +77,13 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
       valor_inicial: initialData?.valor_inicial || 0,
       valor_meta: initialData?.valor_meta || 0,
       unidade: initialData?.unidade || "",
+      periodo: initialData?.periodo || "", // NOVO: Default value for periodo
     },
+  });
+
+  const { data: periods, isLoading: isLoadingPeriods } = useQuery<Periodo[], Error>({
+    queryKey: ["periods"],
+    queryFn: getPeriodos,
   });
 
   React.useEffect(() => {
@@ -83,6 +94,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
         valor_inicial: initialData.valor_inicial,
         valor_meta: initialData.valor_meta,
         unidade: initialData.unidade,
+        periodo: initialData.periodo, // NOVO: Reset periodo
       });
     } else {
       form.reset({
@@ -91,6 +103,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
         valor_inicial: 0,
         valor_meta: 0,
         unidade: "",
+        periodo: "", // NOVO: Reset periodo
       });
     }
   }, [initialData, form]);
@@ -104,6 +117,7 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
         valor_inicial: 0,
         valor_meta: 0,
         unidade: "",
+        periodo: "", // NOVO: Reset periodo
       });
     }
   };
@@ -200,8 +214,36 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
                 </FormItem>
               )}
             />
+            <FormField // NOVO: Campo de Período
+              control={form.control}
+              name="periodo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Período</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o período" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
+                      {isLoadingPeriods ? (
+                        <SelectItem value="" disabled>Carregando períodos...</SelectItem>
+                      ) : (
+                        periods?.map((period) => (
+                          <SelectItem key={period.id} value={period.nome}>
+                            {period.nome}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <DialogFooter>
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading || isLoadingPeriods}> {/* isLoadingPeriods adicionado */}
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? "Salvando..." : "Salvar"}
               </Button>

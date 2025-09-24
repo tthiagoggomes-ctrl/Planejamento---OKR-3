@@ -8,7 +8,7 @@ export interface Objetivo {
   area_name?: string; // To display the area name in the UI
   titulo: string;
   descricao: string | null;
-  periodo: string;
+  // periodo: string; // REMOVIDO: Período agora está no Key Result
   status: 'draft' | 'active' | 'completed' | 'archived';
   created_at?: string;
   updated_at?: string;
@@ -22,7 +22,7 @@ export interface ObjetivoSummary {
 
 interface GetObjetivosParams {
   status?: Objetivo['status'] | 'all';
-  periodo?: string | 'all';
+  // periodo?: string | 'all'; // REMOVIDO: Período agora está no Key Result
   area_id?: string | 'all';
   search?: string;
   sortBy?: keyof Objetivo | 'area_name';
@@ -38,9 +38,9 @@ export const getObjetivos = async (params?: GetObjetivosParams): Promise<Objetiv
   if (params?.status && params.status !== 'all') {
     query = query.eq('status', params.status);
   }
-  if (params?.periodo && params.periodo !== 'all') {
-    query = query.eq('periodo', params.periodo);
-  }
+  // if (params?.periodo && params.periodo !== 'all') { // REMOVIDO: Período agora está no Key Result
+  //   query = query.eq('periodo', params.periodo);
+  // }
   if (params?.area_id && params.area_id !== 'all') {
     query = query.eq('area_id', params.area_id);
   } else if (params?.area_id === 'null') { // Handle explicit 'Nenhuma Área' filter
@@ -101,13 +101,13 @@ export const getObjetivosSummary = async (): Promise<ObjetivoSummary[] | null> =
 export const createObjetivo = async (
   titulo: string,
   descricao: string | null,
-  periodo: string,
+  // periodo: string, // REMOVIDO
   area_id: string | null,
   user_id: string // The user_id will be passed from the session
 ): Promise<Objetivo | null> => {
   const { data, error } = await supabase
     .from('objetivos')
-    .insert({ titulo, descricao, periodo, area_id, user_id, status: 'draft' })
+    .insert({ titulo, descricao, area_id, user_id, status: 'draft' }) // 'periodo' removido
     .select('*, area:areas(nome)')
     .single();
 
@@ -126,13 +126,13 @@ export const updateObjetivo = async (
   id: string,
   titulo: string,
   descricao: string | null,
-  periodo: string,
+  // periodo: string, // REMOVIDO
   area_id: string | null,
   status: 'draft' | 'active' | 'completed' | 'archived'
 ): Promise<Objetivo | null> => {
   const { data, error } = await supabase
     .from('objetivos')
-    .update({ titulo, descricao, periodo, area_id, status, updated_at: new Date().toISOString() })
+    .update({ titulo, descricao, area_id, status, updated_at: new Date().toISOString() }) // 'periodo' removido
     .eq('id', id)
     .select('*, area:areas(nome)')
     .single();

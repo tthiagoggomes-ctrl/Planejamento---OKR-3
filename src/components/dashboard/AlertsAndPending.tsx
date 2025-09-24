@@ -3,7 +3,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, AlertTriangle, Target, Clock, XCircle, TrendingUp, Building } from 'lucide-react';
+import { Loader2, AlertTriangle, Target, Clock, XCircle, TrendingUp, Building, ChevronDown, ChevronUp } from 'lucide-react';
 import { getAllKeyResults, KeyResult, calculateKeyResultProgress } from '@/integrations/supabase/api/key_results';
 import { getObjetivos, Objetivo } from '@/integrations/supabase/api/objetivos';
 import { getAtividades, Atividade } from '@/integrations/supabase/api/atividades';
@@ -12,9 +12,11 @@ import { showError } from '@/utils/toast';
 import { formatDistanceToNow, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { Button } from '@/components/ui/button'; // Import Button
 
 const AlertsAndPending: React.FC = () => {
   const navigate = useNavigate(); // Initialize useNavigate
+  const [showAllKRsAtRisk, setShowAllKRsAtRisk] = React.useState(false); // Novo estado para controlar a expansão
 
   const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[], Error>({
     queryKey: ["allKeyResults"],
@@ -137,6 +139,9 @@ const AlertsAndPending: React.FC = () => {
 
   const hasAlerts = krsAtRiskOrOffTrack.length > 0 || objectivesBelow30Percent.length > 0 || areasWithoutRecentUpdates.length > 0;
 
+  // KRs a serem exibidos (limitado a 5 ou todos)
+  const displayedKRsAtRisk = showAllKRsAtRisk ? krsAtRiskOrOffTrack : krsAtRiskOrOffTrack.slice(0, 5);
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -155,7 +160,7 @@ const AlertsAndPending: React.FC = () => {
               <TrendingUp className="mr-2 h-4 w-4" /> Key Results em Risco/Fora do Caminho ({krsAtRiskOrOffTrack.length})
             </h4>
             <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
-              {krsAtRiskOrOffTrack.map(kr => (
+              {displayedKRsAtRisk.map(kr => (
                 <li
                   key={kr.id}
                   className="cursor-pointer hover:text-blue-600 hover:underline"
@@ -165,6 +170,23 @@ const AlertsAndPending: React.FC = () => {
                 </li>
               ))}
             </ul>
+            {krsAtRiskOrOffTrack.length > 5 && (
+              <Button
+                variant="link"
+                className="mt-2 p-0 h-auto text-sm"
+                onClick={() => setShowAllKRsAtRisk(!showAllKRsAtRisk)}
+              >
+                {showAllKRsAtRisk ? (
+                  <>
+                    <ChevronUp className="mr-1 h-4 w-4" /> Ocultar
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="mr-1 h-4 w-4" /> Ver todos ({krsAtRiskOrOffTrack.length - 5} mais)
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         )}
 

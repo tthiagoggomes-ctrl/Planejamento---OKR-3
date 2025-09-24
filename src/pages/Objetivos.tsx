@@ -120,17 +120,20 @@ const Objetivos = () => {
 
   // Fetch Key Results for a specific objective (now includes nested activities)
   const { data: keyResultsMap, isLoading: isLoadingKeyResults } = useQuery<Map<string, KeyResult[]>, Error>({
-    queryKey: ["key_results_by_objetivo", objetivos], // Depend on filtered objectives
+    queryKey: ["key_results_by_objetivo"], // Simplificado: Removido 'objetivos' da chave
     queryFn: async () => {
-      if (!objetivos) return new Map();
-      const krPromises = objetivos.map(async (obj) => {
+      // Obter os objetivos mais recentes do cache
+      const currentObjetivos = queryClient.getQueryData<Objetivo[]>(["objetivos", { statusFilter, areaFilter, search: debouncedSearchQuery, sortBy, sortOrder }]);
+      if (!currentObjetivos) return new Map();
+
+      const krPromises = currentObjetivos.map(async (obj) => {
         const krs = await getKeyResultsByObjetivoId(obj.id); // This now fetches activities too
         return [obj.id, krs || []] as [string, KeyResult[]];
       });
       const results = await Promise.all(krPromises);
       return new Map(results);
     },
-    enabled: !!objetivos, // Only run if objectives are loaded
+    enabled: !!objetivos, // Ainda habilitado apenas quando os objetivos são carregados
   });
 
   // Helper function to format due_date for API
@@ -207,7 +210,7 @@ const Objetivos = () => {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo"] });
+      queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo"] }); // Invalida a consulta de KRs
       setIsKeyResultFormOpen(false);
       setSelectedObjetivoForKR(null);
       showSuccess("Key Result criado com sucesso!");
@@ -229,7 +232,7 @@ const Objetivos = () => {
         values.periodo,
       ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo"] });
+      queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo"] }); // Invalida a consulta de KRs
       setIsKeyResultFormOpen(false);
       setEditingKeyResult(null);
       setSelectedObjetivoForKR(null);
@@ -243,7 +246,7 @@ const Objetivos = () => {
   const deleteKeyResultMutation = useMutation({
     mutationFn: deleteKeyResult,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo"] });
+      queryClient.invalidateQueries({ queryKey: ["key_results_by_objetivo"] }); // Invalida a consulta de KRs
       setIsKeyResultDeleteDialogOpen(false);
       setKeyResultToDelete(null);
       showSuccess("Key Result excluído com sucesso!");

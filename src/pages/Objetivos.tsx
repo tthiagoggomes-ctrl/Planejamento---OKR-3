@@ -136,6 +136,30 @@ const Objetivos = () => {
     enabled: !!objetivos, // Ainda habilitado apenas quando os objetivos são carregados
   });
 
+  // NEW: Effect to expand objective and KR if keyResultId is in location.state
+  React.useEffect(() => {
+    if (location.state && (location.state as any).keyResultId && keyResultsMap && objetivos) {
+      const targetKeyResultId = (location.state as any).keyResultId;
+      let foundObjetivoId: string | null = null;
+
+      // Find the objective ID for the target Key Result
+      for (const [objetivoId, krs] of keyResultsMap.entries()) {
+        if (krs.some(kr => kr.id === targetKeyResultId)) {
+          foundObjetivoId = objetivoId;
+          break;
+        }
+      }
+
+      if (foundObjetivoId) {
+        setExpandedObjetivos(prev => new Set(prev).add(foundObjetivoId!));
+        setExpandedKeyResults(prev => new Set(prev).add(targetKeyResultId));
+      }
+
+      // Clear the state after using it to avoid re-applying on subsequent visits
+      window.history.replaceState({}, document.title, location.pathname);
+    }
+  }, [location.state, keyResultsMap, objetivos]); // Dependencies
+
   // Helper function to format due_date for API
   const formatDueDateForApi = (date: Date | string | null | undefined): string | null => {
     if (date instanceof Date) {

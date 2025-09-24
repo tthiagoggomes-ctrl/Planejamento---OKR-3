@@ -119,8 +119,10 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
       setStartDateString(format(new Date(initialData.start_date), "dd/MM/yyyy", { locale: ptBR }));
       setEndDateString(format(new Date(initialData.end_date), "dd/MM/yyyy", { locale: ptBR }) );
     } else {
+      // For new annual periods, pre-fill the name to avoid validation errors
+      const defaultNome = parentPeriodIdForNew === null ? `Anual ${new Date().getFullYear()}` : "";
       form.reset({
-        nome: "",
+        nome: defaultNome,
         start_date: undefined,
         end_date: undefined,
         status: "active",
@@ -150,14 +152,16 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
         // Auto-set name for annual period
         form.setValue('nome', `Anual ${year} - Janeiro a Dezembro ${year}`);
       } else {
-        form.setValue('start_date', undefined);
-        form.setValue('end_date', undefined);
+        // This else block should ideally not be hit if defaultNome is set correctly for new annual periods
+        // For safety, we ensure dates are still valid if nome somehow becomes invalid
+        form.setValue('start_date', undefined); // This will trigger Zod error if not handled
+        form.setValue('end_date', undefined);   // This will trigger Zod error if not handled
         setStartDateString("");
         setEndDateString("");
         form.setValue('nome', ''); // Clear name if year is not found
       }
     }
-  }, [form.watch('nome'), isAnnualPeriod]); // Watch 'nome' to update dates for annual periods
+  }, [form.watch('nome'), isAnnualPeriod]);
 
   // Effect to handle quarterly period name auto-generation based on dates
   React.useEffect(() => {

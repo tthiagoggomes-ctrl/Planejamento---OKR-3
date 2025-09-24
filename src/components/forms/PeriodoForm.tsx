@@ -32,7 +32,7 @@ import { Periodo, PeriodoStatus } from "@/integrations/supabase/api/periodos";
 import { Loader2, CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, parse, isValid } from "date-fns"; // Import parse and isValid
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
@@ -146,20 +146,28 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP", { locale: ptBR })
-                          ) : (
-                            <span>Selecione uma data</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
+                        <div className="relative">
+                          <Input
+                            {...field}
+                            type="text"
+                            value={field.value ? format(field.value, "dd/MM/yyyy", { locale: ptBR }) : ""}
+                            onChange={(e) => {
+                              const dateString = e.target.value;
+                              const parsedDate = parse(dateString, "dd/MM/yyyy", new Date(), { locale: ptBR });
+                              if (isValid(parsedDate)) {
+                                field.onChange(parsedDate);
+                              } else {
+                                field.onChange(undefined);
+                              }
+                            }}
+                            placeholder="DD/MM/AAAA"
+                            className={cn(
+                              "w-full pl-3 text-left font-normal pr-10",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          />
+                          <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 cursor-pointer" />
+                        </div>
                       </FormControl>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -185,20 +193,28 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP", { locale: ptBR })
-                          ) : (
-                            <span>Selecione uma data</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
+                        <div className="relative">
+                          <Input
+                            {...field}
+                            type="text"
+                            value={field.value ? format(field.value, "dd/MM/yyyy", { locale: ptBR }) : ""}
+                            onChange={(e) => {
+                              const dateString = e.target.value;
+                              const parsedDate = parse(dateString, "dd/MM/yyyy", new Date(), { locale: ptBR });
+                              if (isValid(parsedDate)) {
+                                field.onChange(parsedDate);
+                              } else {
+                                field.onChange(undefined);
+                              }
+                            }}
+                            placeholder="DD/MM/AAAA"
+                            className={cn(
+                              "w-full pl-3 text-left font-normal pr-10",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          />
+                          <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 cursor-pointer" />
+                        </div>
                       </FormControl>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">

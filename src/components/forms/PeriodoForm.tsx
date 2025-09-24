@@ -138,14 +138,8 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
       if (yearMatch) {
         const year = parseInt(yearMatch[0], 10);
         
-        // Calculate the local timezone offset in hours from UTC.
-        const localOffsetHours = new Date().getTimezoneOffset() / 60; // e.g., 180 / 60 = 3 for BRT
-
-        // Create Date objects that represent the desired local date/time, but in UTC
-        // For start_date (01/01/YYYY 00:00:00 local)
-        const newStartDate = new Date(Date.UTC(year, 0, 1, 0 + localOffsetHours, 0, 0, 0));
-        // For end_date (31/12/YYYY 23:59:59.999 local)
-        const newEndDate = new Date(Date.UTC(year, 11, 31, 23 + localOffsetHours, 59, 59, 999));
+        const newStartDate = new Date(year, 0, 1, 0, 0, 0, 0); // January 1st, 00:00:00 local time
+        const newEndDate = new Date(year, 11, 31, 23, 59, 59, 999); // December 31st, 23:59:59.999 local time
 
         form.setValue('start_date', newStartDate);
         form.setValue('end_date', newEndDate);

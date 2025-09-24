@@ -87,33 +87,54 @@ export const getPeriodos = async (params?: GetPeriodosParams): Promise<Periodo[]
 
 export const createPeriodo = async (
   nome: string,
-  start_date: string,
-  end_date: string,
+  start_date: string, // Este parâmetro será sobrescrito para períodos anuais
+  end_date: string,   // Este parâmetro será sobrescrito para períodos anuais
   status: PeriodoStatus,
-  parent_id: string | null = null // NOVO: Adicionado parent_id
+  parent_id: string | null = null
 ): Promise<Periodo | null> => {
+  let finalStartDate = start_date;
+  let finalEndDate = end_date;
+  let year: number;
+
+  // Se o período for anual (parent_id é null), fixar as datas e extrair o ano do nome
+  if (parent_id === null) {
+    const yearMatch = nome.match(/\d{4}/);
+    year = yearMatch ? parseInt(yearMatch[0], 10) : getYear(new Date()); // Fallback para o ano atual
+    
+    const fixedAnnualStartDate = new Date(year, 0, 1); // 1º de Janeiro
+    const fixedAnnualEndDate = new Date(year, 11, 31); // 31 de Dezembro
+
+    finalStartDate = fixedAnnualStartDate.toISOString();
+    finalEndDate = fixedAnnualEndDate.toISOString();
+  } else {
+    // Para trimestres, o ano é derivado do período pai ou do nome, mas as datas são fixas
+    const yearMatch = nome.match(/\d{4}/);
+    year = yearMatch ? parseInt(yearMatch[0], 10) : getYear(new Date(start_date)); // Usar o ano da data de início fornecida ou do nome
+  }
+
   const { data, error } = await supabase
     .from('periodos')
-    .insert({ nome, start_date, end_date, status, parent_id }) // NOVO: Inserindo parent_id
+    .insert({ nome, start_date: finalStartDate, end_date: finalEndDate, status, parent_id })
     .select()
     .single();
+
   if (error) {
     console.error('Error creating period:', error.message);
     showError(`Erro ao criar período: ${error.message}`);
     return null;
   }
 
-  // Se o período criado for anual (sem parent_id), criar os trimestres automaticamente
-  if (parent_id === null && data) {
-    const annualPeriodId = data.id;
-    const annualStartDate = new Date(start_date);
-    const year = getYear(annualStartDate);
+  let createdPeriod = data;
 
+  // Se o período criado for anual (sem parent_id), criar os trimestres automaticamente
+  if (parent_id === null && createdPeriod) {
+    const annualPeriodId = createdPeriod.id;
+    
     const quartersToCreate = [
-      { name: `1º Trimestre ${year}`, start: startOfYear(annualStartDate), end: endOfMonth(addMonths(startOfYear(annualStartDate), 2)) }, // Jan-Mar
-      { name: `2º Trimestre ${year}`, start: startOfMonth(addMonths(startOfYear(annualStartDate), 3)), end: endOfMonth(addMonths(startOfYear(annualStartDate), 5)) }, // Apr-Jun
-      { name: `3º Trimestre ${year}`, start: startOfMonth(addMonths(startOfYear(annualStartDate), 6)), end: endOfMonth(addMonths(startOfYear(annualStartDate), 8)) }, // Jul-Sep
-      { name: `4º Trimestre ${year}`, start: startOfMonth(addMonths(startOfYear(annualStartDate), 9)), end: endOfYear(annualStartDate) }, // Oct-Dec
+      { name: `1º Trimestre ${year}`, start: new Date(year, 0, 1), end: new Date(year, 2, 31) }, // Jan 1 - Mar 31
+      { name: `2º Trimestre ${year}`, start: new Date(year, 3, 1), end: new Date(year, 5, 30) }, // Apr 1 - Jun 30
+      { name: `3º Trimestre ${year}`, start: new Date(year, 6, 1), end: new Date(year, 8, 30) }, // Jul 1 - Sep 30
+      { name: `4º Trimestre ${year}`, start: new Date(year, 9, 1), end: new Date(year, 11, 31) }, // Oct 1 - Dec 31
     ];
 
     for (const quarter of quartersToCreate) {
@@ -123,19 +144,17 @@ export const createPeriodo = async (
           nome: quarter.name,
           start_date: quarter.start.toISOString(),
           end_date: quarter.end.toISOString(),
-          status: 'active', // Trimestres são criados como ativos por padrão
+          status: 'active',
           parent_id: annualPeriodId,
         });
 
       if (quarterError) {
         console.error(`Error creating quarter ${quarter.name}:`, quarterError.message);
-        // Decidir se o erro na criação do trimestre deve falhar a criação do ano inteiro
-        // Por enquanto, apenas logamos o erro.
       }
     }
   }
 
-  return data;
+  return createdPeriod;
 };
 
 export const updatePeriodo = async (
@@ -144,11 +163,11 @@ export const updatePeriodo = async (
   start_date: string,
   end_date: string,
   status: PeriodoStatus,
-  parent_id: string | null = null // NOVO: Adicionado parent_id
+  parent_id: string | null = null
 ): Promise<Periodo | null> => {
   const { data, error } = await supabase
     .from('periodos')
-    .update({ nome, start_date, end_date, status, parent_id, updated_at: new Date().toISOString() }) // NOVO: Atualizando parent_id
+    .update({ nome, start_date, end_date, status, parent_id, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single();

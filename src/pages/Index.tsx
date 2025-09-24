@@ -217,6 +217,10 @@ const Index = () => {
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3 mb-6">
         <AreaProgressList />
         <RecentActivitiesList />
+      </div>
+
+      {/* Alerts and Pending section - now full width */}
+      <div className="mb-6">
         <AlertsAndPending />
       </div>
 

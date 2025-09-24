@@ -137,8 +137,8 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
       const yearMatch = nomeValue.match(/\d{4}/);
       if (yearMatch) {
         const year = parseInt(yearMatch[0], 10);
-        const newStartDate = new Date(year, 0, 1);
-        const newEndDate = new Date(year, 11, 31);
+        const newStartDate = new Date(year, 0, 1); // January 1st, 00:00:00 local time
+        const newEndDate = new Date(year, 11, 31, 23, 59, 59, 999); // December 31st, 23:59:59.999 local time
 
         form.setValue('start_date', newStartDate);
         form.setValue('end_date', newEndDate);

@@ -87,8 +87,8 @@ export const getPeriodos = async (params?: GetPeriodosParams): Promise<Periodo[]
 
 export const createPeriodo = async (
   nome: string,
-  start_date: string, // Este parâmetro será sobrescrito para períodos anuais
-  end_date: string,   // Este parâmetro será sobrescrito para períodos anuais
+  start_date: string,
+  end_date: string,
   status: PeriodoStatus,
   parent_id: string | null = null
 ): Promise<Periodo | null> => {
@@ -101,9 +101,9 @@ export const createPeriodo = async (
     const yearMatch = nome.match(/\d{4}/);
     year = yearMatch ? parseInt(yearMatch[0], 10) : getYear(new Date()); // Fallback para o ano atual
     
-    // FIX: Use Date.UTC to ensure dates are consistently set to UTC midnight
-    const fixedAnnualStartDate = new Date(Date.UTC(year, 0, 1)); // 1º de Janeiro (UTC)
-    const fixedAnnualEndDate = new Date(Date.UTC(year, 11, 31)); // 31 de Dezembro (UTC)
+    // FIX: Create dates in local timezone for the start and end of the year
+    const fixedAnnualStartDate = new Date(year, 0, 1); // January 1st, 00:00:00 local time
+    const fixedAnnualEndDate = new Date(year, 11, 31, 23, 59, 59, 999); // December 31st, 23:59:59.999 local time
 
     finalStartDate = fixedAnnualStartDate.toISOString();
     finalEndDate = fixedAnnualEndDate.toISOString();
@@ -132,10 +132,10 @@ export const createPeriodo = async (
     const annualPeriodId = createdPeriod.id;
     
     const quartersToCreate = [
-      { name: `1º Trimestre ${year}`, start: new Date(Date.UTC(year, 0, 1)), end: new Date(Date.UTC(year, 2, 31)) }, // Jan 1 - Mar 31 (UTC)
-      { name: `2º Trimestre ${year}`, start: new Date(Date.UTC(year, 3, 1)), end: new Date(Date.UTC(year, 5, 30)) }, // Apr 1 - Jun 30 (UTC)
-      { name: `3º Trimestre ${year}`, start: new Date(Date.UTC(year, 6, 1)), end: new Date(Date.UTC(year, 8, 30)) }, // Jul 1 - Sep 30 (UTC)
-      { name: `4º Trimestre ${year}`, start: new Date(Date.UTC(year, 9, 1)), end: new Date(Date.UTC(year, 11, 31)) }, // Oct 1 - Dec 31 (UTC)
+      { name: `1º Trimestre ${year}`, start: new Date(year, 0, 1), end: new Date(year, 2, 31, 23, 59, 59, 999) }, // Jan 1 - Mar 31 local time
+      { name: `2º Trimestre ${year}`, start: new Date(year, 3, 1), end: new Date(year, 5, 30, 23, 59, 59, 999) }, // Apr 1 - Jun 30 local time
+      { name: `3º Trimestre ${year}`, start: new Date(year, 6, 1), end: new Date(year, 8, 30, 23, 59, 59, 999) }, // Jul 1 - Sep 30 local time
+      { name: `4º Trimestre ${year}`, start: new Date(year, 9, 1), end: new Date(year, 11, 31, 23, 59, 59, 999) }, // Oct 1 - Dec 31 local time
     ];
 
     for (const quarter of quartersToCreate) {

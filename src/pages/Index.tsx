@@ -10,9 +10,10 @@ import { getAtividadesSummary, AtividadeSummary } from "@/integrations/supabase/
 import { Loader2, Target, ListTodo, CheckCircle, Hourglass, XCircle, Flag, TrendingUp, AlertTriangle, Clock, CircleDot, StopCircle } from "lucide-react";
 import StatusDistributionChart from "@/components/charts/StatusDistributionChart";
 import { Progress } from "@/components/ui/progress";
-import AreaProgressList from '@/components/dashboard/AreaProgressList'; // Import new component
-import RecentActivitiesList from '@/components/dashboard/RecentActivitiesList'; // Import new component
-import AlertsAndPending from '@/components/dashboard/AlertsAndPending'; // Import new component
+import AreaProgressList from '@/components/dashboard/AreaProgressList';
+import RecentActivitiesList from '@/components/dashboard/RecentActivitiesList';
+import AlertsAndPending from '@/components/dashboard/AlertsAndPending';
+import KeyResultsByPeriodList from '@/components/dashboard/KeyResultsByPeriodList'; // Import the new component
 
 const Index = () => {
   const { data: objetivosSummary, isLoading: isLoadingObjetivosSummary, error: errorObjetivosSummary } = useQuery<ObjetivoSummary[], Error>({
@@ -217,6 +218,11 @@ const Index = () => {
         <AreaProgressList />
         <RecentActivitiesList />
         <AlertsAndPending />
+      </div>
+
+      {/* New section for Key Results by Period */}
+      <div className="grid gap-4 mb-6">
+        <KeyResultsByPeriodList />
       </div>
 
       <MadeWithDyad />

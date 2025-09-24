@@ -81,6 +81,10 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
     },
   });
 
+  // Local state for date input strings
+  const [startDateString, setStartDateString] = React.useState<string>("");
+  const [endDateString, setEndDateString] = React.useState<string>("");
+
   React.useEffect(() => {
     if (initialData) {
       form.reset({
@@ -89,6 +93,8 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
         end_date: new Date(initialData.end_date),
         status: initialData.status,
       });
+      setStartDateString(format(new Date(initialData.start_date), "dd/MM/yyyy", { locale: ptBR }));
+      setEndDateString(format(new Date(initialData.end_date), "dd/MM/yyyy", { locale: ptBR }));
     } else {
       form.reset({
         nome: "",
@@ -96,8 +102,30 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
         end_date: undefined,
         status: "active",
       });
+      setStartDateString("");
+      setEndDateString("");
     }
   }, [initialData, form]);
+
+  // Sync form's Date object with local string state when form's Date changes (e.g., from calendar selection)
+  React.useEffect(() => {
+    const formStartDate = form.getValues("start_date");
+    if (formStartDate && isValid(formStartDate)) {
+      setStartDateString(format(formStartDate, "dd/MM/yyyy", { locale: ptBR }));
+    } else if (formStartDate === undefined) { // If cleared by form.reset()
+      setStartDateString("");
+    }
+  }, [form.watch("start_date")]); // Watch for changes in the form's Date object
+
+  React.useEffect(() => {
+    const formEndDate = form.getValues("end_date");
+    if (formEndDate && isValid(formEndDate)) {
+      setEndDateString(format(formEndDate, "dd/MM/yyyy", { locale: ptBR }));
+    } else if (formEndDate === undefined) { // If cleared by form.reset()
+      setEndDateString("");
+    }
+  }, [form.watch("end_date")]); // Watch for changes in the form's Date object
+
 
   const handleSubmit = (values: PeriodoFormValues) => {
     onSubmit(values);
@@ -108,6 +136,8 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
         end_date: undefined,
         status: "active",
       });
+      setStartDateString("");
+      setEndDateString("");
     }
   };
 
@@ -148,16 +178,15 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                       <FormControl>
                         <div className="relative">
                           <Input
-                            {...field}
                             type="text"
-                            value={field.value ? format(field.value, "dd/MM/yyyy", { locale: ptBR }) : ""}
-                            onChange={(e) => {
-                              const dateString = e.target.value;
-                              const parsedDate = parse(dateString, "dd/MM/yyyy", new Date(), { locale: ptBR });
+                            value={startDateString} // Use local state for input value
+                            onChange={(e) => setStartDateString(e.target.value)} // Update local state on change
+                            onBlur={() => { // Parse and update form field on blur
+                              const parsedDate = parse(startDateString, "dd/MM/yyyy", new Date(), { locale: ptBR });
                               if (isValid(parsedDate)) {
                                 field.onChange(parsedDate);
                               } else {
-                                field.onChange(undefined);
+                                field.onChange(undefined); // Clear form field if invalid
                               }
                             }}
                             placeholder="DD/MM/AAAA"
@@ -174,9 +203,17 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          field.onChange(date); // Update form field directly
+                          if (date) {
+                            setStartDateString(format(date, "dd/MM/yyyy", { locale: ptBR })); // Update local state
+                          } else {
+                            setStartDateString("");
+                          }
+                        }}
                         initialFocus
                         locale={ptBR}
+                        fixedWeeks={true} // Add fixedWeeks prop here
                       />
                     </PopoverContent>
                   </Popover>
@@ -195,16 +232,15 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                       <FormControl>
                         <div className="relative">
                           <Input
-                            {...field}
                             type="text"
-                            value={field.value ? format(field.value, "dd/MM/yyyy", { locale: ptBR }) : ""}
-                            onChange={(e) => {
-                              const dateString = e.target.value;
-                              const parsedDate = parse(dateString, "dd/MM/yyyy", new Date(), { locale: ptBR });
+                            value={endDateString} // Use local state for input value
+                            onChange={(e) => setEndDateString(e.target.value)} // Update local state on change
+                            onBlur={() => { // Parse and update form field on blur
+                              const parsedDate = parse(endDateString, "dd/MM/yyyy", new Date(), { locale: ptBR });
                               if (isValid(parsedDate)) {
                                 field.onChange(parsedDate);
                               } else {
-                                field.onChange(undefined);
+                                field.onChange(undefined); // Clear form field if invalid
                               }
                             }}
                             placeholder="DD/MM/AAAA"
@@ -221,9 +257,17 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          field.onChange(date); // Update form field directly
+                          if (date) {
+                            setEndDateString(format(date, "dd/MM/yyyy", { locale: ptBR })); // Update local state
+                          } else {
+                            setEndDateString("");
+                          }
+                        }}
                         initialFocus
                         locale={ptBR}
+                        fixedWeeks={true} // Add fixedWeeks prop here
                       />
                     </PopoverContent>
                   </Popover>

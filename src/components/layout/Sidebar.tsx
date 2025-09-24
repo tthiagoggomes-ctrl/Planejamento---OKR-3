@@ -76,9 +76,8 @@ export function Sidebar({ isOpen, onClose, className }: SidebarProps) {
       )}
     >
       <div className="flex h-16 items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-primary-foreground">
-          <Home className="h-6 w-6" />
-          <span className="text-lg">FADE-UFPE OKR</span>
+        <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-primary-foreground" onClick={onClose}>
+          <img src="/assets/logo-fade-ufpe.png" alt="Logo FADE-UFPE" className="h-8" /> {/* Adicionada a logo aqui */}
         </Link>
         <Button
           variant="ghost"

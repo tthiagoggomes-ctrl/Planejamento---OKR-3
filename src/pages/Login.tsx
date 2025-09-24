@@ -24,6 +24,7 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <img src="/assets/logo-fade-ufpe.png" alt="Logo FADE-UFPE" className="mx-auto mb-4 h-16" /> {/* Adicionada a logo aqui */}
           <CardTitle className="text-3xl font-bold">FADE-UFPE OKR Login</CardTitle>
         </CardHeader>
         <CardContent>

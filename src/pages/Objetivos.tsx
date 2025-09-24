@@ -889,7 +889,6 @@ const Objetivos = () => {
         </AlertDialog>
 
         {/* Atividade Form */}
-        {/* NOVO: Passando o ID do KR */}
         <AtividadeForm
           open={isAtividadeFormOpen}
           onOpenChange={setIsAtividadeFormOpen}

@@ -66,7 +66,7 @@ const formSchema = z.object({
   status: z.enum(['active', 'archived'], {
     message: "Selecione um status válido.",
   }),
-  parent_id: z.string().uuid().nullable().optional(), // NOVO: parent_id é opcional
+  parent_id: z.string().uuid().nullable().optional(),
 }).refine((data) => data.end_date >= data.start_date, {
   message: "A data de término não pode ser anterior à data de início.",
   path: ["end_date"],
@@ -80,7 +80,7 @@ interface PeriodoFormProps {
   onSubmit: (values: PeriodoFormValues) => void;
   initialData?: Periodo | null;
   isLoading?: boolean;
-  parentPeriodIdForNew?: string | null; // NOVO: Para preencher parent_id ao criar um trimestre
+  parentPeriodIdForNew?: string | null;
 }
 
 export const PeriodoForm: React.FC<PeriodoFormProps> = ({
@@ -89,7 +89,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
   onSubmit,
   initialData,
   isLoading,
-  parentPeriodIdForNew = null, // Default to null
+  parentPeriodIdForNew = null,
 }) => {
   const form = useForm<PeriodoFormValues>({
     resolver: zodResolver(formSchema),
@@ -98,14 +98,13 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
       start_date: initialData?.start_date ? new Date(initialData.start_date) : undefined,
       end_date: initialData?.end_date ? new Date(initialData.end_date) : undefined,
       status: initialData?.status || "active",
-      parent_id: initialData?.parent_id || parentPeriodIdForNew, // NOVO: Usar parentPeriodIdForNew
+      parent_id: initialData?.parent_id || parentPeriodIdForNew,
     },
   });
 
   const [startDateString, setStartDateString] = React.useState<string>("");
   const [endDateString, setEndDateString] = React.useState<string>("");
 
-  // Determina se o período é anual (sem pai)
   const isAnnualPeriod = initialData?.parent_id === null || (parentPeriodIdForNew === null && !initialData);
 
   React.useEffect(() => {
@@ -125,46 +124,44 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
         start_date: undefined,
         end_date: undefined,
         status: "active",
-        parent_id: parentPeriodIdForNew, // NOVO: Resetar com parentPeriodIdForNew
+        parent_id: parentPeriodIdForNew,
       });
       setStartDateString("");
       setEndDateString("");
     }
   }, [initialData, form, parentPeriodIdForNew]);
 
-  // Efeito para preencher e desabilitar datas automaticamente para períodos anuais
   React.useEffect(() => {
     if (isAnnualPeriod) {
       const nomeValue = form.getValues('nome');
-      const yearMatch = nomeValue.match(/\d{4}/); // Tenta extrair o ano do nome
+      const yearMatch = nomeValue.match(/\d{4}/);
       if (yearMatch) {
         const year = parseInt(yearMatch[0], 10);
-        const newStartDate = new Date(year, 0, 1); // 1º de Janeiro (local para exibição)
-        const newEndDate = new Date(year, 11, 31); // 31 de Dezembro (local para exibição)
+        const newStartDate = new Date(year, 0, 1);
+        const newEndDate = new Date(year, 11, 31);
 
         form.setValue('start_date', newStartDate);
         form.setValue('end_date', newEndDate);
         setStartDateString(format(newStartDate, "dd/MM/yyyy", { locale: ptBR }));
         setEndDateString(format(newEndDate, "dd/MM/yyyy", { locale: ptBR }));
       } else {
-        // Se o nome não contiver um ano, limpa as datas
         form.setValue('start_date', undefined);
         form.setValue('end_date', undefined);
         setStartDateString("");
         setEndDateString("");
       }
     }
-  }, [form.watch('nome'), isAnnualPeriod]); // Observa o campo 'nome' e se é um período anual
+  }, [form.watch('nome'), isAnnualPeriod]);
 
   const handleSubmit = (values: PeriodoFormValues) => {
     onSubmit(values);
-    if (!initialData) { // Only reset if creating a new period
+    if (!initialData) {
       form.reset({
         nome: "",
         start_date: undefined,
         end_date: undefined,
         status: "active",
-        parent_id: parentPeriodIdForNew, // NOVO: Resetar com parentPeriodIdForNew
+        parent_id: parentPeriodIdForNew,
       });
       setStartDateString("");
       setEndDateString("");
@@ -223,7 +220,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                               "w-full pl-3 text-left font-normal pr-10",
                               !field.value && "text-muted-foreground"
                             )}
-                            disabled={isAnnualPeriod} {/* Desabilitar para períodos anuais */}
+                            disabled={isAnnualPeriod}
                           />
                           <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 cursor-pointer" />
                         </div>
@@ -271,7 +268,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                               "w-full pl-3 text-left font-normal pr-10",
                               !field.value && "text-muted-foreground"
                             )}
-                            disabled={isAnnualPeriod} {/* Desabilitar para períodos anuais */}
+                            disabled={isAnnualPeriod}
                           />
                           <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 cursor-pointer" />
                         </div>
@@ -319,7 +316,6 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                 </FormItem>
               )}
             />
-            {/* Hidden parent_id field if it's a new quarter */}
             {parentPeriodIdForNew && !initialData && (
               <FormField
                 control={form.control}

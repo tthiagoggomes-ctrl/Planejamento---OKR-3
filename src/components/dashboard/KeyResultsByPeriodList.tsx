@@ -3,13 +3,15 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CalendarDays, AlertTriangle, Clock, CheckCircle, TrendingUp } from 'lucide-react';
+import { Loader2, CalendarDays, AlertTriangle, Clock, CheckCircle, TrendingUp, Eye, EyeOff } from 'lucide-react';
 import { getPeriodos, Periodo } from '@/integrations/supabase/api/periodos';
 import { getAllKeyResults, KeyResult } from '@/integrations/supabase/api/key_results';
 import { showError } from '@/utils/toast';
 import { format, isPast, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
+import { Switch } from '@/components/ui/switch'; // Import Switch
+import { Label } from '@/components/ui/label'; // Import Label
 
 interface KeyResultsByPeriodListProps {
   // Pode aceitar filtros ou propriedades adicionais no futuro, se necessário
@@ -25,6 +27,8 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
     queryKey: ["allKeyResults"],
     queryFn: getAllKeyResults,
   });
+
+  const [hideEmptyPeriods, setHideEmptyPeriods] = React.useState(false); // Novo estado
 
   const now = new Date();
 
@@ -129,18 +133,33 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
     );
   }
 
+  const filteredGroups = hideEmptyPeriods
+    ? groupedKRs.filter(group => group.overdueKRs.length > 0 || group.attentionKRs.length > 0 || group.otherKRs.length > 0)
+    : groupedKRs;
+
   return (
     <Card className="h-full">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-lg font-semibold flex items-center">
           <CalendarDays className="mr-2 h-5 w-5" /> Key Results por Período
         </CardTitle>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="hide-empty-periods"
+            checked={hideEmptyPeriods}
+            onCheckedChange={setHideEmptyPeriods}
+          />
+          <Label htmlFor="hide-empty-periods" className="flex items-center gap-1 text-sm text-muted-foreground">
+            {hideEmptyPeriods ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            Ocultar vazios
+          </Label>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {groupedKRs.length === 0 ? (
+        {filteredGroups.length === 0 ? (
           <p className="text-gray-600">Nenhum Key Result encontrado ou período associado.</p>
         ) : (
-          groupedKRs.map(({ period, overdueKRs, attentionKRs, otherKRs }) => {
+          filteredGroups.map(({ period, overdueKRs, attentionKRs, otherKRs }) => {
             const periodEndDate = parseISO(period.end_date);
             const periodStartDate = parseISO(period.start_date);
             const isPeriodPast = isPast(periodEndDate, { now });

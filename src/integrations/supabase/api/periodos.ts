@@ -1,6 +1,7 @@
 import { supabase } from '../client';
 import { showError, showSuccess } from '@/utils/toast';
 import { getYear, format } from 'date-fns'; // Importar funções de data
+import { ptBR } from 'date-fns/locale'; // Corrigido: Importar ptBR diretamente
 
 export type PeriodoStatus = 'active' | 'archived';
 
@@ -144,7 +145,7 @@ export const createPeriodo = async (
       const quarterStartDate = new Date(year, quarter.startMonth, 1, 0, 0, 0, 0);
       const quarterEndDate = new Date(year, quarter.endMonth + 1, 0, 23, 59, 59, 999); // Last day of the month
 
-      const quarterName = `${quarter.quarterNum}º Trimestre ${year} - ${format(quarterStartDate, 'MMMM', { locale: require('date-fns/locale/pt-BR') })} a ${format(quarterEndDate, 'MMMM', { locale: require('date-fns/locale/pt-BR') })} ${year}`;
+      const quarterName = `${quarter.quarterNum}º Trimestre ${year} - ${format(quarterStartDate, 'MMMM', { locale: ptBR })} a ${format(quarterEndDate, 'MMMM', { locale: ptBR })} ${year}`;
 
       const { error: quarterError } = await supabase
         .from('periodos')
@@ -189,8 +190,8 @@ export const updatePeriodo = async (
     const startDateObj = new Date(start_date);
     const endDateObj = new Date(end_date);
     const year = getYear(startDateObj);
-    const startMonthName = format(startDateObj, 'MMMM', { locale: require('date-fns/locale/pt-BR') });
-    const endMonthName = format(endDateObj, 'MMMM', { locale: require('date-fns/locale/pt-BR') });
+    const startMonthName = format(startDateObj, 'MMMM', { locale: ptBR });
+    const endMonthName = format(endDateObj, 'MMMM', { locale: ptBR });
 
     // Attempt to infer quarter number from name if it exists, otherwise default
     let quarterNum = 0;

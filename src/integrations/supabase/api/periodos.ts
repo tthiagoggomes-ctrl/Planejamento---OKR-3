@@ -14,13 +14,44 @@ export interface Periodo {
 }
 
 export const getPeriodos = async (): Promise<Periodo[] | null> => {
-  const { data, error } = await supabase.from('periodos').select('*').order('start_date', { ascending: false });
+  const { data, error } = await supabase.from('periodos').select('*'); // Fetch all periods without initial ordering
   if (error) {
     console.error('Error fetching periods:', error.message);
     showError('Erro ao carregar períodos.');
     return null;
   }
-  return data;
+
+  if (!data) return [];
+
+  // Custom sorting logic
+  const sortedData = data.sort((a, b) => {
+    // Extract year from 'nome' (e.g., "Q1 2025" -> 2025, "Anual 2025" -> 2025)
+    const yearA = parseInt(a.nome.match(/\d{4}/)?.[0] || '0', 10);
+    const yearB = parseInt(b.nome.match(/\d{4}/)?.[0] || '0', 10);
+
+    // Define order for period types
+    const getPeriodTypeOrder = (name: string) => {
+      if (name.includes('Anual')) return 0;
+      if (name.includes('Q1')) return 1;
+      if (name.includes('Q2')) return 2;
+      if (name.includes('Q3')) return 3;
+      if (name.includes('Q4')) return 4;
+      return 99; // Fallback for unknown types
+    };
+
+    const typeOrderA = getPeriodTypeOrder(a.nome);
+    const typeOrderB = getPeriodTypeOrder(b.nome);
+
+    // Primary sort: year descending
+    if (yearA !== yearB) {
+      return yearB - yearA;
+    }
+
+    // Secondary sort: period type ascending (Anual, Q1, Q2, Q3, Q4)
+    return typeOrderA - typeOrderB;
+  });
+
+  return sortedData;
 };
 
 export const createPeriodo = async (

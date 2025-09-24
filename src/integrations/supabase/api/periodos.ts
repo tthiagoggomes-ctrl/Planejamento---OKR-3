@@ -1,5 +1,6 @@
 import { supabase } from '../client';
 import { showError, showSuccess } from '@/utils/toast';
+import { startOfYear, endOfYear, addMonths, startOfMonth, endOfMonth, getYear } from 'date-fns'; // Importar funções de data
 
 export type PeriodoStatus = 'active' | 'archived';
 
@@ -101,6 +102,39 @@ export const createPeriodo = async (
     showError(`Erro ao criar período: ${error.message}`);
     return null;
   }
+
+  // Se o período criado for anual (sem parent_id), criar os trimestres automaticamente
+  if (parent_id === null && data) {
+    const annualPeriodId = data.id;
+    const annualStartDate = new Date(start_date);
+    const year = getYear(annualStartDate);
+
+    const quartersToCreate = [
+      { name: `1º Trimestre ${year}`, start: startOfYear(annualStartDate), end: endOfMonth(addMonths(startOfYear(annualStartDate), 2)) }, // Jan-Mar
+      { name: `2º Trimestre ${year}`, start: startOfMonth(addMonths(startOfYear(annualStartDate), 3)), end: endOfMonth(addMonths(startOfYear(annualStartDate), 5)) }, // Apr-Jun
+      { name: `3º Trimestre ${year}`, start: startOfMonth(addMonths(startOfYear(annualStartDate), 6)), end: endOfMonth(addMonths(startOfYear(annualStartDate), 8)) }, // Jul-Sep
+      { name: `4º Trimestre ${year}`, start: startOfMonth(addMonths(startOfYear(annualStartDate), 9)), end: endOfYear(annualStartDate) }, // Oct-Dec
+    ];
+
+    for (const quarter of quartersToCreate) {
+      const { error: quarterError } = await supabase
+        .from('periodos')
+        .insert({
+          nome: quarter.name,
+          start_date: quarter.start.toISOString(),
+          end_date: quarter.end.toISOString(),
+          status: 'active', // Trimestres são criados como ativos por padrão
+          parent_id: annualPeriodId,
+        });
+
+      if (quarterError) {
+        console.error(`Error creating quarter ${quarter.name}:`, quarterError.message);
+        // Decidir se o erro na criação do trimestre deve falhar a criação do ano inteiro
+        // Por enquanto, apenas logamos o erro.
+      }
+    }
+  }
+
   return data;
 };
 

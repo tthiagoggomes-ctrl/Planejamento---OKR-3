@@ -189,7 +189,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
                     <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
                       {overdueKRs.map(kr => (
                         <li key={kr.id} className="cursor-pointer hover:text-blue-600 hover:underline">
-                          <Link to={`/objetivos/${kr.objetivo_id}`} state={{ keyResultId: kr.id }}>
+                          <Link to={`/objetivos`} state={{ keyResultId: kr.id }}> {/* CORRIGIDO: Aponta para /objetivos */}
                             {kr.titulo}
                           </Link>
                         </li>
@@ -206,7 +206,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
                     <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
                       {attentionKRs.map(kr => (
                         <li key={kr.id} className="cursor-pointer hover:text-blue-600 hover:underline">
-                          <Link to={`/objetivos/${kr.objetivo_id}`} state={{ keyResultId: kr.id }}>
+                          <Link to={`/objetivos`} state={{ keyResultId: kr.id }}> {/* CORRIGIDO: Aponta para /objetivos */}
                             {kr.titulo}
                           </Link>
                         </li>
@@ -223,7 +223,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
                     <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
                       {otherKRs.map(kr => (
                         <li key={kr.id} className="cursor-pointer hover:text-blue-600 hover:underline">
-                          <Link to={`/objetivos/${kr.objetivo_id}`} state={{ keyResultId: kr.id }}>
+                          <Link to={`/objetivos`} state={{ keyResultId: kr.id }}> {/* CORRIGIDO: Aponta para /objetivos */}
                             {kr.titulo} (Status: {kr.status === 'completed' ? 'Concluído' : 'No Caminho'})
                           </Link>
                         </li>

@@ -24,9 +24,9 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
-  SelectGroup, // Adicionado
+  // SelectGroup, // Removido
   SelectItem,
-  SelectLabel, // Adicionado
+  // SelectLabel, // Removido
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -130,32 +130,30 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
     { value: "percentage", label: "Porcentagem" },
   ];
 
-  // Lógica para agrupar os períodos
-  const groupedPeriods = React.useMemo(() => {
+  // Lógica para filtrar e ordenar apenas os períodos trimestrais
+  const quarterlyPeriods = React.useMemo(() => {
     if (!periods) return [];
+    return periods
+      .filter(period => period.parent_id !== null) // Apenas períodos com parent_id (trimestrais)
+      .sort((a, b) => {
+        // Ordenar por ano descendente
+        const yearA = parseInt(a.nome.match(/\d{4}/)?.[0] || '0', 10);
+        const yearB = parseInt(b.nome.match(/\d{4}/)?.[0] || '0', 10);
 
-    const groups: { label: string; items: Periodo[] }[] = [];
-    let currentAnnualGroup: { label: string; items: Periodo[] } | null = null;
-
-    periods.forEach(period => {
-      if (period.nome.startsWith('Anual')) {
-        // Se um novo período anual é encontrado, inicia um novo grupo
-        currentAnnualGroup = { label: period.nome, items: [period] };
-        groups.push(currentAnnualGroup);
-      } else if (currentAnnualGroup && period.nome.includes(currentAnnualGroup.label.split(' ')[1])) {
-        // Se é um período trimestral e pertence ao grupo anual atual, adiciona
-        currentAnnualGroup.items.push(period);
-      } else {
-        // Para períodos que não se encaixam ou aparecem antes de um anual
-        let genericGroup = groups.find(g => g.label === 'Outros Períodos');
-        if (!genericGroup) {
-          genericGroup = { label: 'Outros Períodos', items: [] };
-          groups.push(genericGroup);
+        if (yearA !== yearB) {
+          return yearB - yearA;
         }
-        genericGroup.items.push(period);
-      }
-    });
-    return groups;
+
+        // Em seguida, ordenar por número do trimestre ascendente
+        const getQuarterOrder = (name: string) => {
+          if (name.includes('1º Trimestre')) return 1;
+          if (name.includes('2º Trimestre')) return 2;
+          if (name.includes('3º Trimestre')) return 3;
+          if (name.includes('4º Trimestre')) return 4;
+          return 99; // Fallback
+        };
+        return getQuarterOrder(a.nome) - getQuarterOrder(b.nome);
+      });
   }, [periods]);
 
   return (
@@ -260,15 +258,10 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
                       {isLoadingPeriods ? (
                         <SelectItem value="" disabled>Carregando períodos...</SelectItem>
                       ) : (
-                        groupedPeriods.map(group => (
-                          <SelectGroup key={group.label}>
-                            <SelectLabel>{group.label}</SelectLabel>
-                            {group.items.map(period => (
-                              <SelectItem key={period.id} value={period.nome}>
-                                {period.nome}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
+                        quarterlyPeriods.map(period => (
+                          <SelectItem key={period.id} value={period.nome}>
+                            {period.nome}
+                          </SelectItem>
                         ))
                       )}
                     </SelectContent>

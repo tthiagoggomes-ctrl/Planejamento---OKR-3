@@ -590,7 +590,7 @@ const Objetivos = () => {
                 {objetivos.map((objetivo) => {
                   const objectiveProgress = calculateObjetivoOverallProgress(objetivo.id);
                   return (
-                    <React.Fragment key={objetivo.id}>
+                    <>
                         <TableRow>
                           <TableCell>
                             <Button
@@ -679,7 +679,7 @@ const Objetivos = () => {
                                         {keyResultsMap.get(objetivo.id)?.map((kr) => {
                                           const krProgress = calculateKeyResultProgress(kr);
                                           return (
-                                            <React.Fragment key={kr.id}>
+                                            <>
                                               <TableRow>
                                                 <TableCell>
                                                   <Button
@@ -808,7 +808,7 @@ const Objetivos = () => {
                                                   </TableCell>
                                                 </TableRow>
                                               )}
-                                            </React.Fragment>
+                                            </>
                                           );
                                         })}
                                       </TableBody>
@@ -821,7 +821,7 @@ const Objetivos = () => {
                             </TableCell>
                           </TableRow>
                         )}
-                      </React.Fragment>
+                      </>
                     );
                   })}
                 </TableBody>

@@ -62,6 +62,8 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // NOVO: Cor personalizada para FADE-UFPE
+        'fade-red': '#b5121b',
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -64,7 +64,7 @@ const Layout = () => {
                 <span className="sr-only">Toggle sidebar</span>
               </Button>
             )}
-            <h1 className="text-xl font-semibold">FADE-UFPE OKR System</h1>
+            <h1 className="text-xl font-semibold text-fade-red">FADE-UFPE OKR System</h1> {/* Cor aplicada aqui */}
           </div>
           <Button variant="ghost" onClick={handleLogout} className="flex items-center gap-2">
             <LogOut className="h-4 w-4" />

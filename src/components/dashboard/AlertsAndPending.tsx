@@ -153,94 +153,82 @@ const AlertsAndPending: React.FC = () => {
         {!hasAlerts ? (
           <p className="text-green-600 text-center py-4">Nenhum alerta ou pendência crítica no momento. Bom trabalho!</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-4"> {/* This was the original structure, not a grid */}
             {/* Key Results em Risco/Fora do Caminho Card */}
             {krsAtRiskOrOffTrack.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-md font-semibold flex items-center text-orange-600">
-                    <TrendingUp className="mr-2 h-4 w-4" /> Key Results em Risco/Fora do Caminho ({krsAtRiskOrOffTrack.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                    {displayedKRsAtRisk.map(kr => (
-                      <li
-                        key={kr.id}
-                        className="cursor-pointer hover:text-blue-600 hover:underline"
-                        onClick={() => handleKeyResultClick(kr.objetivo_id, kr.id)}
-                      >
-                        {kr.titulo} (Status: {kr.status === 'at_risk' ? 'Em Risco' : 'Fora do Caminho'})
-                      </li>
-                    ))}
-                  </ul>
-                  {krsAtRiskOrOffTrack.length > 5 && (
-                    <Button
-                      variant="link"
-                      className="mt-2 p-0 h-auto text-sm"
-                      onClick={() => setShowAllKRsAtRisk(!showAllKRsAtRisk)}
+              <div>
+                <h4 className="font-semibold text-orange-600 flex items-center gap-1 mb-2">
+                  <TrendingUp className="mr-2 h-4 w-4" /> Key Results em Risco/Fora do Caminho ({krsAtRiskOrOffTrack.length})
+                </h4>
+                <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                  {displayedKRsAtRisk.map(kr => (
+                    <li
+                      key={kr.id}
+                      className="cursor-pointer hover:text-blue-600 hover:underline"
+                      onClick={() => handleKeyResultClick(kr.objetivo_id, kr.id)}
                     >
-                      {showAllKRsAtRisk ? (
-                        <>
-                          <ChevronUp className="mr-1 h-4 w-4" /> Ocultar
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="mr-1 h-4 w-4" /> Ver todos ({krsAtRiskOrOffTrack.length - 5} mais)
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
+                      {kr.titulo} (Status: {kr.status === 'at_risk' ? 'Em Risco' : 'Fora do Caminho'})
+                    </li>
+                  ))}
+                </ul>
+                {krsAtRiskOrOffTrack.length > 5 && (
+                  <Button
+                    variant="link"
+                    className="mt-2 p-0 h-auto text-sm"
+                    onClick={() => setShowAllKRsAtRisk(!showAllKRsAtRisk)}
+                  >
+                    {showAllKRsAtRisk ? (
+                      <>
+                        <ChevronUp className="mr-1 h-4 w-4" /> Ocultar
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="mr-1 h-4 w-4" /> Ver todos ({krsAtRiskOrOffTrack.length - 5} mais)
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             )}
 
             {/* Objetivos Abaixo de 30% de Conclusão Card */}
             {objectivesBelow30Percent.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-md font-semibold flex items-center text-red-600">
-                    <Target className="mr-2 h-4 w-4" /> Objetivos Abaixo de 30% de Conclusão ({objectivesBelow30Percent.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                    {objectivesBelow30Percent.map(obj => (
-                      <li
-                        key={obj.id}
-                        className="cursor-pointer hover:text-blue-600 hover:underline"
-                        onClick={() => handleObjectiveClick(obj.id)}
-                      >
-                        {obj.titulo}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
+              <div>
+                <h4 className="font-semibold text-red-600 flex items-center gap-1 mb-2">
+                  <Target className="mr-2 h-4 w-4" /> Objetivos Abaixo de 30% de Conclusão ({objectivesBelow30Percent.length})
+                </h4>
+                <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                  {objectivesBelow30Percent.map(obj => (
+                    <li
+                      key={obj.id}
+                      className="cursor-pointer hover:text-blue-600 hover:underline"
+                      onClick={() => handleObjectiveClick(obj.id)}
+                    >
+                      {obj.titulo}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
 
             {/* Áreas sem Atualizações Recentes Card */}
             {areasWithoutRecentUpdates.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-md font-semibold flex items-center text-yellow-600">
-                    <Building className="mr-2 h-4 w-4" /> Áreas sem Atualizações Recentes ({areasWithoutRecentUpdates.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                    {areasWithoutRecentUpdates.map(area => (
-                      <li
-                        key={area.id}
-                        className="cursor-pointer hover:text-blue-600 hover:underline"
-                        onClick={() => handleAreaClick(area.id)}
-                      >
-                        {area.nome}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
+              <div>
+                <h4 className="font-semibold text-yellow-600 flex items-center gap-1 mb-2">
+                  <Building className="mr-2 h-4 w-4" /> Áreas sem Atualizações Recentes ({areasWithoutRecentUpdates.length})
+                </h4>
+                <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                  {areasWithoutRecentUpdates.map(area => (
+                    <li
+                      key={area.id}
+                      className="cursor-pointer hover:text-blue-600 hover:underline"
+                      onClick={() => handleAreaClick(area.id)}
+                    >
+                      {area.nome}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         )}

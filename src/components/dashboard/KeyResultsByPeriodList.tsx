@@ -12,7 +12,7 @@ import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { Switch } from '@/components/ui/switch'; // Import Switch
 import { Label } from '@/components/ui/label'; // Import Label
-import { Progress } from '@/components/ui/progress'; // Import Progress
+// import { Progress } from '@/components/ui/progress'; // Progress component removed
 
 interface KeyResultsByPeriodListProps {
   // Pode aceitar filtros ou propriedades adicionais no futuro, se necessário
@@ -191,11 +191,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
                       {overdueKRs.map(kr => (
                         <li key={kr.id} className="cursor-pointer hover:text-blue-600 hover:underline">
                           <Link to={`/objetivos`} state={{ keyResultId: kr.id }}> {/* CORRIGIDO: Aponta para /objetivos */}
-                            <div className="flex items-center justify-between">
-                              <span>{kr.titulo}</span>
-                              <span className="text-sm text-muted-foreground">{kr.valor_atual}%</span>
-                            </div>
-                            <Progress value={kr.valor_atual} className="h-2 mt-1" />
+                            {kr.titulo}
                           </Link>
                         </li>
                       ))}
@@ -212,11 +208,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
                       {attentionKRs.map(kr => (
                         <li key={kr.id} className="cursor-pointer hover:text-blue-600 hover:underline">
                           <Link to={`/objetivos`} state={{ keyResultId: kr.id }}> {/* CORRIGIDO: Aponta para /objetivos */}
-                            <div className="flex items-center justify-between">
-                              <span>{kr.titulo}</span>
-                              <span className="text-sm text-muted-foreground">{kr.valor_atual}%</span>
-                            </div>
-                            <Progress value={kr.valor_atual} className="h-2 mt-1" />
+                            {kr.titulo}
                           </Link>
                         </li>
                       ))}
@@ -233,11 +225,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
                       {otherKRs.map(kr => (
                         <li key={kr.id} className="cursor-pointer hover:text-blue-600 hover:underline">
                           <Link to={`/objetivos`} state={{ keyResultId: kr.id }}> {/* CORRIGIDO: Aponta para /objetivos */}
-                            <div className="flex items-center justify-between">
-                              <span>{kr.titulo} (Status: {kr.status === 'completed' ? 'Concluído' : 'No Caminho'})</span>
-                              <span className="text-sm text-muted-foreground">{kr.valor_atual}%</span>
-                            </div>
-                            <Progress value={kr.valor_atual} className="h-2 mt-1" />
+                            {kr.titulo} (Status: {kr.status === 'completed' ? 'Concluído' : 'No Caminho'})
                           </Link>
                         </li>
                       ))}

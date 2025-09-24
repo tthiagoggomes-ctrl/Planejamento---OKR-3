@@ -105,6 +105,9 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
   const [startDateString, setStartDateString] = React.useState<string>("");
   const [endDateString, setEndDateString] = React.useState<string>("");
 
+  // Determina se o período é anual (sem pai)
+  const isAnnualPeriod = initialData?.parent_id === null || (parentPeriodIdForNew === null && !initialData);
+
   React.useEffect(() => {
     if (initialData) {
       form.reset({
@@ -128,6 +131,30 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
       setEndDateString("");
     }
   }, [initialData, form, parentPeriodIdForNew]);
+
+  // Efeito para preencher e desabilitar datas automaticamente para períodos anuais
+  React.useEffect(() => {
+    if (isAnnualPeriod) {
+      const nomeValue = form.getValues('nome');
+      const yearMatch = nomeValue.match(/\d{4}/); // Tenta extrair o ano do nome
+      if (yearMatch) {
+        const year = parseInt(yearMatch[0], 10);
+        const newStartDate = new Date(year, 0, 1); // 1º de Janeiro (local para exibição)
+        const newEndDate = new Date(year, 11, 31); // 31 de Dezembro (local para exibição)
+
+        form.setValue('start_date', newStartDate);
+        form.setValue('end_date', newEndDate);
+        setStartDateString(format(newStartDate, "dd/MM/yyyy", { locale: ptBR }));
+        setEndDateString(format(newEndDate, "dd/MM/yyyy", { locale: ptBR }));
+      } else {
+        // Se o nome não contiver um ano, limpa as datas
+        form.setValue('start_date', undefined);
+        form.setValue('end_date', undefined);
+        setStartDateString("");
+        setEndDateString("");
+      }
+    }
+  }, [form.watch('nome'), isAnnualPeriod]); // Observa o campo 'nome' e se é um período anual
 
   const handleSubmit = (values: PeriodoFormValues) => {
     onSubmit(values);
@@ -196,6 +223,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                               "w-full pl-3 text-left font-normal pr-10",
                               !field.value && "text-muted-foreground"
                             )}
+                            disabled={isAnnualPeriod} {/* Desabilitar para períodos anuais */}
                           />
                           <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 cursor-pointer" />
                         </div>
@@ -243,6 +271,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                               "w-full pl-3 text-left font-normal pr-10",
                               !field.value && "text-muted-foreground"
                             )}
+                            disabled={isAnnualPeriod} {/* Desabilitar para períodos anuais */}
                           />
                           <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 cursor-pointer" />
                         </div>

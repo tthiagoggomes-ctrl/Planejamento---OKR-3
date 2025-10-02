@@ -81,12 +81,12 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
 
 export const createUser = async (
   email: string,
-  password?: string,
   first_name: string,
   last_name: string,
   area_id: string | null,
   permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario', // Updated permission type
-  selected_permissions: string[] = [] // New parameter for granular permissions
+  selected_permissions: string[] = [], // New parameter for granular permissions
+  password?: string // Moved optional parameter to the end
 ): Promise<UserProfile | null> => {
   try {
     const { data, error } = await supabase.functions.invoke('create-user', {
@@ -215,7 +215,7 @@ export const sendPasswordResetEmail = async (email: string): Promise<boolean> =>
   // This function still uses supabaseAdmin.auth.admin.generateLink.
   // For full security, this should also be moved to an Edge Function.
   const { error } = await supabase.auth.admin.generateLink({
-    type: 'password_reset',
+    type: 'recovery', // Corrigido: 'password_reset' para 'recovery'
     email,
   });
 
@@ -237,7 +237,7 @@ export const blockUser = async (id: string): Promise<UserProfile | null> => {
 
   if (error) {
     console.error('Error blocking user:', error.message);
-    showError(`Erro ao bloquear usuário: ${err.message}`);
+    showError(`Erro ao bloquear usuário: ${error.message}`); // Corrigido: err.message para error.message
     return null;
   }
   // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.
@@ -256,7 +256,7 @@ export const unblockUser = async (id: string): Promise<UserProfile | null> => {
 
   if (error) {
     console.error('Error unblocking user:', error.message);
-    showError(`Erro ao desbloquear usuário: ${err.message}`);
+    showError(`Erro ao desbloquear usuário: ${error.message}`); // Corrigido: err.message para error.message
     return null;
   }
   // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.

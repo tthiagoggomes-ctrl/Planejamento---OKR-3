@@ -77,9 +77,9 @@ export const ObjetivoForm: React.FC<ObjetivoFormProps> = ({
     },
   });
 
-  const { data: areas, isLoading: isLoadingAreas } = useQuery<Area[], Error>({
+  const { data: areas, isLoading: isLoadingAreas } = useQuery<Area[] | null, Error>({
     queryKey: ["areas"],
-    queryFn: getAreas,
+    queryFn: () => getAreas(), // Wrap in arrow function
   });
 
   // const { data: periods, isLoading: isLoadingPeriods } = useQuery<Periodo[], Error>({ // REMOVIDO

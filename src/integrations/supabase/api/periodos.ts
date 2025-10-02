@@ -1,6 +1,6 @@
 import { supabase } from '../client';
 import { showError, showSuccess } from '@/utils/toast';
-import { getYear, format } from 'date-fns'; // Importar funções de data
+import { getYear, format, getMonth } from 'date-fns'; // Importar funções de data, incluindo getMonth
 import { ptBR } from 'date-fns/locale'; // Corrigido: Importar ptBR diretamente
 
 export type PeriodoStatus = 'active' | 'archived';
@@ -158,7 +158,7 @@ export const createPeriodo = async (
         });
 
       if (quarterError) {
-        console.error(`Error creating quarter ${quarter.name}:`, quarterError.message);
+        console.error(`Error creating quarter ${quarter.quarterNum}:`, quarterError.message); // Corrigido: quarter.name para quarter.quarterNum
       }
     }
   }
@@ -199,6 +199,13 @@ export const updatePeriodo = async (
     else if (nome.includes('2º Trimestre')) quarterNum = 2;
     else if (nome.includes('3º Trimestre')) quarterNum = 3;
     else if (nome.includes('4º Trimestre')) quarterNum = 4;
+    else {
+      const startMonth = getMonth(startDateObj);
+      if (startMonth >= 0 && startMonth <= 2) quarterNum = 1;
+      else if (startMonth >= 3 && startMonth <= 5) quarterNum = 2;
+      else if (startMonth >= 6 && startMonth <= 8) quarterNum = 3;
+      else if (startMonth >= 9 && startMonth <= 11) quarterNum = 4;
+    }
 
     if (quarterNum > 0) {
       finalNome = `${quarterNum}º Trimestre ${year} - ${startMonthName} a ${endMonthName} ${year}`;

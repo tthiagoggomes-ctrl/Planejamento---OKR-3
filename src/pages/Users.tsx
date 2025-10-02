@@ -52,20 +52,20 @@ const Users = () => {
   const [sortBy, setSortBy] = React.useState<keyof UserProfile | 'area_name' | 'email'>('first_name');
   const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
 
-  const { data: users, isLoading, error } = useQuery<UserProfile[], Error>({
+  const { data: users, isLoading, error } = useQuery<UserProfile[] | null, Error>({
     queryKey: ["users", { sortBy, sortOrder }], // Incluir ordenação na chave da query
-    queryFn: () => getUsers({ sortBy, sortOrder }),
+    queryFn: ({ queryKey }) => getUsers({ sortBy: queryKey[1].sortBy, sortOrder: queryKey[1].sortOrder }),
   });
 
   const createUserMutation = useMutation({
     mutationFn: (values: UserFormValues) => createUser(
       values.email,
-      values.password,
       values.first_name,
       values.last_name,
       values.area_id,
       values.permissao,
-      values.selected_permissions
+      values.selected_permissions,
+      values.password, // Password is now the last optional argument
     ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });

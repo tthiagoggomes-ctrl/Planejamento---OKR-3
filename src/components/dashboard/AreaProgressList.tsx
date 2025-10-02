@@ -14,19 +14,19 @@ import { useNavigate } from 'react-router-dom'; // Importar useNavigate
 const AreaProgressList: React.FC = () => {
   const navigate = useNavigate(); // Inicializar useNavigate
 
-  const { data: areas, isLoading: isLoadingAreas, error: errorAreas } = useQuery<Area[], Error>({
+  const { data: areas, isLoading: isLoadingAreas, error: errorAreas } = useQuery<Area[] | null, Error>({
     queryKey: ["areas"],
-    queryFn: getAreas,
+    queryFn: () => getAreas(), // Wrap in arrow function
   });
 
-  const { data: objetivos, isLoading: isLoadingObjetivos, error: errorObjetivos } = useQuery<Objetivo[], Error>({
+  const { data: objetivos, isLoading: isLoadingObjetivos, error: errorObjetivos } = useQuery<Objetivo[] | null, Error>({
     queryKey: ["objetivos"],
     queryFn: () => getObjetivos(),
   });
 
-  const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[], Error>({
+  const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[] | null, Error>({
     queryKey: ["allKeyResults"],
-    queryFn: getAllKeyResults,
+    queryFn: () => getAllKeyResults(), // Wrap in arrow function
   });
 
   const calculateAreaProgress = (areaId: string | null): number => {

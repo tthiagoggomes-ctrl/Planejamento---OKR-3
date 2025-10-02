@@ -90,9 +90,9 @@ export const UserForm: React.FC<UserFormProps> = ({
     },
   });
 
-  const { data: areas, isLoading: isLoadingAreas } = useQuery<Area[], Error>({
+  const { data: areas, isLoading: isLoadingAreas } = useQuery<Area[] | null, Error>({
     queryKey: ["areas"],
-    queryFn: getAreas,
+    queryFn: () => getAreas(), // Wrap in arrow function
   });
 
   const { data: allPermissions, isLoading: isLoadingPermissions } = useQuery<Permission[], Error>({
@@ -109,12 +109,13 @@ export const UserForm: React.FC<UserFormProps> = ({
 
   const { data: currentUserPermissions, isLoading: isLoadingCurrentUserPermissions } = useQuery<string[], Error>({
     queryKey: ["currentUserPermissions", initialData?.id],
-    queryFn: async () => {
-      if (!initialData?.id) return [];
+    queryFn: async ({ queryKey }) => {
+      const userId = queryKey[1] as string | undefined;
+      if (!userId) return [];
       const { data, error } = await supabase
         .from('user_permissions')
         .select('permission_id, permissions(resource, action)')
-        .eq('user_id', initialData.id);
+        .eq('user_id', userId);
 
       if (error) {
         console.error('Error fetching current user permissions:', error.message);

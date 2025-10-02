@@ -97,33 +97,32 @@ const Objetivos = () => {
     }
   }, [location.state]);
 
-  const { data: objetivos, isLoading: isLoadingObjetivos, error: objetivosError } = useQuery<Objetivo[], Error>({
+  const { data: objetivos, isLoading: isLoadingObjetivos, error: objetivosError } = useQuery<Objetivo[] | null, Error>({
     queryKey: ["objetivos", { statusFilter, areaFilter, search: debouncedSearchQuery, sortBy, sortOrder }],
-    queryFn: () => getObjetivos({
-      status: statusFilter,
-      area_id: areaFilter,
-      search: debouncedSearchQuery,
-      sortBy,
-      sortOrder,
+    queryFn: ({ queryKey }) => getObjetivos({
+      status: queryKey[1].statusFilter,
+      area_id: queryKey[1].areaFilter,
+      search: queryKey[1].search,
+      sortBy: queryKey[1].sortBy,
+      sortOrder: queryKey[1].sortOrder,
     }),
   });
 
-  const { data: areas, isLoading: isLoadingAreas } = useQuery<Area[], Error>({
+  const { data: areas, isLoading: isLoadingAreas } = useQuery<Area[] | null, Error>({
     queryKey: ["areas"],
-    queryFn: getAreas,
+    queryFn: () => getAreas(),
   });
 
-  const { data: periods, isLoading: isLoadingPeriods } = useQuery<Periodo[], Error>({
+  const { data: periods, isLoading: isLoadingPeriods } = useQuery<Periodo[] | null, Error>({
     queryKey: ["periods"],
-    queryFn: getPeriodos,
+    queryFn: () => getPeriodos(),
   });
 
   // Fetch Key Results for a specific objective (now includes nested activities)
   const { data: keyResultsMap, isLoading: isLoadingKeyResults } = useQuery<Map<string, KeyResult[]>, Error>({
-    queryKey: ["key_results_by_objetivo"], // Simplificado: Removido 'objetivos' da chave
-    queryFn: async () => {
-      // Obter os objetivos mais recentes do cache
-      const currentObjetivos = queryClient.getQueryData<Objetivo[]>(["objetivos", { statusFilter, areaFilter, search: debouncedSearchQuery, sortBy, sortOrder }]);
+    queryKey: ["key_results_by_objetivo", objetivos], // Depende de objetivos
+    queryFn: async ({ queryKey }) => {
+      const currentObjetivos = queryKey[1] as Objetivo[] | null;
       if (!currentObjetivos) return new Map();
 
       const krPromises = currentObjetivos.map(async (obj) => {

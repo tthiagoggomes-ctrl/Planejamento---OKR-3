@@ -16,30 +16,30 @@ import AlertsAndPending from '@/components/dashboard/AlertsAndPending';
 import KeyResultsByPeriodList from '@/components/dashboard/KeyResultsByPeriodList'; // Import the new component
 
 const Index = () => {
-  const { data: objetivosSummary, isLoading: isLoadingObjetivosSummary, error: errorObjetivosSummary } = useQuery<ObjetivoSummary[], Error>({
+  const { data: objetivosSummary, isLoading: isLoadingObjetivosSummary, error: errorObjetivosSummary } = useQuery<ObjetivoSummary[] | null, Error>({
     queryKey: ["objetivosSummary"],
     queryFn: getObjetivosSummary,
   });
 
-  const { data: keyResultsSummary, isLoading: isLoadingKeyResultsSummary, error: errorKeyResultsSummary } = useQuery<KeyResultSummary[], Error>({
+  const { data: keyResultsSummary, isLoading: isLoadingKeyResultsSummary, error: errorKeyResultsSummary } = useQuery<KeyResultSummary[] | null, Error>({
     queryKey: ["keyResultsSummary"],
     queryFn: getKeyResultsSummary,
   });
 
-  const { data: atividadesSummary, isLoading: isLoadingAtividades, error: errorAtividades } = useQuery<AtividadeSummary[], Error>({
+  const { data: atividadesSummary, isLoading: isLoadingAtividades, error: errorAtividades } = useQuery<AtividadeSummary[] | null, Error>({
     queryKey: ["atividadesSummary"],
     queryFn: getAtividadesSummary,
   });
 
   // Fetch all objectives and key results for overall progress calculation
-  const { data: allObjetivos, isLoading: isLoadingAllObjetivos, error: errorAllObjetivos } = useQuery<Objetivo[], Error>({
+  const { data: allObjetivos, isLoading: isLoadingAllObjetivos, error: errorAllObjetivos } = useQuery<Objetivo[] | null, Error>({
     queryKey: ["allObjetivos"],
     queryFn: () => getObjetivos(),
   });
 
-  const { data: allKeyResults, isLoading: isLoadingAllKeyResults, error: errorAllKeyResults } = useQuery<KeyResult[], Error>({
+  const { data: allKeyResults, isLoading: isLoadingAllKeyResults, error: errorAllKeyResults } = useQuery<KeyResult[] | null, Error>({
     queryKey: ["allKeyResults"],
-    queryFn: getAllKeyResults, // This now fetches activities too
+    queryFn: () => getAllKeyResults(), // This now fetches activities too
   });
 
   const getTotalCount = (summary: { count: number }[] | null) => {

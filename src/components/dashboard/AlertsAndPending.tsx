@@ -9,7 +9,7 @@ import { getObjetivos, Objetivo } from '@/integrations/supabase/api/objetivos';
 import { getAtividades, Atividade } from '@/integrations/supabase/api/atividades';
 import { getAreas, Area } from '@/integrations/supabase/api/areas';
 import { showError } from '@/utils/toast';
-import { formatDistanceToNow, subDays } from 'date-fns';
+import { formatDistanceToNow, subDays, isPast as dateFnsIsPast } from 'date-fns'; // Renomear isPast para evitar conflito
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import { Button } from '@/components/ui/button'; // Import Button
@@ -18,24 +18,24 @@ const AlertsAndPending: React.FC = () => {
   const navigate = useNavigate(); // Initialize useNavigate
   const [showAllKRsAtRisk, setShowAllKRsAtRisk] = React.useState(false); // Novo estado para controlar a expansão
 
-  const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[], Error>({
+  const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[] | null, Error>({
     queryKey: ["allKeyResults"],
-    queryFn: getAllKeyResults,
+    queryFn: () => getAllKeyResults(), // Wrap in arrow function
   });
 
-  const { data: objetivos, isLoading: isLoadingObjetivos, error: errorObjetivos } = useQuery<Objetivo[], Error>({
+  const { data: objetivos, isLoading: isLoadingObjetivos, error: errorObjetivos } = useQuery<Objetivo[] | null, Error>({
     queryKey: ["objetivos"],
     queryFn: () => getObjetivos(),
   });
 
-  const { data: atividades, isLoading: isLoadingAtividades, error: errorAtividades } = useQuery<Atividade[], Error>({
+  const { data: atividades, isLoading: isLoadingAtividades, error: errorAtividades } = useQuery<Atividade[] | null, Error>({
     queryKey: ["allActivities"],
     queryFn: () => getAtividades(),
   });
 
-  const { data: areas, isLoading: isLoadingAreas, error: errorAreas } = useQuery<Area[], Error>({
+  const { data: areas, isLoading: isLoadingAreas, error: errorAreas } = useQuery<Area[] | null, Error>({
     queryKey: ["areas"],
-    queryFn: getAreas,
+    queryFn: () => getAreas(), // Wrap in arrow function
   });
 
   const krsAtRiskOrOffTrack = React.useMemo(() => {

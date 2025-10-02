@@ -46,10 +46,10 @@ export const useUserPermissions = () => {
 
   const { data: userPermissions, isLoading: permissionsLoading, error: permissionsError } = useQuery<Set<string>, Error>({
     queryKey: ["userPermissions", user?.id],
-    queryFn: () => fetchUserPermissions(user?.id),
+    queryFn: ({ queryKey }) => fetchUserPermissions(queryKey[1] as string | undefined), // Wrap in arrow function and extract userId
     enabled: !!user && !sessionLoading, // Only fetch if user is logged in and session is not loading
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    // cacheTime: 10 * 60 * 1000, // 10 minutes - Removido, pois cacheTime não é uma propriedade válida para useQueryOptions
   });
 
   const can = React.useCallback((resource: string, action: string): boolean => {

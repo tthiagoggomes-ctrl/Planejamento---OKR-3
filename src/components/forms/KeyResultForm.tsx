@@ -83,9 +83,9 @@ export const KeyResultForm: React.FC<KeyResultFormProps> = ({
     },
   });
 
-  const { data: periods, isLoading: isLoadingPeriods } = useQuery<Periodo[], Error>({
+  const { data: periods, isLoading: isLoadingPeriods } = useQuery<Periodo[] | null, Error>({
     queryKey: ["periods"],
-    queryFn: getPeriodos,
+    queryFn: () => getPeriodos(), // Wrap in arrow function
   });
 
   React.useEffect(() => {

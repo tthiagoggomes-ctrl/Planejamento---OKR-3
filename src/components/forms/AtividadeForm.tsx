@@ -85,12 +85,12 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
     },
   });
 
-  const { data: objetivos, isLoading: isLoadingObjetivos } = useQuery<Objetivo[], Error>({
+  const { data: objetivos, isLoading: isLoadingObjetivos } = useQuery<Objetivo[] | null, Error>({
     queryKey: ["objetivos"],
-    queryFn: getObjetivos,
+    queryFn: () => getObjetivos(),
   });
 
-  const { data: allKeyResults, isLoading: isLoadingKeyResults } = useQuery<KeyResult[], Error>({
+  const { data: allKeyResults, isLoading: isLoadingAllKeyResults } = useQuery<KeyResult[] | null, Error>({
     queryKey: ["all_key_results"],
     queryFn: async () => {
       if (!objetivos) return [];
@@ -101,9 +101,9 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
     enabled: !!objetivos,
   });
 
-  const { data: users, isLoading: isLoadingUsers } = useQuery<UserProfile[], Error>({
+  const { data: users, isLoading: isLoadingUsers } = useQuery<UserProfile[] | null, Error>({
     queryKey: ["users"],
-    queryFn: getUsers,
+    queryFn: () => getUsers(),
   });
 
   React.useEffect(() => {
@@ -258,7 +258,7 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {isLoadingKeyResults ? (
+                      {isLoadingAllKeyResults ? (
                         <SelectItem value="" disabled>Carregando Key Results...</SelectItem>
                       ) : (
                         allKeyResults?.map((kr) => (
@@ -302,7 +302,7 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
               )}
             />
             <DialogFooter>
-              <Button type="submit" disabled={isLoading || isLoadingKeyResults || isLoadingUsers}>
+              <Button type="submit" disabled={isLoading || isLoadingAllKeyResults || isLoadingUsers}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? "Salvando..." : "Salvar"}
               </Button>

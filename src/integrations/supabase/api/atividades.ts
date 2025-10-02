@@ -41,18 +41,33 @@ export const getAtividades = async (
     query = query.limit(limit);
   }
 
-  // Aplicar filtro por Key Result
+  // Priorize filtering by specific Key Result ID if provided
   if (keyResultId && keyResultId !== 'all') {
-    console.log('API: Aplicando filtro por keyResultId:', keyResultId);
+    console.log('API: Aplicando filtro por keyResultId (específico):', keyResultId);
     query = query.eq('key_result_id', keyResultId);
-  }
+  } else if (objectiveId && objectiveId !== 'all') {
+    // If a specific objectiveId is provided, but no specific keyResultId,
+    // then fetch all key_result_ids for that objective and filter activities by them.
+    console.log('API: Pré-filtrando Key Results para objectiveId:', objectiveId);
+    const { data: krsData, error: krsError } = await supabase
+      .from('key_results')
+      .select('id')
+      .eq('objetivo_id', objectiveId);
 
-  // Aplicar filtro por Objetivo (requer filtro na tabela join)
-  if (objectiveId && objectiveId !== 'all') {
-    console.log('API: Aplicando filtro por objectiveId:', objectiveId);
-    query = query.filter('key_result.objetivo_id', 'eq', objectiveId);
-  }
+    if (krsError) {
+      console.error('Error fetching key results for objective filter:', krsError.message);
+      showError('Erro ao carregar Key Results para o filtro de objetivo.');
+      return null;
+    }
+    const keyResultIdsForObjective = krsData.map(kr => kr.id);
 
+    if (keyResultIdsForObjective.length === 0) {
+      console.log('API: Nenhum Key Result encontrado para o objetivo, retornando array vazio.');
+      return []; // No key results for this objective, so no activities
+    }
+    console.log('API: Aplicando filtro por keyResultIds (do objetivo):', keyResultIdsForObjective);
+    query = query.in('key_result_id', keyResultIdsForObjective);
+  }
 
   const { data, error } = await query;
 
@@ -65,7 +80,7 @@ export const getAtividades = async (
   return data.map(atividade => ({
     ...atividade,
     key_result_title: (atividade as any).key_result?.titulo || 'N/A',
-    key_result_objetivo_id: (atividade as any).key_result?.objetivo_id || null, // Extract objective ID
+    key_result_objetivo_id: (atividade as any).key_result?.objetivo_id || null,
     assignee_name: (atividade as any).assignee ? `${(atividade as any).assignee.first_name} ${(atividade as any).assignee.last_name}` : 'N/A',
   }));
 };

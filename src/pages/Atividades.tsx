@@ -67,16 +67,11 @@ const Atividades = () => {
 
   const { data: atividades, isLoading, error } = useQuery<Atividade[] | null, Error>({
     queryKey: ["atividades", selectedObjectiveFilter, selectedKeyResultFilter, debouncedSearchQuery],
-    queryFn: ({ queryKey }) => {
-      const objFilter = queryKey[1] as string | 'all';
-      const krFilter = queryKey[2] as string | 'all';
-      console.log('UI: useQuery para atividades disparado com:', { objFilter, krFilter });
-      return getAtividades(
-        undefined, // limit
-        objFilter, // objectiveId
-        krFilter   // keyResultId
-      );
-    },
+    queryFn: ({ queryKey }) => getAtividades(
+      undefined, // limit
+      queryKey[1] as string | 'all', // objectiveId
+      queryKey[2] as string | 'all'  // keyResultId
+    ),
   });
 
   // Helper function to format due_date for API

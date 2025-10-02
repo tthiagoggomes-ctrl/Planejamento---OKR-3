@@ -26,6 +26,8 @@ export const getAtividades = async (
   objectiveId?: string | 'all', // Novo parâmetro para filtrar por objetivo
   keyResultId?: string | 'all' // Novo parâmetro para filtrar por Key Result
 ): Promise<Atividade[] | null> => {
+  console.log('API: getAtividades chamada com:', { limit, objectiveId, keyResultId });
+
   let query = supabase
     .from('atividades')
     .select(`
@@ -41,11 +43,13 @@ export const getAtividades = async (
 
   // Aplicar filtro por Key Result
   if (keyResultId && keyResultId !== 'all') {
+    console.log('API: Aplicando filtro por keyResultId:', keyResultId);
     query = query.eq('key_result_id', keyResultId);
   }
 
   // Aplicar filtro por Objetivo (requer filtro na tabela join)
   if (objectiveId && objectiveId !== 'all') {
+    console.log('API: Aplicando filtro por objectiveId:', objectiveId);
     query = query.filter('key_result.objetivo_id', 'eq', objectiveId);
   }
 

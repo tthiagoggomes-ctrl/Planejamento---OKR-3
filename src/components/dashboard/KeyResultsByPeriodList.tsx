@@ -7,12 +7,12 @@ import { Loader2, CalendarDays, AlertTriangle, Clock, CheckCircle, TrendingUp, E
 import { getPeriodos, Periodo } from '@/integrations/supabase/api/periodos';
 import { getAllKeyResults, KeyResult } from '@/integrations/supabase/api/key_results';
 import { showError } from '@/utils/toast';
-import { format, isPast as dateFnsIsPast, isWithinInterval, parseISO } from 'date-fns'; // Renomear isPast para evitar conflito
+import { format, isPast as dateFnsIsPast, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
-import { Switch } from '@/components/ui/switch'; // Import Switch
-import { Label } from '@/components/ui/label'; // Import Label
-import { Progress } from '@/components/ui/progress'; // Import Progress
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
 
 interface KeyResultsByPeriodListProps {
   // Pode aceitar filtros ou propriedades adicionais no futuro, se necessário
@@ -21,12 +21,12 @@ interface KeyResultsByPeriodListProps {
 const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
   const { data: periods, isLoading: isLoadingPeriods, error: errorPeriods } = useQuery<Periodo[] | null, Error>({
     queryKey: ["allPeriods"],
-    queryFn: () => getPeriodos(), // Wrap in arrow function
+    queryFn: () => getPeriodos(),
   });
 
   const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[] | null, Error>({
     queryKey: ["allKeyResults"],
-    queryFn: () => getAllKeyResults(), // Wrap in arrow function
+    queryFn: () => getAllKeyResults(),
   });
 
   const now = new Date();
@@ -47,16 +47,14 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
     });
 
     keyResults.forEach(kr => {
-      const period = periods.find(p => p.nome === kr.periodo); // Find the actual period object by name
+      const period = periods.find(p => p.nome === kr.periodo);
       if (!period) {
-        // Se não encontrar um período correspondente, pode ser um KR sem período válido ou um período que não foi carregado
-        // Por simplicidade, vamos ignorar KRs sem período correspondente por enquanto.
         return;
       }
 
       const periodEndDate = parseISO(period.end_date);
       const periodStartDate = parseISO(period.start_date);
-      const isPeriodPast = dateFnsIsPast(periodEndDate, { refDate: now }); // Corrigido: isPast com refDate
+      const isPeriodPast = dateFnsIsPast(periodEndDate); // Corrigido: Removido { refDate: now }
       const isPeriodCurrent = isWithinInterval(now, { start: periodStartDate, end: periodEndDate });
 
       if (kr.status !== 'completed') {
@@ -65,10 +63,10 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
         } else if (isPeriodCurrent) {
           groups[period.id].attentionKRs.push(kr);
         } else {
-          groups[period.id].otherKRs.push(kr); // KRs futuros ou em andamento em períodos futuros
+          groups[period.id].otherKRs.push(kr);
         }
       } else {
-        groups[period.id].otherKRs.push(kr); // KRs já concluídos
+        groups[period.id].otherKRs.push(kr);
       }
     });
 
@@ -82,13 +80,13 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
       const aIsCurrent = isWithinInterval(now, { start: aStartDate, end: aEndDate });
       const bIsCurrent = isWithinInterval(now, { start: bStartDate, end: bEndDate });
 
-      if (aIsCurrent && !bIsCurrent) return -1; // Current periods first
+      if (aIsCurrent && !bIsCurrent) return -1;
       if (!aIsCurrent && bIsCurrent) return 1;
 
-      const aIsPast = dateFnsIsPast(aEndDate, { refDate: now }); // Corrigido: isPast com refDate
-      const bIsPast = dateFnsIsPast(bEndDate, { refDate: now }); // Corrigido: isPast com refDate
+      const aIsPast = dateFnsIsPast(aEndDate); // Corrigido: Removido { refDate: now }
+      const bIsPast = dateFnsIsPast(bEndDate); // Corrigido: Removido { refDate: now }
 
-      if (aIsPast && !bIsPast) return -1; // Past periods after current, before future
+      if (aIsPast && !bIsPast) return -1;
       if (!aIsPast && bIsPast) return 1;
 
       // For past periods, sort by end_date descending (most recent past first)
@@ -101,7 +99,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
     return sortedPeriodGroups;
   }, [periods, keyResults, now]);
 
-  const [hideEmptyPeriods, setHideEmptyPeriods] = React.useState(false); // Novo estado
+  const [hideEmptyPeriods, setHideEmptyPeriods] = React.useState(false);
 
   if (isLoadingPeriods || isLoadingKeyResults) {
     return (
@@ -163,7 +161,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
           filteredGroups.map(({ period, overdueKRs, attentionKRs, otherKRs }) => {
             const periodEndDate = parseISO(period.end_date);
             const periodStartDate = parseISO(period.start_date);
-            const isPeriodPast = dateFnsIsPast(periodEndDate, { refDate: now });
+            const isPeriodPast = dateFnsIsPast(periodEndDate); // Corrigido: Removido { refDate: now }
             const isPeriodCurrent = isWithinInterval(now, { start: periodStartDate, end: periodEndDate });
 
             const hasOverdue = overdueKRs.length > 0;
@@ -190,7 +188,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
                     <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
                       {overdueKRs.map(kr => (
                         <li key={kr.id} className="cursor-pointer hover:text-blue-600 hover:underline">
-                          <Link to={`/objetivos`} state={{ keyResultId: kr.id }}> {/* CORRIGIDO: Aponta para /objetivos */}
+                          <Link to={`/objetivos`} state={{ keyResultId: kr.id }}>
                             <div className="flex items-center justify-between">
                               <span>{kr.titulo}</span>
                               <span className="text-sm text-muted-foreground">{kr.valor_atual}%</span>
@@ -211,7 +209,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
                     <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
                       {attentionKRs.map(kr => (
                         <li key={kr.id} className="cursor-pointer hover:text-blue-600 hover:underline">
-                          <Link to={`/objetivos`} state={{ keyResultId: kr.id }}> {/* CORRIGIDO: Aponta para /objetivos */}
+                          <Link to={`/objetivos`} state={{ keyResultId: kr.id }}>
                             <div className="flex items-center justify-between">
                               <span>{kr.titulo}</span>
                               <span className="text-sm text-muted-foreground">{kr.valor_atual}%</span>
@@ -232,7 +230,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
                     <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
                       {otherKRs.map(kr => (
                         <li key={kr.id} className="cursor-pointer hover:text-blue-600 hover:underline">
-                          <Link to={`/objetivos`} state={{ keyResultId: kr.id }}> {/* CORRIGIDO: Aponta para /objetivos */}
+                          <Link to={`/objetivos`} state={{ keyResultId: kr.id }}>
                             <div className="flex items-center justify-between">
                               <span>{kr.titulo} (Status: {kr.status === 'completed' ? 'Concluído' : 'No Caminho'})</span>
                               <span className="text-sm text-muted-foreground">{kr.valor_atual}%</span>

@@ -56,7 +56,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
 
       const periodEndDate = parseISO(period.end_date);
       const periodStartDate = parseISO(period.start_date);
-      const isPeriodPast = dateFnsIsPast(periodEndDate, now); // Corrigido: isPast com refDate
+      const isPeriodPast = dateFnsIsPast(periodEndDate, { refDate: now }); // Corrigido: isPast com refDate
       const isPeriodCurrent = isWithinInterval(now, { start: periodStartDate, end: periodEndDate });
 
       if (kr.status !== 'completed') {
@@ -85,8 +85,8 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
       if (aIsCurrent && !bIsCurrent) return -1; // Current periods first
       if (!aIsCurrent && bIsCurrent) return 1;
 
-      const aIsPast = dateFnsIsPast(aEndDate, now); // Corrigido: isPast com refDate
-      const bIsPast = dateFnsIsPast(bEndDate, now); // Corrigido: isPast com refDate
+      const aIsPast = dateFnsIsPast(aEndDate, { refDate: now }); // Corrigido: isPast com refDate
+      const bIsPast = dateFnsIsPast(bEndDate, { refDate: now }); // Corrigido: isPast com refDate
 
       if (aIsPast && !bIsPast) return -1; // Past periods after current, before future
       if (!aIsPast && bIsPast) return 1;
@@ -163,7 +163,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
           filteredGroups.map(({ period, overdueKRs, attentionKRs, otherKRs }) => {
             const periodEndDate = parseISO(period.end_date);
             const periodStartDate = parseISO(period.start_date);
-            const isPeriodPast = dateFnsIsPast(periodEndDate, now);
+            const isPeriodPast = dateFnsIsPast(periodEndDate, { refDate: now });
             const isPeriodCurrent = isWithinInterval(now, { start: periodStartDate, end: periodEndDate });
 
             const hasOverdue = overdueKRs.length > 0;

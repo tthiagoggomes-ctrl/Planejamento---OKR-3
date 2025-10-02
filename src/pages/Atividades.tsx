@@ -55,22 +55,22 @@ const Atividades = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  const { data: objetivos, isLoading: isLoadingObjetivos } = useQuery<Objetivo[], Error>({
+  const { data: objetivos, isLoading: isLoadingObjetivos } = useQuery<Objetivo[] | null, Error>({
     queryKey: ["objetivos"],
-    queryFn: getObjetivos,
+    queryFn: () => getObjetivos(),
   });
 
-  const { data: allKeyResults, isLoading: isLoadingAllKeyResults } = useQuery<KeyResult[], Error>({
+  const { data: allKeyResults, isLoading: isLoadingAllKeyResults } = useQuery<KeyResult[] | null, Error>({
     queryKey: ["allKeyResults", selectedObjectiveFilter], // Adicionar selectedObjectiveFilter como dependência
-    queryFn: () => getAllKeyResults(selectedObjectiveFilter), // Filtrar KRs pelo objetivo selecionado
+    queryFn: ({ queryKey }) => getAllKeyResults(queryKey[1] as string | 'all'), // Filtrar KRs pelo objetivo selecionado
   });
 
-  const { data: atividades, isLoading, error } = useQuery<Atividade[], Error>({
+  const { data: atividades, isLoading, error } = useQuery<Atividade[] | null, Error>({
     queryKey: ["atividades", selectedObjectiveFilter, selectedKeyResultFilter, debouncedSearchQuery],
-    queryFn: () => getAtividades(
+    queryFn: ({ queryKey }) => getAtividades(
       undefined, // limit
-      selectedObjectiveFilter,
-      selectedKeyResultFilter
+      queryKey[1] as string | 'all', // objectiveId
+      queryKey[2] as string | 'all'  // keyResultId
     ),
   });
 
@@ -176,7 +176,7 @@ const Atividades = () => {
         user_id: atividadeToUpdate.user_id,
         titulo: atividadeToUpdate.titulo,
         descricao: atividadeToUpdate.descricao,
-        due_date: atividadeToUpdate.due_date,
+        due_date: atividadeToUpdate.due_date ? new Date(atividadeToUpdate.due_date) : null, // Convert string to Date
         status: newStatus,
       });
     }

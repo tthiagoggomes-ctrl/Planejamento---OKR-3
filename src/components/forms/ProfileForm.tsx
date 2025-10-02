@@ -58,9 +58,9 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     },
   });
 
-  const { data: areas, isLoading: isLoadingAreas } = useQuery<Area[], Error>({
+  const { data: areas, isLoading: isLoadingAreas } = useQuery<Area[] | null, Error>({
     queryKey: ["areas"],
-    queryFn: getAreas,
+    queryFn: () => getAreas(), // Wrap in arrow function to match QueryFunction signature
   });
 
   React.useEffect(() => {

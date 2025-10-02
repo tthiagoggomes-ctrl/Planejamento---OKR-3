@@ -43,16 +43,17 @@ const Comentarios = () => {
   const [expandedAtividades, setExpandedAtividades] = React.useState<Set<string>>(new Set());
   const [inlineCommentContent, setInlineCommentContent] = React.useState<Record<string, string>>({}); // For inline comment input
 
-  const { data: atividades, isLoading: isLoadingAtividades, error: atividadesError } = useQuery<Atividade[], Error>({
+  const { data: atividades, isLoading: isLoadingAtividades, error: atividadesError } = useQuery<Atividade[] | null, Error>({
     queryKey: ["atividades"],
-    queryFn: getAtividades,
+    queryFn: () => getAtividades(), // Wrap in arrow function to match QueryFunction signature
   });
 
   const { data: comentariosMap, isLoading: isLoadingComentarios } = useQuery<Map<string, Comentario[]>, Error>({
-    queryKey: ["comentarios_by_atividade"],
-    queryFn: async () => {
-      if (!atividades) return new Map();
-      const commentPromises = atividades.map(async (ativ) => {
+    queryKey: ["comentarios_by_atividade", atividades],
+    queryFn: async ({ queryKey }) => {
+      const currentAtividades = queryKey[1] as Atividade[] | null;
+      if (!currentAtividades) return new Map();
+      const commentPromises = currentAtividades.map(async (ativ) => {
         const comments = await getComentariosByAtividadeId(ativ.id);
         return [ativ.id, comments || []] as [string, Comentario[]];
       });

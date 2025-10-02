@@ -74,7 +74,7 @@ export const getKeyResultsByObjetivoId = async (objetivo_id: string): Promise<Ke
   }
 
   // Explicitly cast data to KeyResult[] before mapping
-  return (data as KeyResult[]).map(kr => {
+  return (data as unknown as KeyResult[]).map(kr => {
     const calculatedProgress = calculateKeyResultProgress(kr);
     const calculatedStatus = determineKeyResultStatus({ ...kr, valor_atual: calculatedProgress }); // Pass calculated progress for status determination
     return {
@@ -107,7 +107,7 @@ export const getAllKeyResults = async (objectiveId?: string | 'all'): Promise<Ke
   }
 
   // Explicitly cast data to KeyResult[] before mapping
-  return (data as KeyResult[]).map(kr => {
+  return (data as unknown as KeyResult[]).map(kr => {
     const calculatedProgress = calculateKeyResultProgress(kr);
     const calculatedStatus = determineKeyResultStatus({ ...kr, valor_atual: calculatedProgress });
     return {
@@ -134,7 +134,7 @@ export const getKeyResultsSummary = async (): Promise<KeyResultSummary[] | null>
 
   // Group and count client-side based on calculated status
   const summaryMap = new Map<KeyResult['status'], number>();
-  (data as KeyResult[]).forEach(kr => { // Explicitly cast data
+  (data as unknown as KeyResult[]).forEach(kr => { // Explicitly cast data
     const calculatedStatus = determineKeyResultStatus(kr);
     const currentCount = summaryMap.get(calculatedStatus) || 0;
     summaryMap.set(calculatedStatus, currentCount + 1);
@@ -183,7 +183,7 @@ export const createKeyResult = async (
     return null;
   }
   // Recalculate status and valor_atual after insert (though it should be 0/off_track initially)
-  const createdKr = data as KeyResult; // Explicitly cast data
+  const createdKr = data as unknown as KeyResult; // Explicitly cast data
   const calculatedProgress = calculateKeyResultProgress(createdKr);
   const calculatedStatus = determineKeyResultStatus({ ...createdKr, valor_atual: calculatedProgress });
   return { ...createdKr, valor_atual: calculatedProgress, status: calculatedStatus };
@@ -211,7 +211,7 @@ export const updateKeyResult = async (
     return null;
   }
 
-  const typedCurrentKr = currentKr as KeyResult; // Explicitly cast
+  const typedCurrentKr = currentKr as unknown as KeyResult; // Explicitly cast
   const calculatedProgress = calculateKeyResultProgress(typedCurrentKr);
   const calculatedStatus = determineKeyResultStatus({ ...typedCurrentKr, valor_atual: calculatedProgress });
 
@@ -241,7 +241,7 @@ export const updateKeyResult = async (
     return null;
   }
   // Recalculate again to ensure consistency, though it should be the same
-  const updatedKr = data as KeyResult; // Explicitly cast data
+  const updatedKr = data as unknown as KeyResult; // Explicitly cast data
   const finalCalculatedProgress = calculateKeyResultProgress(updatedKr);
   const finalCalculatedStatus = determineKeyResultStatus({ ...updatedKr, valor_atual: finalCalculatedProgress });
   return { ...updatedKr, valor_atual: finalCalculatedProgress, status: finalCalculatedStatus };

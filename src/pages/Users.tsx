@@ -54,7 +54,10 @@ const Users = () => {
 
   const { data: users, isLoading, error } = useQuery<UserProfile[] | null, Error>({
     queryKey: ["users", { sortBy, sortOrder }], // Incluir ordenação na chave da query
-    queryFn: ({ queryKey }) => getUsers({ sortBy: queryKey[1].sortBy, sortOrder: queryKey[1].sortOrder }),
+    queryFn: ({ queryKey }) => {
+      const params = queryKey[1] as { sortBy: keyof UserProfile | 'area_name' | 'email', sortOrder: 'asc' | 'desc' };
+      return getUsers({ sortBy: params.sortBy, sortOrder: params.sortOrder });
+    },
   });
 
   const createUserMutation = useMutation({

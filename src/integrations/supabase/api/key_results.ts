@@ -85,14 +85,20 @@ export const getKeyResultsByObjetivoId = async (objetivo_id: string): Promise<Ke
   });
 };
 
-export const getAllKeyResults = async (): Promise<KeyResult[] | null> => {
-  const { data, error } = await supabase
+export const getAllKeyResults = async (objectiveId?: string | 'all'): Promise<KeyResult[] | null> => {
+  let query = supabase
     .from('key_results')
     .select(`
       *,
       atividades(*) // Fetch nested activities
     `)
     .order('created_at', { ascending: true });
+
+  if (objectiveId && objectiveId !== 'all') {
+    query = query.eq('objetivo_id', objectiveId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Error fetching all key results:', error.message);

@@ -21,7 +21,11 @@ export interface AtividadeSummary {
   count: number;
 }
 
-export const getAtividades = async (limit?: number): Promise<Atividade[] | null> => {
+export const getAtividades = async (
+  limit?: number,
+  objectiveId?: string | 'all', // Novo parâmetro para filtrar por objetivo
+  keyResultId?: string | 'all' // Novo parâmetro para filtrar por Key Result
+): Promise<Atividade[] | null> => {
   let query = supabase
     .from('atividades')
     .select(`
@@ -34,6 +38,17 @@ export const getAtividades = async (limit?: number): Promise<Atividade[] | null>
   if (limit) {
     query = query.limit(limit);
   }
+
+  // Aplicar filtro por Key Result
+  if (keyResultId && keyResultId !== 'all') {
+    query = query.eq('key_result_id', keyResultId);
+  }
+
+  // Aplicar filtro por Objetivo (requer filtro na tabela join)
+  if (objectiveId && objectiveId !== 'all') {
+    query = query.filter('key_result.objetivo_id', 'eq', objectiveId);
+  }
+
 
   const { data, error } = await query;
 

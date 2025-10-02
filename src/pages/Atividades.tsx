@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, List, Kanban, StopCircle } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2, List, Kanban, StopCircle, Search } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -25,10 +25,21 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AtividadeForm, AtividadeFormValues } from "@/components/forms/AtividadeForm";
 import { getAtividades, createAtividade, updateAtividade, deleteAtividade, Atividade } from "@/integrations/supabase/api/atividades";
+import { getObjetivos, Objetivo } from "@/integrations/supabase/api/objetivos"; // Import Objetivo API
+import { getAllKeyResults, KeyResult } from "@/integrations/supabase/api/key_results"; // Import KeyResult API
 import { showSuccess, showError } from "@/utils/toast";
 import { format } from "date-fns";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { useDebounce } from "@/hooks/use-debounce";
 
 const Atividades = () => {
   const queryClient = useQueryClient();
@@ -36,11 +47,31 @@ const Atividades = () => {
   const [editingAtividade, setEditingAtividade] = React.useState<Atividade | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [atividadeToDelete, setAtividadeToDelete] = React.useState<string | null>(null);
-  const [viewMode, setViewMode] = React.useState<'list' | 'kanban'>('kanban'); // Alterado para 'kanban' como padrão
+  const [viewMode, setViewMode] = React.useState<'list' | 'kanban'>('kanban');
+
+  // Estados para filtros
+  const [selectedObjectiveFilter, setSelectedObjectiveFilter] = React.useState<string | 'all'>('all');
+  const [selectedKeyResultFilter, setSelectedKeyResultFilter] = React.useState<string | 'all'>('all');
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
+  const { data: objetivos, isLoading: isLoadingObjetivos } = useQuery<Objetivo[], Error>({
+    queryKey: ["objetivos"],
+    queryFn: getObjetivos,
+  });
+
+  const { data: allKeyResults, isLoading: isLoadingAllKeyResults } = useQuery<KeyResult[], Error>({
+    queryKey: ["allKeyResults", selectedObjectiveFilter], // Adicionar selectedObjectiveFilter como dependência
+    queryFn: () => getAllKeyResults(selectedObjectiveFilter), // Filtrar KRs pelo objetivo selecionado
+  });
 
   const { data: atividades, isLoading, error } = useQuery<Atividade[], Error>({
-    queryKey: ["atividades"],
-    queryFn: getAtividades,
+    queryKey: ["atividades", selectedObjectiveFilter, selectedKeyResultFilter, debouncedSearchQuery],
+    queryFn: () => getAtividades(
+      undefined, // limit
+      selectedObjectiveFilter,
+      selectedKeyResultFilter
+    ),
   });
 
   // Helper function to format due_date for API
@@ -66,6 +97,7 @@ const Atividades = () => {
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atividades"] });
+      queryClient.invalidateQueries({ queryKey: ["allKeyResults"] }); // Invalidate KRs to update progress
       setIsFormOpen(false);
       showSuccess("Atividade criada com sucesso!");
     },
@@ -87,6 +119,7 @@ const Atividades = () => {
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atividades"] });
+      queryClient.invalidateQueries({ queryKey: ["allKeyResults"] }); // Invalidate KRs to update progress
       setIsFormOpen(false);
       setEditingAtividade(null);
       showSuccess("Atividade atualizada com sucesso!");
@@ -100,6 +133,7 @@ const Atividades = () => {
     mutationFn: deleteAtividade,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atividades"] });
+      queryClient.invalidateQueries({ queryKey: ["allKeyResults"] }); // Invalidate KRs to update progress
       setIsDeleteDialogOpen(false);
       setAtividadeToDelete(null);
       showSuccess("Atividade excluída com sucesso!");
@@ -158,7 +192,7 @@ const Atividades = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingObjetivos || isLoadingAllKeyResults) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -173,6 +207,13 @@ const Atividades = () => {
       </div>
     );
   }
+
+  // Filtrar atividades pelo termo de busca (client-side, pois o filtro de busca não foi adicionado ao getAtividades)
+  const filteredAtividades = atividades?.filter(atividade =>
+    atividade.titulo.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+    atividade.key_result_title?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+    atividade.assignee_name?.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+  ) || [];
 
   return (
     <div className="container mx-auto py-6">
@@ -194,8 +235,58 @@ const Atividades = () => {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="flex flex-wrap items-center gap-4 mb-4">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar atividades..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+
+            <Select
+              value={selectedObjectiveFilter}
+              onValueChange={(value: string | 'all') => {
+                setSelectedObjectiveFilter(value);
+                setSelectedKeyResultFilter('all'); // Reset KR filter when objective changes
+              }}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por Objetivo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Objetivos</SelectItem>
+                {objetivos?.map((obj) => (
+                  <SelectItem key={obj.id} value={obj.id}>{obj.titulo}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={selectedKeyResultFilter}
+              onValueChange={(value: string | 'all') => setSelectedKeyResultFilter(value)}
+              disabled={isLoadingAllKeyResults}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por Key Result" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Key Results</SelectItem>
+                {isLoadingAllKeyResults ? (
+                  <SelectItem value="" disabled>Carregando KRs...</SelectItem>
+                ) : (
+                  allKeyResults?.map((kr) => (
+                    <SelectItem key={kr.id} value={kr.id}>{kr.titulo}</SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
           {viewMode === 'list' ? (
-            atividades && atividades.length > 0 ? (
+            filteredAtividades && filteredAtividades.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -208,7 +299,7 @@ const Atividades = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {atividades.map((atividade) => (
+                  {filteredAtividades.map((atividade) => (
                     <TableRow key={atividade.id}>
                       <TableCell className="font-medium">{atividade.titulo}</TableCell>
                       <TableCell>{atividade.key_result_title}</TableCell>
@@ -248,11 +339,11 @@ const Atividades = () => {
                 </TableBody>
               </Table>
             ) : (
-              <p className="text-gray-600">Nenhuma atividade cadastrada ainda.</p>
+              <p className="text-gray-600">Nenhuma atividade cadastrada ainda ou correspondente aos filtros.</p>
             )
           ) : (
             <KanbanBoard
-              atividades={atividades || []}
+              atividades={filteredAtividades}
               onStatusChange={handleStatusChangeFromKanban}
               onEdit={handleEditClick}
               onDelete={handleDeleteClick}

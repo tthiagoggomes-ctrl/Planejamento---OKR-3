@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 // Define um tipo para os argumentos da mutação de atualização
-type UpdateUserMutationArgs = UserFormValues & { id: string };
+type UpdateUserMutationArgs = UserFormValues & { id: string; email: string }; // Added email here
 
 const Users = () => {
   const queryClient = useQueryClient();
@@ -81,8 +81,8 @@ const Users = () => {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ id, first_name, last_name, area_id, permissao, status, selected_permissions }: UpdateUserMutationArgs) =>
-      updateUserProfile(id, first_name, last_name, area_id, permissao, status, selected_permissions),
+    mutationFn: ({ id, first_name, last_name, area_id, permissao, status, selected_permissions, email }: UpdateUserMutationArgs) =>
+      updateUserProfile(id, first_name, last_name, area_id, permissao, status, selected_permissions, email),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setIsFormOpen(false);
@@ -151,6 +151,7 @@ const Users = () => {
         permissao: values.permissao,
         status: values.status || 'active',
         selected_permissions: values.selected_permissions,
+        email: editingUser.email, // Pass email
       });
     } else {
       createUserMutation.mutate({

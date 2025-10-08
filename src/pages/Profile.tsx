@@ -27,7 +27,9 @@ const Profile = () => {
         values.last_name,
         values.area_id,
         userProfile.permissao, // Keep existing permission
-        userProfile.status // Keep existing status
+        userProfile.status, // Keep existing status
+        [], // selected_permissions are not managed in Profile.tsx
+        userProfile.email // Pass email
       );
     },
     onSuccess: () => {

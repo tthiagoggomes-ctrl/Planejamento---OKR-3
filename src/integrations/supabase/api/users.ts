@@ -116,21 +116,29 @@ export const updateUserProfile = async (
   area_id: string | null,
   permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario', // Updated permission type
   status: 'active' | 'blocked',
-  selected_permissions: string[] = [] // New parameter for granular permissions
+  selected_permissions: string[] = [], // New parameter for granular permissions
+  email: string // Added email as a parameter
 ): Promise<UserProfile | null> => {
   // First, update the user's profile in the 'usuarios' table
   const { data, error } = await supabase
     .from('usuarios')
     .update({ first_name, last_name, area_id, permissao, status, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select('*, area:areas(nome)')
-    .single();
+    .select('*, area:areas(nome)'); // Removed .single()
 
   if (error) {
     console.error('Error updating user profile:', error.message);
     showError(`Erro ao atualizar perfil do usuário: ${error.message}`);
     return null;
   }
+
+  if (!data || data.length === 0) {
+    console.error('No user profile found or updated for ID:', id);
+    showError('Nenhum perfil de usuário encontrado para atualização.');
+    return null;
+  }
+
+  const updatedProfileData = data[0]; // Get the first (and only expected) updated row
 
   // Fetch all available permissions to map selected_permissions (string keys) to permission_ids (UUIDs)
   const { data: allPermissions, error: permissionsError } = await supabase.from('permissions').select('id, resource, action');
@@ -191,12 +199,11 @@ export const updateUserProfile = async (
     }
   }
 
-  // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.
-  // For now, we'll fetch the email from the client's session if available, or default to 'N/A'
-  const { data: { user: authUserSession } } = await supabase.auth.getUser();
-  const email = authUserSession?.id === id ? authUserSession.email : 'N/A'; // Only get email if it's the current user
-
-  return { ...data, email: email || 'N/A', area_name: (data as any).area?.nome || 'N/A' };
+  return {
+    ...updatedProfileData,
+    email: email, // Use the email passed as an argument
+    area_name: (updatedProfileData as any).area?.nome || 'N/A',
+  };
 };
 
 export const deleteUser = async (id: string): Promise<boolean> => {

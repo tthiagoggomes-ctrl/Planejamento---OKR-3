@@ -104,7 +104,7 @@ export const createObjetivo = async (
   // periodo: string, // REMOVIDO
   area_id: string | null,
   user_id: string // The user_id will be passed from the session
-): Promise<Objetivo | null> => {
+): Promise<Objetivo> => { // Changed return type to Objetivo (not nullable)
   const { data, error } = await supabase
     .from('objetivos')
     .insert({ titulo, descricao, area_id, user_id, status: 'draft' }) // 'periodo' removido
@@ -113,8 +113,8 @@ export const createObjetivo = async (
 
   if (error) {
     console.error('Error creating objective:', error.message);
-    showError(`Erro ao criar objetivo: ${error.message}`);
-    return null;
+    // Throw the error to be caught by useMutation's onError
+    throw new Error(`Erro ao criar objetivo: ${error.message}`);
   }
   return {
     ...data,

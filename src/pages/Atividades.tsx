@@ -59,6 +59,10 @@ const Atividades = () => {
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [groupByKr, setGroupByKr] = React.useState(false); // New state for Gantt grouping
 
+  // Estados para classificação do Gantt
+  const [ganttSortBy, setGanttSortBy] = React.useState<'date' | 'krTitle'>('date');
+  const [ganttSortOrder, setGanttSortOrder] = React.useState<'asc' | 'desc'>('asc');
+
   const { data: objetivos, isLoading: isLoadingObjetivos } = useQuery<Objetivo[] | null, Error>({
     queryKey: ["objetivos"],
     queryFn: () => getObjetivos(),
@@ -360,6 +364,10 @@ const Atividades = () => {
               atividades={filteredAtividades}
               groupByKr={groupByKr}
               onGroupByKrChange={setGroupByKr}
+              ganttSortBy={ganttSortBy}
+              onGanttSortByChange={setGanttSortBy}
+              ganttSortOrder={ganttSortOrder}
+              onGanttSortOrderChange={setGanttSortOrder}
             />
           )}
         </CardContent>

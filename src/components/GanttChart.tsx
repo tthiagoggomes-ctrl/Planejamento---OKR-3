@@ -11,22 +11,77 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { ArrowUp, ArrowDown } from "lucide-react";
 
 interface GanttChartProps {
   atividades: Atividade[];
   groupByKr: boolean;
   onGroupByKrChange: (checked: boolean) => void;
+  ganttSortBy: 'date' | 'krTitle';
+  onGanttSortByChange: (value: 'date' | 'krTitle') => void;
+  ganttSortOrder: 'asc' | 'desc';
+  onGanttSortOrderChange: (order: 'asc' | 'desc') => void;
 }
 
-const GanttChart: React.FC<GanttChartProps> = ({ atividades, groupByKr, onGroupByKrChange }) => {
+const GanttChart: React.FC<GanttChartProps> = ({
+  atividades,
+  groupByKr,
+  onGroupByKrChange,
+  ganttSortBy,
+  onGanttSortByChange,
+  ganttSortOrder,
+  onGanttSortOrderChange,
+}) => {
   if (atividades.length === 0) {
     return (
       <p className="text-gray-600 text-center py-8">Nenhuma atividade para exibir no gráfico de Gantt.</p>
     );
   }
 
+  const sortedActivities = React.useMemo(() => {
+    const sortableActivities = [...atividades]; // Create a shallow copy to avoid mutating props
+
+    sortableActivities.sort((a, b) => {
+      let compareA: string | Date | null = null;
+      let compareB: string | Date | null = null;
+
+      if (ganttSortBy === 'date') {
+        compareA = a.due_date ? parseISO(a.due_date) : (a.created_at ? parseISO(a.created_at) : null);
+        compareB = b.due_date ? parseISO(b.due_date) : (b.created_at ? parseISO(b.created_at) : null);
+
+        // Handle null dates: nulls go to end for asc, beginning for desc
+        if (compareA === null && compareB !== null) return ganttSortOrder === 'asc' ? 1 : -1;
+        if (compareA !== null && compareB === null) return ganttSortOrder === 'asc' ? -1 : 1;
+        if (compareA === null && compareB === null) return 0;
+
+        return ganttSortOrder === 'asc'
+          ? (compareA as Date).getTime() - (compareB as Date).getTime()
+          : (compareB as Date).getTime() - (compareA as Date).getTime();
+
+      } else if (ganttSortBy === 'krTitle') {
+        compareA = a.key_result_title || '';
+        compareB = b.key_result_title || '';
+
+        return ganttSortOrder === 'asc'
+          ? compareA.localeCompare(compareB)
+          : compareB.localeCompare(compareA);
+      }
+      return 0;
+    });
+    return sortableActivities;
+  }, [atividades, ganttSortBy, ganttSortOrder]);
+
+
   // Determine overall date range
-  const allDates = atividades.flatMap(ativ => {
+  const allDates = sortedActivities.flatMap(ativ => {
     const dates: Date[] = [];
     if (ativ.created_at) dates.push(parseISO(ativ.created_at));
     if (ativ.due_date) dates.push(parseISO(ativ.due_date));
@@ -48,7 +103,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ atividades, groupByKr, onGroupB
 
   // Group activities if required
   const groupedActivities = groupByKr
-    ? atividades.reduce((acc, ativ) => {
+    ? sortedActivities.reduce((acc, ativ) => {
         const krTitle = ativ.key_result_title || 'Sem Key Result';
         if (!acc[krTitle]) {
           acc[krTitle] = [];
@@ -56,7 +111,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ atividades, groupByKr, onGroupB
         acc[krTitle].push(ativ);
         return acc;
       }, {} as Record<string, Atividade[]>)
-    : { 'Todas as Atividades': atividades }; // Single group if not grouping by KR
+    : { 'Todas as Atividades': sortedActivities }; // Single group if not grouping by KR
 
   const getStatusColor = (status: Atividade['status']) => {
     switch (status) {
@@ -82,13 +137,38 @@ const GanttChart: React.FC<GanttChartProps> = ({ atividades, groupByKr, onGroupB
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-2xl font-bold">Gráfico de Gantt</CardTitle>
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="group-by-kr">Agrupar por KR</Label>
-          <Switch
-            id="group-by-kr"
-            checked={groupByKr}
-            onCheckedChange={onGroupByKrChange}
-          />
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="group-by-kr">Agrupar por KR</Label>
+            <Switch
+              id="group-by-kr"
+              checked={groupByKr}
+              onCheckedChange={onGroupByKrChange}
+            />
+          </div>
+
+          <Separator orientation="vertical" className="h-6" />
+
+          <div className="flex items-center space-x-2">
+            <Label>Ordenar por:</Label>
+            <Select value={ganttSortBy} onValueChange={onGanttSortByChange}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">Data</SelectItem>
+                <SelectItem value="krTitle">Key Result</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => onGanttSortOrderChange(ganttSortOrder === 'asc' ? 'desc' : 'asc')}
+            >
+              {ganttSortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+              <span className="sr-only">Alterar Ordem</span>
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>

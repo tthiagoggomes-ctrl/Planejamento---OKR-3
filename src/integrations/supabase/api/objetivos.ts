@@ -113,7 +113,11 @@ export const createObjetivo = async (
 
   if (error) {
     console.error('Error creating objective:', error.message);
-    // Throw the error to be caught by useMutation's onError
+    // Check for RLS specific error message
+    if (error.message.includes('violates row-level security policy')) {
+      throw new Error("Item não inserido, usuário sem permissão.");
+    }
+    // Throw the original error for other types of errors
     throw new Error(`Erro ao criar objetivo: ${error.message}`);
   }
   return {

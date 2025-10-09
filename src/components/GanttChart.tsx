@@ -1,0 +1,170 @@
+"use client";
+
+import React from 'react';
+import { Atividade } from '@/integrations/supabase/api/atividades';
+import { format, parseISO, startOfWeek, endOfWeek, eachWeekOfInterval, isWithinInterval, differenceInWeeks, min, max } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
+
+interface GanttChartProps {
+  atividades: Atividade[];
+  groupByKr: boolean;
+  onGroupByKrChange: (checked: boolean) => void;
+}
+
+const GanttChart: React.FC<GanttChartProps> = ({ atividades, groupByKr, onGroupByKrChange }) => {
+  if (atividades.length === 0) {
+    return (
+      <p className="text-gray-600 text-center py-8">Nenhuma atividade para exibir no gráfico de Gantt.</p>
+    );
+  }
+
+  // Determine overall date range
+  const allDates = atividades.flatMap(ativ => {
+    const dates: Date[] = [];
+    if (ativ.created_at) dates.push(parseISO(ativ.created_at));
+    if (ativ.due_date) dates.push(parseISO(ativ.due_date));
+    return dates;
+  }).filter(Boolean);
+
+  if (allDates.length === 0) {
+    return (
+      <p className="text-gray-600 text-center py-8">Atividades sem datas para exibir no gráfico de Gantt.</p>
+    );
+  }
+
+  const now = new Date();
+  const minDate = startOfWeek(min([min(allDates), now]), { locale: ptBR }); // Ensure current week is included
+  const maxDate = endOfWeek(max([max(allDates), now]), { locale: ptBR }); // Ensure current week is included
+
+  const weeks = eachWeekOfInterval({ start: minDate, end: maxDate }, { locale: ptBR });
+  const totalWeeks = weeks.length;
+
+  // Group activities if required
+  const groupedActivities = groupByKr
+    ? atividades.reduce((acc, ativ) => {
+        const krTitle = ativ.key_result_title || 'Sem Key Result';
+        if (!acc[krTitle]) {
+          acc[krTitle] = [];
+        }
+        acc[krTitle].push(ativ);
+        return acc;
+      }, {} as Record<string, Atividade[]>)
+    : { 'Todas as Atividades': atividades }; // Single group if not grouping by KR
+
+  const getStatusColor = (status: Atividade['status']) => {
+    switch (status) {
+      case 'todo': return 'bg-gray-500';
+      case 'in_progress': return 'bg-blue-500';
+      case 'done': return 'bg-green-500';
+      case 'stopped': return 'bg-red-500';
+      default: return 'bg-gray-400';
+    }
+  };
+
+  const calculateProgress = (status: Atividade['status']) => {
+    switch (status) {
+      case 'done': return 100;
+      case 'in_progress': return 50; // Arbitrary progress for in_progress
+      case 'todo':
+      case 'stopped':
+      default: return 0;
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-2xl font-bold">Gráfico de Gantt</CardTitle>
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="group-by-kr">Agrupar por KR</Label>
+          <Switch
+            id="group-by-kr"
+            checked={groupByKr}
+            onCheckedChange={onGroupByKrChange}
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <div className="grid gap-y-2 min-w-[800px]" style={{ gridTemplateColumns: `250px repeat(${totalWeeks}, minmax(50px, 1fr))` }}>
+            {/* Header Row */}
+            <div className="sticky left-0 z-10 bg-background border-b border-r p-2 font-semibold text-sm">Atividade / KR</div>
+            {weeks.map((weekStart, index) => (
+              <div key={index} className="border-b p-2 text-center text-xs font-semibold">
+                {format(weekStart, 'dd/MM', { locale: ptBR })}
+              </div>
+            ))}
+
+            {Object.entries(groupedActivities).map(([groupTitle, activitiesInGroup]) => (
+              <React.Fragment key={groupTitle}>
+                {groupByKr && (
+                  <div className="sticky left-0 z-10 bg-muted border-b border-r p-2 font-semibold text-sm col-span-full">
+                    {groupTitle}
+                  </div>
+                )}
+                {activitiesInGroup.map((atividade) => {
+                  const startDate = atividade.created_at ? parseISO(atividade.created_at) : null;
+                  const endDate = atividade.due_date ? parseISO(atividade.due_date) : null;
+
+                  if (!startDate && !endDate) return null; // Skip if no dates
+
+                  const effectiveStartDate = startDate || endDate || now;
+                  const effectiveEndDate = endDate || startDate || now;
+
+                  const startOffsetWeeks = differenceInWeeks(startOfWeek(effectiveStartDate, { locale: ptBR }), minDate);
+                  const durationWeeks = differenceInWeeks(endOfWeek(effectiveEndDate, { locale: ptBR }), startOfWeek(effectiveStartDate, { locale: ptBR })) + 1;
+
+                  const progress = calculateProgress(atividade.status);
+
+                  return (
+                    <React.Fragment key={atividade.id}>
+                      <div className="sticky left-0 z-10 bg-background border-r p-2 text-sm truncate">
+                        {atividade.titulo}
+                        <p className="text-xs text-muted-foreground">{atividade.assignee_name}</p>
+                      </div>
+                      <div
+                        className="relative col-span-full h-8 flex items-center"
+                        style={{
+                          gridColumnStart: startOffsetWeeks + 2, // +1 for the first column, +1 for 1-based indexing
+                          gridColumnEnd: startOffsetWeeks + durationWeeks + 2,
+                        }}
+                      >
+                        <div
+                          className={cn(
+                            "absolute h-6 rounded-sm flex items-center justify-center text-white text-xs px-2",
+                            getStatusColor(atividade.status)
+                          )}
+                          style={{ width: `${progress}%` }}
+                        >
+                          {progress > 0 && `${progress}%`}
+                        </div>
+                        <div
+                          className={cn(
+                            "absolute h-6 rounded-sm border border-gray-300 dark:border-gray-600",
+                            getStatusColor(atividade.status)
+                          )}
+                          style={{ width: `100%`, opacity: 0.3 }} // Full bar for context, with some transparency
+                        >
+                          {/* Full bar for context */}
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default GanttChart;

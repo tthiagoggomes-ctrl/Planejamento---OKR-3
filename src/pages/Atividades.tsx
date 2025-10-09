@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, List, Kanban, StopCircle, Search } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2, List, Kanban, StopCircle, Search, GanttChartSquare } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -40,6 +40,9 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/use-debounce";
+import GanttChart from "@/components/GanttChart"; // Import the new GanttChart component
+import { Switch } from "@/components/ui/switch"; // Import Switch for Gantt grouping
+import { Label } from "@/components/ui/label"; // Import Label for Switch
 
 const Atividades = () => {
   const queryClient = useQueryClient();
@@ -47,13 +50,14 @@ const Atividades = () => {
   const [editingAtividade, setEditingAtividade] = React.useState<Atividade | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [atividadeToDelete, setAtividadeToDelete] = React.useState<string | null>(null);
-  const [viewMode, setViewMode] = React.useState<'list' | 'kanban'>('kanban');
+  const [viewMode, setViewMode] = React.useState<'list' | 'kanban' | 'gantt'>('kanban'); // Added 'gantt'
 
   // Estados para filtros
   const [selectedObjectiveFilter, setSelectedObjectiveFilter] = React.useState<string | 'all'>('all');
   const [selectedKeyResultFilter, setSelectedKeyResultFilter] = React.useState<string | 'all'>('all');
   const [searchQuery, setSearchQuery] = React.useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const [groupByKr, setGroupByKr] = React.useState(false); // New state for Gantt grouping
 
   const { data: objetivos, isLoading: isLoadingObjetivos } = useQuery<Objetivo[] | null, Error>({
     queryKey: ["objetivos"],
@@ -221,12 +225,15 @@ const Atividades = () => {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-2xl font-bold">Gestão de Atividades</CardTitle>
           <div className="flex items-center gap-2">
-            <ToggleGroup type="single" value={viewMode} onValueChange={(value: 'list' | 'kanban') => value && setViewMode(value)}>
+            <ToggleGroup type="single" value={viewMode} onValueChange={(value: 'list' | 'kanban' | 'gantt') => value && setViewMode(value)}>
               <ToggleGroupItem value="list" aria-label="Visualização em Lista">
                 <List className="h-4 w-4 mr-2" /> Lista
               </ToggleGroupItem>
               <ToggleGroupItem value="kanban" aria-label="Visualização em Kanban">
                 <Kanban className="h-4 w-4 mr-2" /> Kanban
+              </ToggleGroupItem>
+              <ToggleGroupItem value="gantt" aria-label="Visualização em Gantt">
+                <GanttChartSquare className="h-4 w-4 mr-2" /> Gantt
               </ToggleGroupItem>
             </ToggleGroup>
             <Button onClick={() => { setEditingAtividade(null); setIsFormOpen(true); }}>
@@ -341,12 +348,18 @@ const Atividades = () => {
             ) : (
               <p className="text-gray-600">Nenhuma atividade cadastrada ainda ou correspondente aos filtros.</p>
             )
-          ) : (
+          ) : viewMode === 'kanban' ? (
             <KanbanBoard
               atividades={filteredAtividades}
               onStatusChange={handleStatusChangeFromKanban}
               onEdit={handleEditClick}
               onDelete={handleDeleteClick}
+            />
+          ) : ( // Gantt view
+            <GanttChart
+              atividades={filteredAtividades}
+              groupByKr={groupByKr}
+              onGroupByKrChange={setGroupByKr}
             />
           )}
         </CardContent>

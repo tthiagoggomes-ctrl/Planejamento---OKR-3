@@ -72,7 +72,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
 
         return ganttSortOrder === 'asc'
           ? compareA.localeCompare(compareB)
-          : compareB.localeCompare(compareA);
+          : compareB.localeCompare(a.key_result_title || ''); // Corrected: b.key_result_title.localeCompare(a.key_result_title)
       }
       return 0;
     });
@@ -113,13 +113,24 @@ const GanttChart: React.FC<GanttChartProps> = ({
       }, {} as Record<string, Atividade[]>)
     : { 'Todas as Atividades': sortedActivities }; // Single group if not grouping by KR
 
-  const getStatusColor = (status: Atividade['status']) => {
-    switch (status) {
-      case 'todo': return 'bg-gray-500';
-      case 'in_progress': return 'bg-blue-500';
-      case 'done': return 'bg-green-500';
-      case 'stopped': return 'bg-red-500';
-      default: return 'bg-gray-400';
+  const getStatusColor = (atividade: Atividade) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize today to start of day for comparison
+
+    const dueDate = atividade.due_date ? parseISO(atividade.due_date) : null;
+    const normalizedDueDate = dueDate ? new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate()) : null;
+
+    switch (atividade.status) {
+      case 'done': return 'bg-green-500'; // Concluída
+      case 'stopped': return 'bg-red-500'; // Parada (vermelho específico para status 'stopped')
+      case 'todo':
+      case 'in_progress':
+        if (normalizedDueDate && normalizedDueDate < today) {
+          return 'bg-red-500'; // Atrasada (vermelho para atividades não concluídas com data de vencimento passada)
+        } else {
+          return 'bg-blue-500'; // Em andamento / A fazer (azul para atividades não concluídas e dentro do prazo)
+        }
+      default: return 'bg-gray-400'; // Default para outros status ou sem data
     }
   };
 
@@ -219,7 +230,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
                         <div
                           className={cn(
                             "absolute h-6 rounded-sm flex items-center justify-center text-white text-xs px-2",
-                            getStatusColor(atividade.status)
+                            getStatusColor(atividade) // Pass atividade object
                           )}
                           style={{ width: `${progress}%` }}
                         >
@@ -228,7 +239,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
                         <div
                           className={cn(
                             "absolute h-6 rounded-sm border border-gray-300 dark:border-gray-600",
-                            getStatusColor(atividade.status)
+                            getStatusColor(atividade) // Pass atividade object
                           )}
                           style={{ width: `100%`, opacity: 0.3 }} // Full bar for context, with some transparency
                         >

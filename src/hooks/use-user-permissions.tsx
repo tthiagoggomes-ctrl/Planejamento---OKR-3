@@ -13,7 +13,22 @@ export interface Permission {
   description: string;
 }
 
-const fetchUserPermissions = async (userId: string | undefined): Promise<Set<string>> => {
+// Fetch user's role to determine if they are admin/diretoria
+const fetchUserRole = async (userId: string | undefined): Promise<string | null> => {
+  if (!userId) return null;
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('permissao')
+    .eq('id', userId)
+    .single();
+  if (error) {
+    console.error('Error fetching user role:', error.message);
+    return null;
+  }
+  return data?.permissao || null;
+};
+
+const fetchUserGranularPermissions = async (userId: string | undefined): Promise<Set<string>> => {
   if (!userId) {
     return new Set();
   }
@@ -27,8 +42,8 @@ const fetchUserPermissions = async (userId: string | undefined): Promise<Set<str
     .eq('user_id', userId);
 
   if (error) {
-    console.error('Error fetching user permissions:', error.message);
-    showError('Erro ao carregar permissões do usuário.');
+    console.error('Error fetching user granular permissions:', error.message);
+    showError('Erro ao carregar permissões granulares do usuário.');
     return new Set();
   }
 
@@ -44,28 +59,37 @@ const fetchUserPermissions = async (userId: string | undefined): Promise<Set<str
 export const useUserPermissions = () => {
   const { user, loading: sessionLoading } = useSession();
 
-  const { data: userPermissions, isLoading: permissionsLoading, error: permissionsError } = useQuery<Set<string>, Error>({
-    queryKey: ["userPermissions", user?.id],
-    queryFn: ({ queryKey }) => fetchUserPermissions(queryKey[1] as string | undefined), // Wrap in arrow function and extract userId
-    enabled: !!user && !sessionLoading, // Only fetch if user is logged in and session is not loading
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    // cacheTime: 10 * 60 * 1000, // 10 minutes - Removido, pois cacheTime não é uma propriedade válida para useQueryOptions
+  const { data: userRole, isLoading: roleLoading, error: roleError } = useQuery<string | null, Error>({
+    queryKey: ["userRole", user?.id],
+    queryFn: ({ queryKey }) => fetchUserRole(queryKey[1] as string | undefined),
+    enabled: !!user && !sessionLoading,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: userGranularPermissions, isLoading: granularPermissionsLoading, error: granularPermissionsError } = useQuery<Set<string>, Error>({
+    queryKey: ["userGranularPermissions", user?.id],
+    queryFn: ({ queryKey }) => fetchUserGranularPermissions(queryKey[1] as string | undefined),
+    enabled: !!user && !sessionLoading,
+    staleTime: 5 * 60 * 1000,
   });
 
   const can = React.useCallback((resource: string, action: string): boolean => {
-    if (sessionLoading || permissionsLoading || permissionsError) {
+    if (sessionLoading || roleLoading || granularPermissionsLoading || roleError || granularPermissionsError) {
       return false; // Or handle as 'pending' state if needed
     }
-    // If user is an administrator, they have all permissions
-    if (user && (user as any).permissao === 'administrador') { // Assuming 'permissao' is available on the user object
+
+    // Administrators and Diretoria have full access
+    if (userRole === 'administrador' || userRole === 'diretoria') {
       return true;
     }
-    return userPermissions?.has(`${resource}_${action}`) || false;
-  }, [userPermissions, user, sessionLoading, permissionsLoading, permissionsError]);
+
+    // Check for specific granular permission
+    return userGranularPermissions?.has(`${resource}_${action}`) || false;
+  }, [userRole, userGranularPermissions, sessionLoading, roleLoading, granularPermissionsLoading, roleError, granularPermissionsError]);
 
   return {
     can,
-    isLoading: sessionLoading || permissionsLoading,
-    isError: !!permissionsError,
+    isLoading: sessionLoading || roleLoading || granularPermissionsLoading,
+    isError: !!roleError || !!granularPermissionsError,
   };
 };

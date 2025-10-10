@@ -59,7 +59,10 @@ export const getObjetivos = async (params?: GetObjetivosParams): Promise<Objetiv
   if (sortByColumn === 'area_name') {
     // Special handling for sorting by joined table column
     query = query.order('area.nome', { ascending: sortAscending });
-  } else {
+  } else if (sortByColumn === 'user_id') { // Explicitly qualify user_id
+    query = query.order('objetivos.user_id', { ascending: sortAscending });
+  }
+  else {
     query = query.order(sortByColumn, { ascending: sortAscending });
   }
 

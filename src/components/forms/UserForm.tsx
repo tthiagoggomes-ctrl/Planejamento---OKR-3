@@ -184,9 +184,9 @@ export const UserForm: React.FC<UserFormProps> = ({
     { key: 'profile', label: 'Meu Perfil' },
     { key: 'areas', label: 'Áreas' },
     { key: 'usuarios', label: 'Usuários' },
-    { key: 'periodos', label: 'Períodos' }, // Adicionado Períodos
+    { key: 'periodos', label: 'Períodos' },
     { key: 'objetivos', label: 'Objetivos & KRs' },
-    { key: 'key_results', label: 'Key Results' }, // Adicionado Key Results como recurso separado
+    { key: 'key_results', label: 'Key Results' },
     { key: 'atividades', label: 'Atividades' },
     { key: 'comentarios', label: 'Comentários' },
   ];

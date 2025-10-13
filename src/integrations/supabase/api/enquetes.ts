@@ -48,6 +48,8 @@ export const getEnquetesByComiteId = async (comite_id: string): Promise<Enquete[
     return null;
   }
 
+  if (!data) return []; // Retorna array vazio se não houver dados
+
   return data.map(enquete => {
     const opcoes = (enquete as any).opcoes_enquete.map((opcao: any) => ({
       id: opcao.id,
@@ -57,7 +59,7 @@ export const getEnquetesByComiteId = async (comite_id: string): Promise<Enquete[
     const totalVotes = opcoes.reduce((sum: number, op: OpcaoEnquete) => sum + (op.vote_count || 0), 0);
 
     return {
-      ...enquete,
+      ...(enquete as any), // Corrigido: Adicionado 'as any' para resolver o erro de tipo
       created_by_name: (enquete as any).created_by_user ? `${(enquete as any).created_by_user.first_name} ${(enquete as any).created_by_user.last_name}` : 'N/A',
       opcoes,
       total_votes: totalVotes,

@@ -65,6 +65,12 @@ const CommitteeDetails = () => {
   const [isReuniaoDeleteDialogOpen, setIsReuniaoDeleteDialogOpen] = React.useState(false);
   const [reuniaoToDelete, setReuniaoToDelete] = React.useState<string | null>(null);
 
+  // NEW: State for Recurring Meeting Delete Confirmation
+  const [isDeleteRecurringDialogOpen, setIsDeleteRecurringDialogOpen] = React.useState(false);
+  const [recurringMeetingToDelete, setRecurringMeetingToDelete] = React.useState<Reuniao | null>(null);
+  const [deleteRecurringOption, setDeleteRecurringOption] = React.useState<'single' | 'series'>('single');
+
+
   // State for AtaReuniao Form
   const [isAtaFormOpen, setIsAtaFormOpen] = React.useState(false);
   const [editingAta, setEditingAta] = React.useState<AtaReuniao | null>(null);
@@ -200,17 +206,19 @@ const CommitteeDetails = () => {
   });
 
   const deleteReuniaoMutation = useMutation({
-    mutationFn: (reuniaoId: string) => {
+    mutationFn: ({ id: reuniaoId, option }: { id: string; option: 'single' | 'series' }) => { // Updated to accept option
       if (!canDeleteReunioes) {
         throw new Error("Você não tem permissão para excluir reuniões.");
       }
-      return deleteReuniao(reuniaoId);
+      return deleteReuniao(reuniaoId, option); // Pass the option
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reunioes"] });
       setIsReuniaoDeleteDialogOpen(false);
+      setIsDeleteRecurringDialogOpen(false); // Close recurring dialog too
       setReuniaoToDelete(null);
-      showSuccess("Reunião excluída com sucesso!");
+      setRecurringMeetingToDelete(null);
+      showSuccess("Reunião(ões) excluída(s) com sucesso!");
     },
     onError: (err) => {
       showError(`Erro ao excluir reunião: ${err.message}`);
@@ -235,14 +243,21 @@ const CommitteeDetails = () => {
     setIsReuniaoFormOpen(true);
   };
 
-  const handleDeleteReuniaoClick = (reuniaoId: string) => {
-    setReuniaoToDelete(reuniaoId);
-    setIsReuniaoDeleteDialogOpen(true);
+  const handleDeleteReuniaoClick = (reuniao: Reuniao) => { // Changed to accept full reuniao object
+    if (reuniao.recurrence_type !== 'none') {
+      setRecurringMeetingToDelete(reuniao);
+      setIsDeleteRecurringDialogOpen(true);
+    } else {
+      setReuniaoToDelete(reuniao.id);
+      setIsReuniaoDeleteDialogOpen(true);
+    }
   };
 
   const confirmDeleteReuniao = () => {
-    if (reuniaoToDelete) {
-      deleteReuniaoMutation.mutate(reuniaoToDelete);
+    if (reuniaoToDelete) { // For single, non-recurring meetings
+      deleteReuniaoMutation.mutate({ id: reuniaoToDelete, option: 'single' });
+    } else if (recurringMeetingToDelete) { // For recurring meetings with chosen option
+      deleteReuniaoMutation.mutate({ id: recurringMeetingToDelete.id, option: deleteRecurringOption });
     }
   };
 
@@ -573,7 +588,7 @@ const CommitteeDetails = () => {
                           </Button>
                         )}
                         {canDeleteReunioes && (
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteReuniaoClick(meeting.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteReuniaoClick(meeting)}> {/* Pass full meeting object */}
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
@@ -758,7 +773,7 @@ const CommitteeDetails = () => {
         />
       )}
 
-      {/* Reuniao Delete Confirmation */}
+      {/* Reuniao Delete Confirmation (for non-recurring meetings) */}
       {canDeleteReunioes && (
         <AlertDialog open={isReuniaoDeleteDialogOpen} onOpenChange={setIsReuniaoDeleteDialogOpen}>
           <AlertDialogContent>
@@ -774,6 +789,48 @@ const CommitteeDetails = () => {
                 {deleteReuniaoMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {deleteReuniaoMutation.isPending ? "Excluindo..." : "Excluir"}
               </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {/* NEW: Recurring Reuniao Delete Confirmation */}
+      {canDeleteReunioes && (
+        <AlertDialog open={isDeleteRecurringDialogOpen} onOpenChange={setIsDeleteRecurringDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Reunião Recorrente</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta reunião faz parte de uma série recorrente. O que você gostaria de excluir?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2">
+              <AlertDialogCancel onClick={() => {
+                setIsDeleteRecurringDialogOpen(false);
+                setRecurringMeetingToDelete(null);
+              }}>Cancelar</AlertDialogCancel>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDeleteRecurringOption('single');
+                  confirmDeleteReuniao();
+                }}
+                disabled={deleteReuniaoMutation.isPending}
+              >
+                {deleteReuniaoMutation.isPending && deleteRecurringOption === 'single' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Apenas esta reunião
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setDeleteRecurringOption('series');
+                  confirmDeleteReuniao();
+                }}
+                disabled={deleteReuniaoMutation.isPending}
+              >
+                {deleteReuniaoMutation.isPending && deleteRecurringOption === 'series' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Todas as reuniões da série
+              </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

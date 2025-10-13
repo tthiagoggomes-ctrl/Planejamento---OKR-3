@@ -182,11 +182,11 @@ export const updateReuniao = async (
   };
 };
 
-export const deleteReuniao = async (id: string): Promise<boolean> => {
+export const deleteReuniao = async (id: string, deleteOption: 'single' | 'series'): Promise<boolean> => {
   // First, fetch the meeting to check if it's part of a recurring series
   const { data: meetingToDelete, error: fetchError } = await supabase
     .from('reunioes')
-    .select('id, recurrence_group_id')
+    .select('id, recurrence_group_id, recurrence_type') // Fetch recurrence_type as well
     .eq('id', id)
     .single();
 
@@ -198,11 +198,11 @@ export const deleteReuniao = async (id: string): Promise<boolean> => {
 
   let deleteQuery = supabase.from('reunioes').delete();
 
-  if (meetingToDelete.recurrence_group_id) {
-    // If it's part of a series, delete all meetings in that series
+  if (meetingToDelete.recurrence_type !== 'none' && deleteOption === 'series' && meetingToDelete.recurrence_group_id) {
+    // If it's part of a series and user chose to delete the series
     deleteQuery = deleteQuery.eq('recurrence_group_id', meetingToDelete.recurrence_group_id);
   } else {
-    // If it's a single meeting, delete just that one
+    // If it's a single meeting, or a recurring meeting but user chose to delete only this instance
     deleteQuery = deleteQuery.eq('id', id);
   }
 

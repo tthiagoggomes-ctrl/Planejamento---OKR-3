@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { Home, Building, Users, Target, ListTodo, LayoutDashboard, MessageSquare, UserCircle, FolderOpen, CalendarDays } from "lucide-react"; // Import CalendarDays icon
+import { Home, Building, Users, Target, ListTodo, LayoutDashboard, MessageSquare, UserCircle, FolderOpen, CalendarDays, GitCommit } from "lucide-react"; // Import CalendarDays icon and GitCommit for committees
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,16 +18,11 @@ interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   onClose: () => void;
 }
 
-const navItems = [
+const strategicPlanningItems = [
   {
-    name: "Dashboard",
+    name: "Dashboard OKR",
     href: "/",
     icon: <LayoutDashboard className="h-4 w-4" />,
-  },
-  {
-    name: "Meu Perfil",
-    href: "/profile",
-    icon: <UserCircle className="h-4 w-4" />,
   },
   {
     name: "Objetivos & KRs",
@@ -46,6 +41,20 @@ const navItems = [
   },
 ];
 
+const committeesModuleItems = [
+  // These will be filled in a later step
+  // {
+  //   name: "Dashboard Comitês",
+  //   href: "/comites/dashboard",
+  //   icon: <LayoutDashboard className="h-4 w-4" />,
+  // },
+  // {
+  //   name: "Comitês",
+  //   href: "/comites",
+  //   icon: <GitCommit className="h-4 w-4" />,
+  // },
+];
+
 const cadastroItems = [
   {
     name: "Áreas",
@@ -53,7 +62,7 @@ const cadastroItems = [
     icon: <Building className="h-4 w-4" />,
   },
   {
-    name: "Períodos", // New item
+    name: "Períodos",
     href: "/periodos",
     icon: <CalendarDays className="h-4 w-4" />,
   },
@@ -65,6 +74,8 @@ const cadastroItems = [
 ].sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
 
 export function Sidebar({ isOpen, onClose, className }: SidebarProps) {
+  const [isStrategicPlanningOpen, setIsStrategicPlanningOpen] = React.useState(true); // Open by default
+  const [isCommitteesOpen, setIsCommitteesOpen] = React.useState(false);
   const [isCadastrosOpen, setIsCadastrosOpen] = React.useState(false);
 
   return (
@@ -77,7 +88,7 @@ export function Sidebar({ isOpen, onClose, className }: SidebarProps) {
     >
       <div className="flex h-16 items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-2 font-semibold text-sidebar-primary-foreground" onClick={onClose}>
-          <img src="/assets/logo-fade-ufpe.png" alt="Logo FADE-UFPE" className="h-8" /> {/* Adicionada a logo aqui */}
+          <img src="/assets/logo-fade-ufpe.png" alt="Logo FADE-UFPE" className="h-8" />
         </Link>
         <Button
           variant="ghost"
@@ -105,17 +116,63 @@ export function Sidebar({ isOpen, onClose, className }: SidebarProps) {
       </div>
       <ScrollArea className="h-[calc(100vh-4rem)] px-4 py-6">
         <nav className="grid items-start gap-2">
-          {navItems.map((item) => (
-            <Link
-              key={item.name}
-              to={item.href}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-all hover:text-sidebar-primary hover:bg-sidebar-accent"
-              onClick={onClose}
-            >
-              {item.icon}
-              {item.name}
-            </Link>
-          ))}
+          {/* Meu Perfil - Top Level */}
+          <Link
+            to="/profile"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-all hover:text-sidebar-primary hover:bg-sidebar-accent"
+            onClick={onClose}
+          >
+            <UserCircle className="h-4 w-4" />
+            Meu Perfil
+          </Link>
+
+          {/* Módulo de Planejamento Estratégico */}
+          <Collapsible open={isStrategicPlanningOpen} onOpenChange={setIsStrategicPlanningOpen} className="space-y-2">
+            <CollapsibleTrigger className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-all hover:text-sidebar-primary hover:bg-sidebar-accent [&[data-state=open]>svg]:rotate-180">
+              <Target className="h-4 w-4" />
+              <span className="text-base">Módulo de Planejamento Estratégico</span>
+              <ChevronDown className="ml-auto h-4 w-4 transition-transform" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1 pl-6">
+              {strategicPlanningItems.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-all hover:text-sidebar-primary hover:bg-sidebar-accent"
+                  onClick={onClose}
+                >
+                  {item.icon}
+                  {item.name}
+                </Link>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Módulo de Comitês (Placeholder for now) */}
+          <Collapsible open={isCommitteesOpen} onOpenChange={setIsCommitteesOpen} className="space-y-2">
+            <CollapsibleTrigger className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-all hover:text-sidebar-primary hover:bg-sidebar-accent [&[data-state=open]>svg]:rotate-180">
+              <GitCommit className="h-4 w-4" />
+              <span className="text-base">Módulo de Comitês</span>
+              <ChevronDown className="ml-auto h-4 w-4 transition-transform" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1 pl-6">
+              {committeesModuleItems.length > 0 ? (
+                committeesModuleItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-all hover:text-sidebar-primary hover:bg-sidebar-accent"
+                    onClick={onClose}
+                  >
+                    {item.icon}
+                    {item.name}
+                  </Link>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground px-3 py-2">Em desenvolvimento...</p>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Cadastros Section */}
           <Collapsible open={isCadastrosOpen} onOpenChange={setIsCadastrosOpen} className="space-y-2">

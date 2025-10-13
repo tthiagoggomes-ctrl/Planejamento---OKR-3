@@ -8,7 +8,7 @@ import NotFound from "./pages/NotFound";
 import Layout from "./components/layout/Layout";
 import Areas from "./pages/Areas";
 import Users from "./pages/Users";
-import Periodos from "./pages/Periodos"; // Import the new Periodos page
+import Periodos from "./pages/Periodos";
 import Objetivos from "./pages/Objetivos";
 import ObjetivoDetails from "./pages/ObjetivoDetails";
 import Atividades from "./pages/Atividades";
@@ -29,15 +29,26 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Layout />}>
-              <Route index element={<Index />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="areas" element={<Areas />} />
-              <Route path="usuarios" element={<Users />} />
-              <Route path="periodos" element={<Periodos />} /> {/* Add the new periods route */}
+              {/* Módulo de Planejamento Estratégico */}
+              <Route index element={<Index />} /> {/* Dashboard OKR */}
               <Route path="objetivos" element={<Objetivos />} />
               <Route path="objetivos/:id" element={<ObjetivoDetails />} />
               <Route path="atividades" element={<Atividades />} />
               <Route path="comentarios" element={<Comentarios />} />
+
+              {/* Telas de Cadastro (acesso geral) */}
+              <Route path="areas" element={<Areas />} />
+              <Route path="usuarios" element={<Users />} />
+              <Route path="periodos" element={<Periodos />} />
+              
+              {/* Meu Perfil (acesso geral) */}
+              <Route path="profile" element={<Profile />} />
+
+              {/* Módulo de Comitês (Rotas a serem adicionadas) */}
+              {/* <Route path="comites/dashboard" element={<CommitteesDashboard />} /> */}
+              {/* <Route path="comites" element={<CommitteesList />} /> */}
+              {/* ... outras rotas do módulo de comitês */}
+
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Route>

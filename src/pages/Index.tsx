@@ -115,7 +115,7 @@ const Index = () => {
     <div className="container mx-auto py-6">
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Dashboard FADE-UFPE OKR</CardTitle>
+          <CardTitle className="text-2xl font-bold">Dashboard OKR</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-gray-600 mb-4">

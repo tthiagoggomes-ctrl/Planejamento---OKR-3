@@ -207,9 +207,10 @@ export const getComiteMembers = async (comite_id: string): Promise<ComiteMember[
   const userIds = membersData.map(member => member.user_id);
 
   // Step 3: Fetch user profiles for these user_id's
+  // IMPORTANT: Only select columns that exist in public.usuarios
   const { data: userProfiles, error: profilesError } = await supabase
     .from('usuarios')
-    .select('id, first_name, last_name, email') // Select only necessary fields
+    .select('id, first_name, last_name') // Removed 'email' from here
     .in('id', userIds);
 
   if (profilesError) {
@@ -218,7 +219,7 @@ export const getComiteMembers = async (comite_id: string): Promise<ComiteMember[
     return null;
   }
 
-  const userProfileMap = new Map<string, Pick<UserProfile, 'id' | 'first_name' | 'last_name' | 'email'>>();
+  const userProfileMap = new Map<string, Pick<UserProfile, 'id' | 'first_name' | 'last_name'>>(); // Adjusted type
   userProfiles.forEach(profile => userProfileMap.set(profile.id, profile));
 
   // Step 4: Map the results together
@@ -227,9 +228,7 @@ export const getComiteMembers = async (comite_id: string): Promise<ComiteMember[
     user_name: userProfileMap.has(member.user_id)
       ? `${userProfileMap.get(member.user_id)?.first_name} ${userProfileMap.get(member.user_id)?.last_name}`
       : 'N/A',
-    user_email: userProfileMap.has(member.user_id)
-      ? userProfileMap.get(member.user_id)?.email || 'N/A'
-      : 'N/A',
+    user_email: 'N/A', // Set email to N/A for now, as it's not fetched from public.usuarios
   }));
 };
 
@@ -243,8 +242,8 @@ export const addComiteMember = async (
     .insert({ comite_id, user_id, role })
     .select(`
       *,
-      user:usuarios(first_name, last_name, email)
-    `)
+      user:usuarios(first_name, last_name)
+    `) // Adjusted select
     .single();
 
   if (error) {
@@ -256,7 +255,7 @@ export const addComiteMember = async (
   return {
     ...data,
     user_name: (data as any).user ? `${(data as any).user.first_name} ${(data as any).user.last_name}` : 'N/A',
-    user_email: (data as any).user?.email || 'N/A',
+    user_email: 'N/A', // Set email to N/A
   };
 };
 
@@ -272,8 +271,8 @@ export const updateComiteMemberRole = async (
     .eq('user_id', user_id)
     .select(`
       *,
-      user:usuarios(first_name, last_name, email)
-    `)
+      user:usuarios(first_name, last_name)
+    `) // Adjusted select
     .single();
 
   if (error) {
@@ -285,7 +284,7 @@ export const updateComiteMemberRole = async (
   return {
     ...data,
     user_name: (data as any).user ? `${(data as any).user.first_name} ${(data as any).user.last_name}` : 'N/A',
-    user_email: (data as any).user?.email || 'N/A',
+    user_email: 'N/A', // Set email to N/A
   };
 };
 

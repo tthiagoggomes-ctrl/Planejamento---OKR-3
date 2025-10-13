@@ -95,22 +95,28 @@ const CommitteeActivitiesNew = () => {
 
   const { data: reunioes, isLoading: isLoadingReunioes } = useQuery<Reuniao[] | null, Error>({
     queryKey: ["reunioesForActivities", selectedComiteFilter],
-    queryFn: () => selectedComiteFilter !== 'all' ? getReunioesByComiteId(selectedComiteFilter) : Promise.resolve(null),
-    enabled: selectedComiteFilter !== 'all',
+    queryFn: () => {
+      if (selectedComiteFilter === 'all') return null;
+      return getReunioesByComiteId(selectedComiteFilter);
+    },
+    enabled: selectedComiteFilter !== 'all' && canViewAtividadesComite && !permissionsLoading,
   });
 
   const { data: atasReuniao, isLoading: isLoadingAtasReuniao } = useQuery<AtaReuniao[] | null, Error>({
     queryKey: ["atasReuniaoForActivities", selectedReuniaoFilter],
-    queryFn: () => selectedReuniaoFilter !== 'all' ? getAtasReuniaoByReuniaoId(selectedReuniaoFilter) : Promise.resolve(null),
-    enabled: selectedReuniaoFilter !== 'all',
+    queryFn: () => {
+      if (selectedReuniaoFilter === 'all') return null;
+      return getAtasReuniaoByReuniaoId(selectedReuniaoFilter);
+    },
+    enabled: selectedReuniaoFilter !== 'all' && canViewAtividadesComite && !permissionsLoading,
   });
 
   const { data: atividades, isLoading, error } = useQuery<AtividadeComite[] | null, Error>({
     queryKey: ["atividadesComite", selectedComiteFilter, selectedAtaReuniaoFilter, debouncedSearchQuery],
-    queryFn: ({ queryKey }) => getAtividadesComite({
-      comite_id: queryKey[1] as string | 'all',
-      ata_reuniao_id: queryKey[2] as string | 'all',
-      search: queryKey[3] as string,
+    queryFn: () => getAtividadesComite({
+      comite_id: selectedComiteFilter,
+      ata_reuniao_id: selectedAtaReuniaoFilter,
+      search: debouncedSearchQuery,
     }),
     enabled: canViewAtividadesComite && !permissionsLoading,
   });

@@ -27,7 +27,7 @@ import { AtividadeComiteForm, AtividadeComiteFormValues } from "@/components/for
 import { getAtividadesComite, createAtividadeComite, updateAtividadeComite, deleteAtividadeComite, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
 import { getComites, Comite } from "@/integrations/supabase/api/comites";
 import { getReunioesByComiteId, Reuniao } from "@/integrations/supabase/api/reunioes";
-import { getAtasReuniaoByReuniaoId, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
+import { getAtasReuniaoByReuniaoId, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao"; // Corrigido: Importar getAtasReuniaoByReuniaoId
 import { showSuccess, showError } from "@/utils/toast";
 import { format, parseISO } from "date-fns";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -101,7 +101,7 @@ const CommitteeActivities = () => {
 
   const { data: atasReuniao, isLoading: isLoadingAtasReuniao } = useQuery<AtaReuniao[] | null, Error>({
     queryKey: ["atasReuniaoForActivities", selectedReuniaoFilter],
-    queryFn: () => selectedReuniaoFilter !== 'all' ? getAtasReuniaoByReuniaoId(selectedReuniaoFilter) : Promise.resolve(null),
+    queryFn: () => selectedReuniaoFilter !== 'all' ? getAtasReuniaoByReuniaoId(selectedReuniaoFilter) : Promise.resolve(null), // Corrigido: Usar getAtasReuniaoByReuniaoId
     enabled: selectedReuniaoFilter !== 'all',
   });
 
@@ -239,7 +239,6 @@ const CommitteeActivities = () => {
     }
   };
 
-  // Using React.useMemo for filteredAtividades to ensure it's a single, stable expression
   const filteredAtividades = React.useMemo(() => {
     if (!atividades) return [];
     const query = debouncedSearchQuery.toLowerCase();

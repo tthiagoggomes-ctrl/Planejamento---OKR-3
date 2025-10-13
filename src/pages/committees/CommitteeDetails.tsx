@@ -13,7 +13,7 @@ import { getEnquetesByComiteId, Enquete, createEnquete, updateEnquete, deleteEnq
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { format, isPast } from "date-fns"; // Import isPast
+import { format, isPast, parseISO, isWithinInterval } from "date-fns"; // Import isWithinInterval
 import { ptBR } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
 import { useSession } from "@/components/auth/SessionContextProvider";
@@ -93,6 +93,9 @@ const CommitteeDetails = () => {
   const [isEnqueteDeleteDialogOpen, setIsEnqueteDeleteDialogOpen] = React.useState(false);
   const [enqueteToDelete, setEnqueteToDelete] = React.useState<string | null>(null);
   const [selectedVoteOption, setSelectedVoteOption] = React.useState<string | null>(null); // NEW: For voting
+
+  // Use useRef to get a stable 'now' for consistent date comparisons within a render cycle
+  const now = React.useRef(new Date()).current;
 
   const { data: comite, isLoading: isLoadingComite, error: errorComite } = useQuery<Comite | null, Error>({
     queryKey: ["comite", id],
@@ -784,7 +787,11 @@ const CommitteeDetails = () => {
             ) : polls && polls.length > 0 ? (
               <div className="space-y-4">
                 {polls.map(poll => {
-                  const isPollActive = !isPast(new Date(poll.start_date)) && isPast(new Date(poll.end_date));
+                  // Corrected logic for isPollActive
+                  const isPollActive = isWithinInterval(now, {
+                    start: parseISO(poll.start_date),
+                    end: parseISO(poll.end_date)
+                  });
                   const hasVoted = !!poll.user_vote;
                   const canUserVote = canVoteEnquete && isPollActive && user?.id;
                   const isCreatorOrAdmin = user?.id === poll.created_by || can('enquetes', 'edit'); // Simplified check for edit/delete

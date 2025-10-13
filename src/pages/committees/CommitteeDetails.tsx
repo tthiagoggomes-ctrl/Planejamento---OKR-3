@@ -207,7 +207,7 @@ const CommitteeDetails = () => {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reunioes"] });
+      queryClient.invalidateQueries({ queryKey: ["reunioes", id] }); // Invalidate specific committee meetings
       setIsReuniaoFormOpen(false);
       showSuccess("Reunião agendada com sucesso!");
     },
@@ -233,7 +233,7 @@ const CommitteeDetails = () => {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reunioes"] });
+      queryClient.invalidateQueries({ queryKey: ["reunioes", id] }); // Invalidate specific committee meetings
       setIsReuniaoFormOpen(false);
       setEditingReuniao(null);
       showSuccess("Reunião atualizada com sucesso!");
@@ -251,7 +251,7 @@ const CommitteeDetails = () => {
       return deleteReuniao(reuniaoId, option);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reunioes"] });
+      queryClient.invalidateQueries({ queryKey: ["reunioes", id] }); // Invalidate specific committee meetings
       setIsReuniaoDeleteDialogOpen(false);
       setIsDeleteRecurringDialogOpen(false);
       setReuniaoToDelete(null);
@@ -407,7 +407,7 @@ const CommitteeDetails = () => {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["enquetes"] });
+      queryClient.invalidateQueries({ queryKey: ["enquetes", id] }); // Invalidate specific committee polls
       setIsEnqueteFormOpen(false);
       showSuccess("Enquete criada com sucesso!");
     },
@@ -431,7 +431,7 @@ const CommitteeDetails = () => {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["enquetes"] });
+      queryClient.invalidateQueries({ queryKey: ["enquetes", id] }); // Invalidate specific committee polls
       setIsEnqueteFormOpen(false);
       setEditingEnquete(null);
       showSuccess("Enquete atualizada com sucesso!");
@@ -449,7 +449,7 @@ const CommitteeDetails = () => {
       return deleteEnquete(enqueteId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["enquetes"] });
+      queryClient.invalidateQueries({ queryKey: ["enquetes", id] }); // Invalidate specific committee polls
       setIsEnqueteDeleteDialogOpen(false);
       setEnqueteToDelete(null);
       showSuccess("Enquete excluída com sucesso!");

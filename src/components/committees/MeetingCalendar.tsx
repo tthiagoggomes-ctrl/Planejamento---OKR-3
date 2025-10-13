@@ -57,29 +57,7 @@ export const MeetingCalendar: React.FC<MeetingCalendarProps> = ({ meetings }) =>
           locale={ptBR}
           className="rounded-md border"
         />
-        <div className="mt-4 w-full">
-          <h3 className="text-lg font-semibold mb-2">Reuniões em {format(month, 'MMMM yyyy', { locale: ptBR })}</h3>
-          {Array.from(meetingsByDate.entries())
-            .filter(([dateKey]) => isSameDay(parseISO(dateKey), month) || format(parseISO(dateKey), 'yyyy-MM') === format(month, 'yyyy-MM'))
-            .sort(([dateKeyA], [dateKeyB]) => parseISO(dateKeyA).getTime() - parseISO(dateKeyB).getTime())
-            .map(([dateKey, dailyMeetings]) => (
-              <div key={dateKey} className="mb-2">
-                <p className="font-medium text-sm mb-1">{format(parseISO(dateKey), 'PPP', { locale: ptBR })}:</p>
-                <ul className="list-disc pl-5 text-sm space-y-1">
-                  {dailyMeetings.sort((a, b) => parseISO(a.data_reuniao).getTime() - parseISO(b.data_reuniao).getTime()).map(meeting => (
-                    <li key={meeting.id}>
-                      {format(parseISO(meeting.data_reuniao), 'HH:mm', { locale: ptBR })} - {meeting.titulo} ({meeting.local || 'N/A'})
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          {Array.from(meetingsByDate.entries())
-            .filter(([dateKey]) => format(parseISO(dateKey), 'yyyy-MM') === format(month, 'yyyy-MM'))
-            .length === 0 && (
-              <p className="text-gray-600 text-center py-2">Nenhuma reunião agendada para este mês.</p>
-            )}
-        </div>
+        {/* A seção de listagem de reuniões foi removida daqui. */}
       </CardContent>
     </Card>
   );

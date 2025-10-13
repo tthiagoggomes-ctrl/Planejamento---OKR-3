@@ -403,7 +403,7 @@ const Atividades = () => {
               ganttSortBy={ganttSortBy}
               onGanttSortByChange={setGanttSortBy}
               ganttSortOrder={ganttSortOrder}
-              onGanttSortOrderChange={setGanttSortOrder} {/* Corrigido aqui */}
+              onGanttSortOrderChange={setGanttSortOrder}
             />
           )}
         </CardContent>

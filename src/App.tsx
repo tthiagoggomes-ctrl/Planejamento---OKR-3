@@ -20,7 +20,7 @@ import CommitteesDashboard from "@/pages/committees/CommitteesDashboard";
 import CommitteesList from "@/pages/committees/CommitteesList";
 import CommitteeDetails from "@/pages/committees/CommitteeDetails";
 import MeetingMinutesList from "@/pages/committees/MeetingMinutesList";
-import CommitteeActivities from "@/pages/committees/CommitteeActivities"; // NEW: Import CommitteeActivities
+import CommitteeActivitiesNew from "@/pages/committees/CommitteeActivitiesNew"; // NEW: Import CommitteeActivitiesNew
 
 const queryClient = new QueryClient();
 
@@ -46,7 +46,7 @@ const App = () => (
               <Route path="comites" element={<CommitteesList />} />
               <Route path="comites/:id" element={<CommitteeDetails />} />
               <Route path="comites/atas" element={<MeetingMinutesList />} />
-              <Route path="comites/atividades" element={<CommitteeActivities />} /> {/* NEW: Route for CommitteeActivities */}
+              <Route path="comites/atividades" element={<CommitteeActivitiesNew />} /> {/* NEW: Route for CommitteeActivitiesNew */}
 
               {/* Telas de Cadastro (acesso geral) */}
               <Route path="areas" element={<Areas />} />

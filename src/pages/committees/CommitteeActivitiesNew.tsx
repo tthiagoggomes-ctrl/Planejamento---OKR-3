@@ -46,7 +46,7 @@ import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useLocation } from "react-router-dom";
 import { useSession } from "@/components/auth/SessionContextProvider";
 
-const CommitteeActivities = () => {
+const CommitteeActivitiesNew = () => { // Renamed component to CommitteeActivitiesNew
   const queryClient = useQueryClient();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
   const location = useLocation();
@@ -509,4 +509,4 @@ const CommitteeActivities = () => {
   );
 };
 
-export default CommitteeActivities;
+export default CommitteeActivitiesNew; // Exporting the new component

@@ -37,7 +37,7 @@ export const getEnquetesByComiteId = async (comite_id: string): Promise<Enquete[
     .select(`
       *,
       created_by_user:usuarios(first_name, last_name),
-      opcoes_enquete(id, texto_opcao, votos_enquete(count))
+      opcoes_enquete(id, texto_opcao, votos_enquete(id)) // Alterado para selecionar 'id' dos votos
     `)
     .eq('comite_id', comite_id)
     .order('created_at', { ascending: false });
@@ -52,7 +52,7 @@ export const getEnquetesByComiteId = async (comite_id: string): Promise<Enquete[
     const opcoes = (enquete as any).opcoes_enquete.map((opcao: any) => ({
       id: opcao.id,
       texto_opcao: opcao.texto_opcao,
-      vote_count: opcao.votos_enquete[0]?.count || 0,
+      vote_count: opcao.votos_enquete ? opcao.votos_enquete.length : 0, // Contar no cliente
     }));
     const totalVotes = opcoes.reduce((sum: number, op: OpcaoEnquete) => sum + (op.vote_count || 0), 0);
 

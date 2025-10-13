@@ -25,7 +25,7 @@ export const getReunioesByComiteId = async (comite_id: string): Promise<Reuniao[
       created_by_user:usuarios(first_name, last_name)
     `)
     .eq('comite_id', comite_id)
-    .order('data_reuniao', { ascending: false });
+    .order('data_reuniao', { ascending: true }); // Alterado para ordem crescente
 
   if (error) {
     console.error('Error fetching meetings:', error.message);

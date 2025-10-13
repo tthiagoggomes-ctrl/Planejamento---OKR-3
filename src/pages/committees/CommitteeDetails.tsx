@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, GitCommit, Users, CalendarDays, MessageSquare, ListTodo, PlusCircle, Edit, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integrations/supabase/api/comites";
 import { getReunioesByComiteId, Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
-import { getAtasReuniaoByReuniaoId, AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
+import { AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
 import { getAtividadesComiteByAtaId, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
 import { getEnquetesByComiteId, Enquete, createEnquete, updateEnquete, deleteEnquete } from "@/integrations/supabase/api/enquetes";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
@@ -30,7 +30,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AtaReuniaoForm, AtaReuniaoFormValues } from "@/components/forms/AtaReuniaoForm";
 import { ReuniaoForm, ReuniaoFormValues } from "@/components/forms/ReuniaoForm";
-import { EnqueteForm, EnqueteFormValues, EnqueteSubmitValues } from "@/components/forms/EnqueteForm"; // Import EnqueteSubmitValues
+import { EnqueteForm, EnqueteFormValues, EnqueteSubmitValues } from "@/components/forms/EnqueteForm";
+import { MeetingCalendar } from "@/components/committees/MeetingCalendar"; // Corrigido: Importação do componente MeetingCalendar
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -153,7 +154,7 @@ const CommitteeDetails = () => {
 
   // Mutations for Reuniao
   const createReuniaoMutation = useMutation({
-    mutationFn: (values: ReuniaoFormValues) => { // Updated type
+    mutationFn: (values: ReuniaoFormValues) => {
       if (!user?.id || !id) {
         throw new Error("User not authenticated or committee ID not available.");
       }
@@ -166,8 +167,8 @@ const CommitteeDetails = () => {
         values.data_reuniao.toISOString(),
         values.local,
         user.id, // created_by
-        values.recurrence_type, // NEW
-        values.recurrence_end_date?.toISOString() || null // NEW
+        values.recurrence_type,
+        values.recurrence_end_date?.toISOString() || null
       );
     },
     onSuccess: () => {
@@ -208,16 +209,16 @@ const CommitteeDetails = () => {
   });
 
   const deleteReuniaoMutation = useMutation({
-    mutationFn: ({ id: reuniaoId, option }: { id: string; option: 'single' | 'series' }) => { // Updated to accept option
+    mutationFn: ({ id: reuniaoId, option }: { id: string; option: 'single' | 'series' }) => {
       if (!canDeleteReunioes) {
         throw new Error("Você não tem permissão para excluir reuniões.");
       }
-      return deleteReuniao(reuniaoId, option); // Pass the option
+      return deleteReuniao(reuniaoId, option);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reunioes"] });
       setIsReuniaoDeleteDialogOpen(false);
-      setIsDeleteRecurringDialogOpen(false); // Close recurring dialog too
+      setIsDeleteRecurringDialogOpen(false);
       setReuniaoToDelete(null);
       setRecurringMeetingToDelete(null);
       showSuccess("Reunião(ões) excluída(s) com sucesso!");
@@ -245,7 +246,7 @@ const CommitteeDetails = () => {
     setIsReuniaoFormOpen(true);
   };
 
-  const handleDeleteReuniaoClick = (reuniao: Reuniao) => { // Changed to accept full reuniao object
+  const handleDeleteReuniaoClick = (reuniao: Reuniao) => {
     if (reuniao.recurrence_type !== 'none') {
       setRecurringMeetingToDelete(reuniao);
       setIsDeleteRecurringDialogOpen(true);
@@ -256,9 +257,9 @@ const CommitteeDetails = () => {
   };
 
   const confirmDeleteReuniao = () => {
-    if (reuniaoToDelete) { // For single, non-recurring meetings
+    if (reuniaoToDelete) {
       deleteReuniaoMutation.mutate({ id: reuniaoToDelete, option: 'single' });
-    } else if (recurringMeetingToDelete) { // For recurring meetings with chosen option
+    } else if (recurringMeetingToDelete) {
       deleteReuniaoMutation.mutate({ id: recurringMeetingToDelete.id, option: deleteRecurringOption });
     }
   };
@@ -353,7 +354,7 @@ const CommitteeDetails = () => {
 
   // Mutations for Enquetes
   const createEnqueteMutation = useMutation({
-    mutationFn: (values: EnqueteSubmitValues) => { // Usando EnqueteSubmitValues
+    mutationFn: (values: EnqueteSubmitValues) => {
       if (!user?.id || !id) {
         throw new Error("User not authenticated or committee ID not available.");
       }
@@ -367,7 +368,7 @@ const CommitteeDetails = () => {
         values.start_date.toISOString(),
         values.end_date.toISOString(),
         user.id,
-        values.opcoes_texto // Já é string[]
+        values.opcoes_texto
       );
     },
     onSuccess: () => {
@@ -381,7 +382,7 @@ const CommitteeDetails = () => {
   });
 
   const updateEnqueteMutation = useMutation({
-    mutationFn: ({ id: enqueteId, ...values }: EnqueteSubmitValues & { id: string }) => { // Usando EnqueteSubmitValues
+    mutationFn: ({ id: enqueteId, ...values }: EnqueteSubmitValues & { id: string }) => {
       if (!canEditEnquetes) {
         throw new Error("Você não tem permissão para editar enquetes.");
       }
@@ -391,7 +392,7 @@ const CommitteeDetails = () => {
         values.descricao,
         values.start_date.toISOString(),
         values.end_date.toISOString(),
-        values.opcoes_texto // Já é string[]
+        values.opcoes_texto
       );
     },
     onSuccess: () => {
@@ -423,7 +424,7 @@ const CommitteeDetails = () => {
     },
   });
 
-  const handleCreateOrUpdateEnquete = (values: EnqueteSubmitValues) => { // Usando EnqueteSubmitValues
+  const handleCreateOrUpdateEnquete = (values: EnqueteSubmitValues) => {
     if (editingEnquete) {
       updateEnqueteMutation.mutate({ id: editingEnquete.id, ...values });
     } else {
@@ -560,8 +561,13 @@ const CommitteeDetails = () => {
           </CardContent>
         </Card>
 
+        {/* Calendário de Reuniões */}
+        {canViewReunioes && (
+          <MeetingCalendar meetings={meetings} />
+        )}
+
         {/* Reuniões e Atas */}
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-xl font-semibold flex items-center">
               <CalendarDays className="mr-2 h-5 w-5" /> Reuniões ({meetings?.length || 0})
@@ -590,7 +596,7 @@ const CommitteeDetails = () => {
                           </Button>
                         )}
                         {canDeleteReunioes && (
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteReuniaoClick(meeting)}> {/* Pass full meeting object */}
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteReuniaoClick(meeting)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
@@ -743,7 +749,7 @@ const CommitteeDetails = () => {
                             <div key={option.id}>
                               <div className="flex justify-between text-sm">
                                 <span>{option.texto_opcao}</span>
-                                <span>{option.vote_count} votos ({(poll.total_votes || 0) > 0 ? ((option.vote_count || 0) / poll.total_votes! * 100).toFixed(1) : 0}%)</span>
+                                <span>{(poll.total_votes || 0) > 0 ? ((option.vote_count || 0) / poll.total_votes! * 100).toFixed(1) : 0}%</span>
                               </div>
                               <Progress value={(poll.total_votes || 0) > 0 ? ((option.vote_count || 0) / poll.total_votes! * 100) : 0} className="h-2" />
                             </div>

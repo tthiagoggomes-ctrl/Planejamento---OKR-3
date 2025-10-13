@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useParams, Link } from "react-router-router";
+import { useParams, Link } from "react-router-dom"; // Corrigido: de "react-router-router" para "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, GitCommit, Users, CalendarDays, MessageSquare, ListTodo, PlusCircle, Edit, Trash2, ChevronDown, ChevronUp } from "lucide-react";

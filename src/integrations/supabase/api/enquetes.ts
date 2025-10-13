@@ -48,10 +48,9 @@ export const getEnquetesByComiteId = async (comite_id: string): Promise<Enquete[
     return null;
   }
 
-  if (!data) return []; // Retorna array vazio se não houver dados
-
-  return data.map(enquete => {
-    const opcoes = (enquete as any).opcoes_enquete.map((opcao: any) => ({
+  // Cast data to 'any[]' and enquete to 'any' to resolve TypeScript spread error
+  return (data as any[]).map((enquete: any) => {
+    const opcoes = enquete.opcoes_enquete.map((opcao: any) => ({
       id: opcao.id,
       texto_opcao: opcao.texto_opcao,
       vote_count: opcao.votos_enquete ? opcao.votos_enquete.length : 0, // Contar no cliente
@@ -59,8 +58,8 @@ export const getEnquetesByComiteId = async (comite_id: string): Promise<Enquete[
     const totalVotes = opcoes.reduce((sum: number, op: OpcaoEnquete) => sum + (op.vote_count || 0), 0);
 
     return {
-      ...(enquete as any), // Corrigido: Adicionado 'as any' para resolver o erro de tipo
-      created_by_name: (enquete as any).created_by_user ? `${(enquete as any).created_by_user.first_name} ${(enquete as any).created_by_user.last_name}` : 'N/A',
+      ...enquete, // Agora enquete é explicitamente 'any'
+      created_by_name: enquete.created_by_user ? `${enquete.created_by_user.first_name} ${enquete.created_by_user.last_name}` : 'N/A',
       opcoes,
       total_votes: totalVotes,
     };

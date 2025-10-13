@@ -9,7 +9,7 @@ import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integra
 import { getReunioesByComiteId, Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
 import { getAtasReuniaoByReuniaoId, AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { getAtividadesComiteByAtaId, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
-import { getEnquetesByComiteId, Enquete, createEnquete, updateEnquete, deleteEnquete } from "@/integrations/supabase/api/enquetes"; // Adicionado createEnquete, updateEnquete, deleteEnquete
+import { getEnquetesByComiteId, Enquete, createEnquete, updateEnquete, deleteEnquete } from "@/integrations/supabase/api/enquetes";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AtaReuniaoForm, AtaReuniaoFormValues } from "@/components/forms/AtaReuniaoForm";
 import { ReuniaoForm, ReuniaoFormValues } from "@/components/forms/ReuniaoForm";
-import { EnqueteForm, EnqueteFormValues } from "@/components/forms/EnqueteForm"; // Adicionado EnqueteForm e EnqueteFormValues
+import { EnqueteForm, EnqueteFormValues, EnqueteSubmitValues } from "@/components/forms/EnqueteForm"; // Import EnqueteSubmitValues
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -321,7 +321,7 @@ const CommitteeDetails = () => {
 
   // Mutations for Enquetes
   const createEnqueteMutation = useMutation({
-    mutationFn: (values: EnqueteFormValues) => {
+    mutationFn: (values: EnqueteSubmitValues) => { // Usando EnqueteSubmitValues
       if (!user?.id || !id) {
         throw new Error("User not authenticated or committee ID not available.");
       }
@@ -335,7 +335,7 @@ const CommitteeDetails = () => {
         values.start_date.toISOString(),
         values.end_date.toISOString(),
         user.id,
-        values.opcoes_texto || []
+        values.opcoes_texto // Já é string[]
       );
     },
     onSuccess: () => {
@@ -349,7 +349,7 @@ const CommitteeDetails = () => {
   });
 
   const updateEnqueteMutation = useMutation({
-    mutationFn: ({ id: enqueteId, ...values }: EnqueteFormValues & { id: string }) => {
+    mutationFn: ({ id: enqueteId, ...values }: EnqueteSubmitValues & { id: string }) => { // Usando EnqueteSubmitValues
       if (!canEditEnquetes) {
         throw new Error("Você não tem permissão para editar enquetes.");
       }
@@ -359,7 +359,7 @@ const CommitteeDetails = () => {
         values.descricao,
         values.start_date.toISOString(),
         values.end_date.toISOString(),
-        values.opcoes_texto || [] // Pass options for update
+        values.opcoes_texto // Já é string[]
       );
     },
     onSuccess: () => {
@@ -391,7 +391,7 @@ const CommitteeDetails = () => {
     },
   });
 
-  const handleCreateOrUpdateEnquete = (values: EnqueteFormValues) => {
+  const handleCreateOrUpdateEnquete = (values: EnqueteSubmitValues) => { // Usando EnqueteSubmitValues
     if (editingEnquete) {
       updateEnqueteMutation.mutate({ id: editingEnquete.id, ...values });
     } else {

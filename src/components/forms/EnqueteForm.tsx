@@ -42,7 +42,6 @@ const formSchema = z.object({
   end_date: z.date({
     required_error: "A data de término é obrigatória.",
   }),
-  // Modificado: opcoes_texto agora é um array de objetos com uma propriedade 'text'
   opcoes_texto: z.array(z.object({
     text: z.string().min(1, "A opção não pode ser vazia.")
   })).min(2, "Uma enquete deve ter pelo menos 2 opções."),
@@ -53,10 +52,16 @@ const formSchema = z.object({
 
 export type EnqueteFormValues = z.infer<typeof formSchema>;
 
+// Novo tipo para os valores que serão submetidos, após a transformação de opcoes_texto
+export type EnqueteSubmitValues = Omit<EnqueteFormValues, 'opcoes_texto'> & {
+  opcoes_texto: string[];
+};
+
 interface EnqueteFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (values: EnqueteFormValues) => void;
+  // O onSubmit agora espera o tipo transformado
+  onSubmit: (values: EnqueteSubmitValues) => void;
   initialData?: Enquete | null;
   isLoading?: boolean;
 }
@@ -75,12 +80,10 @@ export const EnqueteForm: React.FC<EnqueteFormProps> = ({
       descricao: initialData?.descricao || "",
       start_date: initialData?.start_date ? new Date(initialData.start_date) : undefined,
       end_date: initialData?.end_date ? new Date(initialData.end_date) : undefined,
-      // Ajustado: Mapear para a nova estrutura de objeto
       opcoes_texto: initialData?.opcoes?.map(opt => ({ text: opt.texto_opcao })) || [{ text: "" }, { text: "" }],
     },
   });
 
-  // Removida a tipagem explícita do segundo argumento, pois agora o tipo é inferido corretamente
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "opcoes_texto",
@@ -93,7 +96,6 @@ export const EnqueteForm: React.FC<EnqueteFormProps> = ({
         descricao: initialData.descricao,
         start_date: new Date(initialData.start_date),
         end_date: new Date(initialData.end_date),
-        // Ajustado: Mapear para a nova estrutura de objeto
         opcoes_texto: initialData.opcoes?.map(opt => ({ text: opt.texto_opcao })) || [{ text: "" }, { text: "" }],
       });
     } else {
@@ -102,19 +104,19 @@ export const EnqueteForm: React.FC<EnqueteFormProps> = ({
         descricao: "",
         start_date: undefined,
         end_date: undefined,
-        opcoes_texto: [{ text: "" }, { text: "" }], // Default para dois objetos vazios
+        opcoes_texto: [{ text: "" }, { text: "" }],
       });
     }
   }, [initialData, form]);
 
   const handleSubmit = (values: EnqueteFormValues) => {
-    // Transformar o array de objetos de volta para um array de strings antes de submeter
-    const transformedValues = {
+    // A transformação para string[] já está correta aqui
+    const transformedValues: EnqueteSubmitValues = {
       ...values,
       opcoes_texto: values.opcoes_texto.map(opt => opt.text)
     };
-    onSubmit(transformedValues);
-    if (!initialData) { // Only reset if creating a new poll
+    onSubmit(transformedValues); // Agora o tipo corresponde ao prop onSubmit
+    if (!initialData) {
       form.reset({
         titulo: "",
         descricao: "",
@@ -247,7 +249,6 @@ export const EnqueteForm: React.FC<EnqueteFormProps> = ({
                 <div key={field.id} className="flex items-center gap-2">
                   <FormField
                     control={form.control}
-                    // Ajustado: Acessar a propriedade 'text' do objeto
                     name={`opcoes_texto.${index}.text`}
                     render={({ field: optionField }) => (
                       <FormItem className="flex-1">
@@ -263,7 +264,7 @@ export const EnqueteForm: React.FC<EnqueteFormProps> = ({
                     variant="ghost"
                     size="icon"
                     onClick={() => remove(index)}
-                    disabled={fields.length <= 2} // Minimum 2 options
+                    disabled={fields.length <= 2}
                   >
                     <XCircle className="h-4 w-4 text-red-500" />
                     <span className="sr-only">Remover Opção</span>
@@ -273,7 +274,6 @@ export const EnqueteForm: React.FC<EnqueteFormProps> = ({
               <Button
                 type="button"
                 variant="outline"
-                // Ajustado: Adicionar um objeto com a propriedade 'text'
                 onClick={() => append({ text: "" })}
                 className="w-full"
               >

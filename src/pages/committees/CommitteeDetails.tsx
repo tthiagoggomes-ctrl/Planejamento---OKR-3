@@ -147,14 +147,22 @@ const CommitteeDetails = () => {
 
   // Mutations for Reuniao
   const createReuniaoMutation = useMutation({
-    mutationFn: (values: ReuniaoFormValues) => {
+    mutationFn: (values: ReuniaoFormValues) => { // Updated type
       if (!user?.id || !id) {
         throw new Error("User not authenticated or committee ID not available.");
       }
       if (!canInsertReunioes) {
         throw new Error("Você não tem permissão para agendar reuniões.");
       }
-      return createReuniao(id, values.titulo, values.data_reuniao.toISOString(), values.local, user.id);
+      return createReuniao(
+        id, // comite_id
+        values.titulo,
+        values.data_reuniao.toISOString(),
+        values.local,
+        user.id, // created_by
+        values.recurrence_type, // NEW
+        values.recurrence_end_date?.toISOString() || null // NEW
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reunioes"] });
@@ -171,7 +179,14 @@ const CommitteeDetails = () => {
       if (!canEditReunioes) {
         throw new Error("Você não tem permissão para editar reuniões.");
       }
-      return updateReuniao(reuniaoId, values.titulo, values.data_reuniao.toISOString(), values.local);
+      return updateReuniao(
+        reuniaoId,
+        values.titulo,
+        values.data_reuniao.toISOString(),
+        values.local,
+        values.recurrence_type, // NEW
+        values.recurrence_end_date?.toISOString() || null // NEW
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reunioes"] });
@@ -569,6 +584,7 @@ const CommitteeDetails = () => {
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {format(new Date(meeting.data_reuniao), "PPP 'às' HH:mm", { locale: ptBR })} - {meeting.local || 'Local não informado'}
+                      {meeting.recurrence_type !== 'none' && ` (Recorrência: ${meeting.recurrence_type === 'weekly' ? 'Semanal' : meeting.recurrence_type === 'bi_weekly' ? 'Quinzenal' : 'Mensal'} até ${format(new Date(meeting.recurrence_end_date!), 'PPP', { locale: ptBR })})`}
                     </p>
                     {expandedMeetings.has(meeting.id) && (
                       <div className="mt-3 pt-3 border-t">

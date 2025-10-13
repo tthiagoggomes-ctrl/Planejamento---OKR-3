@@ -25,9 +25,16 @@ import { Reuniao } from "@/integrations/supabase/api/reunioes";
 import { Loader2, CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns"; // NEW: addDays for default recurrence end date
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import {
+  Select, // NEW
+  SelectContent, // NEW
+  SelectItem, // NEW
+  SelectTrigger, // NEW
+  SelectValue, // NEW
+} from "@/components/ui/select"; // NEW
 
 const formSchema = z.object({
   titulo: z.string().min(5, {
@@ -37,6 +44,21 @@ const formSchema = z.object({
     required_error: "A data da reunião é obrigatória.",
   }),
   local: z.string().nullable(),
+  recurrence_type: z.enum(['none', 'weekly', 'bi_weekly', 'monthly'], { // NEW
+    message: "Selecione um tipo de recorrência válido.",
+  }).default('none'),
+  recurrence_end_date: z.date().nullable().optional(), // NEW
+}).refine((data) => {
+  if (data.recurrence_type !== 'none' && !data.recurrence_end_date) {
+    return false; // Recurrence end date is required for recurring meetings
+  }
+  if (data.recurrence_type !== 'none' && data.recurrence_end_date && data.recurrence_end_date < data.data_reuniao) {
+    return false; // Recurrence end date cannot be before start date
+  }
+  return true;
+}, {
+  message: "A data de término da recorrência é obrigatória e não pode ser anterior à data de início da reunião para reuniões recorrentes.",
+  path: ["recurrence_end_date"],
 });
 
 export type ReuniaoFormValues = z.infer<typeof formSchema>;
@@ -62,6 +84,8 @@ export const ReuniaoForm: React.FC<ReuniaoFormProps> = ({
       titulo: initialData?.titulo || "",
       data_reuniao: initialData?.data_reuniao ? new Date(initialData.data_reuniao) : undefined,
       local: initialData?.local || "",
+      recurrence_type: initialData?.recurrence_type || "none", // NEW
+      recurrence_end_date: initialData?.recurrence_end_date ? new Date(initialData.recurrence_end_date) : undefined, // NEW
     },
   });
 
@@ -71,15 +95,21 @@ export const ReuniaoForm: React.FC<ReuniaoFormProps> = ({
         titulo: initialData.titulo,
         data_reuniao: new Date(initialData.data_reuniao),
         local: initialData.local,
+        recurrence_type: initialData.recurrence_type, // NEW
+        recurrence_end_date: initialData.recurrence_end_date ? new Date(initialData.recurrence_end_date) : null, // NEW
       });
     } else {
       form.reset({
         titulo: "",
         data_reuniao: undefined,
         local: "",
+        recurrence_type: "none", // NEW
+        recurrence_end_date: undefined, // NEW
       });
     }
   }, [initialData, form]);
+
+  const selectedRecurrenceType = form.watch('recurrence_type'); // NEW
 
   const handleSubmit = (values: ReuniaoFormValues) => {
     onSubmit(values);
@@ -88,6 +118,8 @@ export const ReuniaoForm: React.FC<ReuniaoFormProps> = ({
         titulo: "",
         data_reuniao: undefined,
         local: "",
+        recurrence_type: "none", // NEW
+        recurrence_end_date: undefined, // NEW
       });
     }
   };
@@ -177,6 +209,76 @@ export const ReuniaoForm: React.FC<ReuniaoFormProps> = ({
                 </FormItem>
               )}
             />
+
+            {/* NEW: Recurrence Type Field */}
+            <FormField
+              control={form.control}
+              name="recurrence_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Recorrência</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo de recorrência" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhuma</SelectItem>
+                      <SelectItem value="weekly">Semanal</SelectItem>
+                      <SelectItem value="bi_weekly">Quinzenal</SelectItem>
+                      <SelectItem value="monthly">Mensal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* NEW: Recurrence End Date Field (conditional) */}
+            {selectedRecurrenceType !== 'none' && (
+              <FormField
+                control={form.control}
+                name="recurrence_end_date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data de Término da Recorrência</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP", { locale: ptBR })
+                            ) : (
+                              <span>Selecione uma data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value || undefined}
+                          onSelect={field.onChange}
+                          initialFocus
+                          locale={ptBR}
+                          disabled={(date) => date < addDays(new Date(), -1)} // Disable past dates
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <DialogFooter>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

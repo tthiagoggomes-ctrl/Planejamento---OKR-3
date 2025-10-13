@@ -316,7 +316,23 @@ const CommitteeDetails = () => {
       if (!canInsertAtasReuniao) {
         throw new Error("Você não tem permissão para criar atas de reunião.");
       }
-      return createAtaReuniao(selectedMeetingForAta.id, values.conteudo, values.decisoes_tomadas, user.id);
+      return createAtaReuniao(
+        selectedMeetingForAta.id,
+        values.conteudo || "", // Conteúdo geral
+        values.decisoes_tomadas,
+        user.id,
+        // NOVOS PARÂMETROS
+        values.data_reuniao ? values.data_reuniao.toISOString() : null,
+        values.horario_inicio,
+        values.horario_fim,
+        values.local_reuniao,
+        values.participantes,
+        values.objetivos_reuniao,
+        values.pauta_tratada,
+        values.novos_topicos,
+        values.pendencias,
+        values.proximos_passos
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
@@ -334,7 +350,22 @@ const CommitteeDetails = () => {
       if (!canEditAtasReuniao) {
         throw new Error("Você não tem permissão para editar atas de reunião.");
       }
-      return updateAtaReuniao(ataId, values.conteudo, values.decisoes_tomadas);
+      return updateAtaReuniao(
+        ataId,
+        values.conteudo || "", // Conteúdo geral
+        values.decisoes_tomadas,
+        // NOVOS PARÂMETROS
+        values.data_reuniao ? values.data_reuniao.toISOString() : null,
+        values.horario_inicio,
+        values.horario_fim,
+        values.local_reuniao,
+        values.participantes,
+        values.objetivos_reuniao,
+        values.pauta_tratada,
+        values.novos_topicos,
+        values.pendencias,
+        values.proximos_passos
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
@@ -375,12 +406,14 @@ const CommitteeDetails = () => {
 
   const handleAddAtaClick = (meeting: Reuniao) => {
     setEditingAta(null);
-    setSelectedMeetingForAta(meeting);
+    setSelectedMeetingForAta(meeting); // Passar a reunião selecionada
     setIsAtaFormOpen(true);
   };
 
   const handleEditAtaClick = (ata: AtaReuniao) => {
     setEditingAta(ata);
+    // Ao editar, a reunião já está associada à ata, não precisamos de selectedMeetingForAta
+    setSelectedMeetingForAta(null); 
     setIsAtaFormOpen(true);
   };
 
@@ -727,9 +760,64 @@ const CommitteeDetails = () => {
                                   </div>
                                 </div>
                                 {expandedMinutes.has(minutes.id) && (
-                                  <div className="mt-2 text-sm text-muted-foreground">
-                                    <p>Conteúdo: {minutes.conteudo}</p>
-                                    <p>Decisões: {minutes.decisoes_tomadas || 'N/A'}</p>
+                                  <div className="mt-2 text-sm text-muted-foreground space-y-2">
+                                    {minutes.data_reuniao && minutes.horario_inicio && minutes.horario_fim && (
+                                      <p><strong>Data:</strong> {format(parseISO(minutes.data_reuniao), "PPP", { locale: ptBR })}</p>
+                                    )}
+                                    {minutes.horario_inicio && minutes.horario_fim && (
+                                      <p><strong>Horário:</strong> {minutes.horario_inicio} às {minutes.horario_fim}</p>
+                                    )}
+                                    {minutes.local_reuniao && (
+                                      <p><strong>Local:</strong> {minutes.local_reuniao}</p>
+                                    )}
+                                    {minutes.participantes && (
+                                      <>
+                                        <p><strong>Participantes:</strong></p>
+                                        <pre className="whitespace-pre-wrap text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded-md">{minutes.participantes}</pre>
+                                      </>
+                                    )}
+                                    {minutes.objetivos_reuniao && (
+                                      <>
+                                        <p><strong>Objetivos da Reunião:</strong></p>
+                                        <pre className="whitespace-pre-wrap text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded-md">{minutes.objetivos_reuniao}</pre>
+                                      </>
+                                    )}
+                                    {minutes.pauta_tratada && (
+                                      <>
+                                        <p><strong>Pauta Tratada:</strong></p>
+                                        <pre className="whitespace-pre-wrap text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded-md">{minutes.pauta_tratada}</pre>
+                                      </>
+                                    )}
+                                    {minutes.novos_topicos && (
+                                      <>
+                                        <p><strong>Novos Tópicos:</strong></p>
+                                        <pre className="whitespace-pre-wrap text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded-md">{minutes.novos_topicos}</pre>
+                                      </>
+                                    )}
+                                    {minutes.pendencias && (
+                                      <>
+                                        <p><strong>Pendências:</strong></p>
+                                        <pre className="whitespace-pre-wrap text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded-md">{minutes.pendencias}</pre>
+                                      </>
+                                    )}
+                                    {minutes.proximos_passos && (
+                                      <>
+                                        <p><strong>Próximos Passos:</strong></p>
+                                        <pre className="whitespace-pre-wrap text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded-md">{minutes.proximos_passos}</pre>
+                                      </>
+                                    )}
+                                    {minutes.conteudo && (
+                                      <>
+                                        <p><strong>Conteúdo Geral:</strong></p>
+                                        <pre className="whitespace-pre-wrap text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded-md">{minutes.conteudo}</pre>
+                                      </>
+                                    )}
+                                    {minutes.decisoes_tomadas && (
+                                      <>
+                                        <p><strong>Decisões Tomadas:</strong></p>
+                                        <pre className="whitespace-pre-wrap text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded-md">{minutes.decisoes_tomadas}</pre>
+                                      </>
+                                    )}
                                     <p>Criado por: {minutes.created_by_name}</p>
 
                                     <Separator className="my-3" />
@@ -995,6 +1083,7 @@ const CommitteeDetails = () => {
           onSubmit={handleCreateOrUpdateAta}
           initialData={editingAta}
           isLoading={createAtaReuniaoMutation.isPending || updateAtaReuniaoMutation.isPending}
+          selectedMeeting={selectedMeetingForAta}
         />
       )}
 

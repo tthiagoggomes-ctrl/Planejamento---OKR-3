@@ -4,12 +4,23 @@ import { showError, showSuccess } from '@/utils/toast';
 export interface AtaReuniao {
   id: string;
   reuniao_id: string;
-  conteudo: string;
+  conteudo: string; // Este campo será mantido, mas as informações serão mais estruturadas
   decisoes_tomadas: string | null;
   created_by: string | null;
   created_at?: string;
   updated_at?: string;
   created_by_name?: string; // Joined from profiles
+  // NOVOS CAMPOS ESTRUTURADOS
+  data_reuniao: string | null; // ISO date string
+  horario_inicio: string | null; // HH:mm string
+  horario_fim: string | null;   // HH:mm string
+  local_reuniao: string | null;
+  participantes: string | null;
+  objetivos_reuniao: string | null;
+  pauta_tratada: string | null;
+  novos_topicos: string | null;
+  pendencias: string | null;
+  proximos_passos: string | null;
 }
 
 export const getAtasReuniaoByReuniaoId = async (reuniao_id: string): Promise<AtaReuniao[] | null> => {
@@ -37,11 +48,37 @@ export const createAtaReuniao = async (
   reuniao_id: string,
   conteudo: string,
   decisoes_tomadas: string | null,
-  created_by: string
+  created_by: string,
+  // NOVOS PARÂMETROS
+  data_reuniao: string | null,
+  horario_inicio: string | null,
+  horario_fim: string | null,
+  local_reuniao: string | null,
+  participantes: string | null,
+  objetivos_reuniao: string | null,
+  pauta_tratada: string | null,
+  novos_topicos: string | null,
+  pendencias: string | null,
+  proximos_passos: string | null
 ): Promise<AtaReuniao | null> => {
   const { data, error } = await supabase
     .from('atas_reuniao')
-    .insert({ reuniao_id, conteudo, decisoes_tomadas, created_by })
+    .insert({
+      reuniao_id,
+      conteudo,
+      decisoes_tomadas,
+      created_by,
+      data_reuniao,
+      horario_inicio,
+      horario_fim,
+      local_reuniao,
+      participantes,
+      objetivos_reuniao,
+      pauta_tratada,
+      novos_topicos,
+      pendencias,
+      proximos_passos
+    })
     .select(`
       *,
       created_by_user:usuarios(first_name, last_name)
@@ -63,11 +100,36 @@ export const createAtaReuniao = async (
 export const updateAtaReuniao = async (
   id: string,
   conteudo: string,
-  decisoes_tomadas: string | null
+  decisoes_tomadas: string | null,
+  // NOVOS PARÂMETROS
+  data_reuniao: string | null,
+  horario_inicio: string | null,
+  horario_fim: string | null,
+  local_reuniao: string | null,
+  participantes: string | null,
+  objetivos_reuniao: string | null,
+  pauta_tratada: string | null,
+  novos_topicos: string | null,
+  pendencias: string | null,
+  proximos_passos: string | null
 ): Promise<AtaReuniao | null> => {
   const { data, error } = await supabase
     .from('atas_reuniao')
-    .update({ conteudo, decisoes_tomadas, updated_at: new Date().toISOString() })
+    .update({
+      conteudo,
+      decisoes_tomadas,
+      updated_at: new Date().toISOString(),
+      data_reuniao,
+      horario_inicio,
+      horario_fim,
+      local_reuniao,
+      participantes,
+      objetivos_reuniao,
+      pauta_tratada,
+      novos_topicos,
+      pendencias,
+      proximos_passos
+    })
     .eq('id', id)
     .select(`
       *,

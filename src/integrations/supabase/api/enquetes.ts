@@ -38,8 +38,7 @@ export const getEnquetesByComiteId = async (comite_id: string): Promise<Enquete[
     .from('enquetes')
     .select(`
       *,
-      created_by_user:usuarios(first_name, last_name),
-      opcoes_enquete(id, texto_opcao) // MODIFICADO: Removido votos_enquete(id) para depuração
+      created_by_user:usuarios(first_name, last_name)
     `)
     .eq('comite_id', comite_id)
     .order('created_at', { ascending: false });
@@ -50,21 +49,13 @@ export const getEnquetesByComiteId = async (comite_id: string): Promise<Enquete[
     return null;
   }
 
-  // Cast data to 'any[]' and enquete to 'any' to resolve TypeScript spread error
   return (data as any[]).map((enquete: any) => {
-    const opcoes = enquete.opcoes_enquete.map((opcao: any) => ({
-      id: opcao.id,
-      texto_opcao: opcao.texto_opcao,
-      vote_count: 0, // Agora sempre 0, pois os votos não são buscados aqui
-    }));
-    const totalVotes = 0; // Agora sempre 0
-    // const totalVotes = opcoes.reduce((sum: number, op: OpcaoEnquete) => sum + (op.vote_count || 0), 0);
-
+    // No options or votes fetched for now
     return {
-      ...enquete, // Agora enquete é explicitamente 'any'
+      ...enquete,
       created_by_name: enquete.created_by_user ? `${enquete.created_by_user.first_name} ${enquete.created_by_user.last_name}` : 'N/A',
-      opcoes,
-      total_votes: totalVotes,
+      opcoes: [], // Ensure it's an empty array
+      total_votes: 0, // Ensure it's 0
     };
   });
 };

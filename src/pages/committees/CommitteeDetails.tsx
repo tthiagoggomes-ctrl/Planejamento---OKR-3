@@ -777,7 +777,7 @@ const CommitteeDetails = () => {
                     <p className="text-xs text-muted-foreground">Criado por: {poll.created_by_name}</p>
 
                     {/* Temporarily display vote counts as 0 */}
-                    {canViewVotosEnquete && poll.opcoes && poll.opcoes.length > 0 && (
+                    {/* {canViewVotosEnquete && poll.opcoes && poll.opcoes.length > 0 && (
                       <div className="mt-3 pt-3 border-t">
                         <h4 className="font-medium mb-2">Resultados da Votação (0 votos)</h4>
                         <p className="text-sm text-muted-foreground mb-2">
@@ -798,7 +798,7 @@ const CommitteeDetails = () => {
                           <Button size="sm" className="mt-3">Votar</Button>
                         )}
                       </div>
-                    )}
+                    )} */}
                   </div>
                 ))}
               </div>

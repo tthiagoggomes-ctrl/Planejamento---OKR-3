@@ -152,7 +152,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                 <FormItem>
                   <FormLabel>Nome do Comitê</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Comitê de Gestão de Sistemas" {...field} />
+                    <Input placeholder="Ex: Comitê de Gestão de Sistemas" {...field} disabled={!!initialData} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -165,7 +165,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                 <FormItem>
                   <FormLabel>Descrição (Opcional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Detalhes sobre o comitê" {...field} value={field.value || ""} />
+                    <Textarea placeholder="Detalhes sobre o comitê" {...field} value={field.value || ""} disabled={!!initialData} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -177,7 +177,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={!!initialData}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o status" />

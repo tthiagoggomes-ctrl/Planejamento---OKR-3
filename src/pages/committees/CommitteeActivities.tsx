@@ -1,10 +1,10 @@
 "use client";
 
-import React from "react";
+import React from "react"; // Import React explicitly
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, List, Kanban, Search, GanttChartSquare, ListTodo } from "lucide-react"; // Import ListTodo
+import { PlusCircle, Edit, Trash2, Loader2, List, Kanban, Search, GanttChartSquare, ListTodo } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -27,7 +27,7 @@ import { AtividadeComiteForm, AtividadeComiteFormValues } from "@/components/for
 import { getAtividadesComite, createAtividadeComite, updateAtividadeComite, deleteAtividadeComite, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
 import { getComites, Comite } from "@/integrations/supabase/api/comites";
 import { getReunioesByComiteId, Reuniao } from "@/integrations/supabase/api/reunioes";
-import { getAtasReuniaoByComiteId, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao"; // Corrigido para getAtasReuniaoByComiteId
+import { getAtasReuniaoByReuniaoId, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao"; // Corrected import
 import { showSuccess, showError } from "@/utils/toast";
 import { format, parseISO } from "date-fns";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -44,19 +44,19 @@ import { useDebounce } from "@/hooks/use-debounce";
 import GanttChart from "@/components/GanttChart";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useLocation } from "react-router-dom";
-import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
+import { useSession } from "@/components/auth/SessionContextProvider";
 
 const CommitteeActivities = () => {
   const queryClient = useQueryClient();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
   const location = useLocation();
-  const { user } = useSession(); // Access user from useSession
+  const { user } = useSession();
 
   const canViewAtividadesComite = can('atividades_comite', 'view');
   const canInsertAtividadesComite = can('atividades_comite', 'insert');
   const canEditAtividadesComite = can('atividades_comite', 'edit');
   const canDeleteAtividadesComite = can('atividades_comite', 'delete');
-  const canChangeActivityStatusComite = can('atividades_comite', 'change_status'); // Assuming a specific permission for status change
+  const canChangeActivityStatusComite = can('atividades_comite', 'change_status');
 
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingAtividade, setEditingAtividade] = React.useState<AtividadeComite | null>(null);
@@ -70,11 +70,10 @@ const CommitteeActivities = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  const [ganttGroupByKr, setGanttGroupByKr] = React.useState(false); // Renamed to avoid conflict
-  const [ganttSortBy, setGanttSortBy] = React.useState<'date' | 'krTitle'>('date'); // krTitle will be reuniao_titulo here
+  const [ganttGroupByKr, setGanttGroupByKr] = React.useState(false);
+  const [ganttSortBy, setGanttSortBy] = React.useState<'date' | 'krTitle'>('date');
   const [ganttSortOrder, setGanttSortOrder] = React.useState<'asc' | 'desc'>('asc');
 
-  // Effect to apply filters from navigation state
   React.useEffect(() => {
     if (location.state) {
       const state = location.state as { comiteId?: string; ataId?: string };
@@ -84,7 +83,6 @@ const CommitteeActivities = () => {
       if (state.ataId) {
         setSelectedAtaReuniaoFilter(state.ataId);
       }
-      // Clear the state after use to prevent re-triggering on subsequent renders
       window.history.replaceState({}, document.title, location.pathname);
     }
   }, [location.state]);
@@ -135,7 +133,7 @@ const CommitteeActivities = () => {
         formatDueDateForApi(values.due_date),
         values.status,
         values.assignee_id,
-        user.id // created_by
+        user.id
       );
     },
     onSuccess: () => {

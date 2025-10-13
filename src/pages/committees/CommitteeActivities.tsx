@@ -83,7 +83,6 @@ const CommitteeActivities = () => {
       if (state.ataId) {
         setSelectedAtaReuniaoFilter(state.ataId);
       }
-      // Clear the state after use to prevent re-triggering on subsequent renders
       window.history.replaceState({}, document.title, location.pathname);
     }
   }, [location.state]);
@@ -508,6 +507,6 @@ const CommitteeActivities = () => {
       )}
     </div>
   );
-}; // <-- AQUI ESTAVA FALTANDO O FECHAMENTO DA FUNÇÃO DO COMPONENTE
+};
 
 export default CommitteeActivities;

@@ -36,10 +36,7 @@ export interface VotoEnquete {
 export const getEnquetesByComiteId = async (comite_id: string): Promise<Enquete[] | null> => {
   const { data, error } = await supabase
     .from('enquetes')
-    .select(`
-      *,
-      created_by_user:usuarios(first_name, last_name)
-    `)
+    .select(`*`) // Removido created_by_user:usuarios(first_name, last_name)
     .eq('comite_id', comite_id)
     .order('created_at', { ascending: false });
 
@@ -50,12 +47,11 @@ export const getEnquetesByComiteId = async (comite_id: string): Promise<Enquete[
   }
 
   return (data as any[]).map((enquete: any) => {
-    // No options or votes fetched for now
     return {
       ...enquete,
-      created_by_name: enquete.created_by_user ? `${enquete.created_by_user.first_name} ${enquete.created_by_user.last_name}` : 'N/A',
-      opcoes: [], // Ensure it's an empty array
-      total_votes: 0, // Ensure it's 0
+      created_by_name: 'N/A', // Definido como N/A já que não estamos buscando o nome do criador
+      opcoes: [],
+      total_votes: 0,
     };
   });
 };
@@ -81,7 +77,7 @@ export const createEnquete = async (
     return null;
   }
 
-  if (enqueteData && opcoes_texto.length > 0) { // Verificação adicionada para enqueteData
+  if (enqueteData && opcoes_texto.length > 0) {
     const opcoesToInsert = opcoes_texto.map(texto_opcao => ({
       enquete_id: enqueteData.id,
       texto_opcao,
@@ -93,7 +89,6 @@ export const createEnquete = async (
     if (opcoesError) {
       console.error('Error creating poll options:', opcoesError.message);
       showError(`Erro ao criar opções da enquete: ${opcoesError.message}`);
-      // Consider rolling back the poll creation if options are critical
       await deleteEnquete(enqueteData.id);
       return null;
     }
@@ -109,7 +104,7 @@ export const updateEnquete = async (
   descricao: string | null,
   start_date: string,
   end_date: string,
-  opcoes_texto: string[] // NEW: Add options to update
+  opcoes_texto: string[]
 ): Promise<Enquete | null> => {
   const { data: enqueteData, error: enqueteError } = await supabase
     .from('enquetes')
@@ -124,8 +119,6 @@ export const updateEnquete = async (
     return null;
   }
 
-  // Handle options update
-  // Fetch current options
   const { data: currentOptions, error: fetchOptionsError } = await supabase
     .from('opcoes_enquete')
     .select('id, texto_opcao')
@@ -143,7 +136,6 @@ export const updateEnquete = async (
   const optionsToAdd = opcoes_texto.filter(optText => !currentOptionsMap.has(optText));
   const optionsToRemove = currentOptions.filter(opt => !newOptionsSet.has(opt.texto_opcao));
 
-  // Add new options
   if (optionsToAdd.length > 0) {
     const { error: addError } = await supabase
       .from('opcoes_enquete')
@@ -155,7 +147,6 @@ export const updateEnquete = async (
     }
   }
 
-  // Remove old options
   if (optionsToRemove.length > 0) {
     const { error: removeError } = await supabase
       .from('opcoes_enquete')
@@ -212,7 +203,7 @@ export const getUserVoteForEnquete = async (enquete_id: string, user_id: string)
     .eq('user_id', user_id)
     .single();
 
-  if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is fine
+  if (error && error.code !== 'PGRST116') {
     console.error('Error fetching user vote:', error.message);
     showError('Erro ao verificar seu voto.');
     return null;

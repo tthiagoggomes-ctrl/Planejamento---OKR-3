@@ -27,7 +27,7 @@ import { AtividadeComiteForm, AtividadeComiteFormValues } from "@/components/for
 import { getAtividadesComite, createAtividadeComite, updateAtividadeComite, deleteAtividadeComite, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
 import { getComites, Comite } from "@/integrations/supabase/api/comites";
 import { getReunioesByComiteId, Reuniao } from "@/integrations/supabase/api/reunioes";
-import { getAtasReuniaoByReuniaoId, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao"; // Corrected import
+import { getAtasReuniaoByReuniaoId, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { showSuccess, showError } from "@/utils/toast";
 import { format, parseISO } from "date-fns";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -239,6 +239,19 @@ const CommitteeActivities = () => {
     }
   };
 
+  // Using React.useMemo for filteredAtividades to ensure it's a single, stable expression
+  const filteredAtividades = React.useMemo(() => {
+    if (!atividades) return [];
+    const query = debouncedSearchQuery.toLowerCase();
+    return atividades.filter(atividade =>
+      atividade.titulo.toLowerCase().includes(query) ||
+      atividade.reuniao_titulo?.toLowerCase().includes(query) ||
+      atividade.comite_nome?.toLowerCase().includes(query) ||
+      atividade.assignee_name?.toLowerCase().includes(query)
+    );
+  }, [atividades, debouncedSearchQuery]);
+
+
   if (isLoading || isLoadingComites || isLoadingReunioes || isLoadingAtasReuniao || permissionsLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -262,13 +275,6 @@ const CommitteeActivities = () => {
       </div>
     );
   }
-
-  const filteredAtividades = atividades?.filter(atividade =>
-    atividade.titulo.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-    atividade.reuniao_titulo?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-    atividade.comite_nome?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-    atividade.assignee_name?.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-  ) || [];
 
   return (
     <div className="container mx-auto py-6">

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, GitCommit, Users, CalendarDays, MessageSquare, ListTodo, PlusCircle, Edit, Trash2, ChevronDown, ChevronUp } from "lucide-react";
@@ -92,7 +92,8 @@ const CommitteeDetails = () => {
   const [editingEnquete, setEditingEnquete] = React.useState<Enquete | null>(null);
   const [isEnqueteDeleteDialogOpen, setIsEnqueteDeleteDialogOpen] = React.useState(false);
   const [enqueteToDelete, setEnqueteToDelete] = React.useState<string | null>(null);
-  const [selectedVoteOption, setSelectedVoteOption] = React.useState<string | null>(null); // NEW: For voting
+  // MODIFIED: Use an object to store selected option for each poll
+  const [selectedVoteOptions, setSelectedVoteOptions] = React.useState<Record<string, string | null>>({}); 
 
   // Use useRef to get a stable 'now' for consistent date comparisons within a render cycle
   const now = React.useRef(new Date()).current;
@@ -151,6 +152,17 @@ const CommitteeDetails = () => {
     queryFn: ({ queryKey }) => getEnquetesByComiteId(queryKey[1] as string, queryKey[2] as string | undefined),
     enabled: !!id && canViewEnquetes && !permissionsLoading,
   });
+
+  // NEW: Effect to initialize selectedVoteOptions when polls data changes
+  React.useEffect(() => {
+    if (polls) {
+      const initialSelections: Record<string, string | null> = {};
+      polls.forEach(poll => {
+        initialSelections[poll.id] = poll.user_vote?.opcao_id || null;
+      });
+      setSelectedVoteOptions(initialSelections);
+    }
+  }, [polls]);
 
   // Mutations for Committee (for members management)
   const updateComiteMutation = useMutation({
@@ -495,10 +507,11 @@ const CommitteeDetails = () => {
       }
       return voteOnEnquete(enqueteId, opcaoId, user.id);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => { // MODIFIED: Access variables from mutation
       queryClient.invalidateQueries({ queryKey: ["enquetes", id] }); // Re-fetch polls to update vote counts
       showSuccess("Voto registrado com sucesso!");
-      setSelectedVoteOption(null); // Clear selected option after voting
+      // MODIFIED: Update selectedVoteOptions for the specific poll
+      setSelectedVoteOptions(prev => ({ ...prev, [variables.enqueteId]: variables.opcaoId }));
     },
     onError: (err) => {
       showError(`Erro ao registrar voto: ${err.message}`);
@@ -828,24 +841,23 @@ const CommitteeDetails = () => {
                             <>
                               <h4 className="font-medium mb-2">Opções da Enquete</h4>
                               <RadioGroup
-                                onValueChange={setSelectedVoteOption}
-                                value={selectedVoteOption || poll.user_vote?.opcao_id || ""}
+                                // MODIFIED: Update selectedVoteOptions for this specific poll
+                                onValueChange={(value) => setSelectedVoteOptions(prev => ({ ...prev, [poll.id]: value }))}
+                                // MODIFIED: Use selectedVoteOptions for the value
+                                value={selectedVoteOptions[poll.id] || ""}
                                 disabled={!canUserVote || voteOnEnqueteMutation.isPending}
                               >
                                 {poll.opcoes.map(option => {
                                   const percentage = poll.total_votes && poll.total_votes > 0
                                     ? Math.round((option.vote_count! / poll.total_votes) * 100)
                                     : 0;
-                                  // CORRECTED: Check if this option is the currently selected one in the UI
-                                  const isSelected = option.id === selectedVoteOption; 
-
+                                  // MODIFIED: The RadioGroup's value prop handles the checked state.
+                                  // No need for explicit 'checked' prop on RadioGroupItem.
                                   return (
                                     <div key={option.id} className="flex items-center space-x-2 mb-2">
                                       <RadioGroupItem
                                         value={option.id}
                                         id={`option-${option.id}`}
-                                        checked={isSelected}
-                                        // Removed redundant onClick, as onValueChange on RadioGroup handles it
                                       />
                                       <Label htmlFor={`option-${option.id}`} className="flex-1">
                                         <div className="flex justify-between text-sm">
@@ -862,8 +874,9 @@ const CommitteeDetails = () => {
                                 <Button
                                   size="sm"
                                   className="mt-3"
-                                  onClick={() => handleVote(poll.id, selectedVoteOption!)}
-                                  disabled={!selectedVoteOption || voteOnEnqueteMutation.isPending}
+                                  // MODIFIED: Use selectedVoteOptions for the specific poll
+                                  onClick={() => handleVote(poll.id, selectedVoteOptions[poll.id]!)}
+                                  disabled={!selectedVoteOptions[poll.id] || voteOnEnqueteMutation.isPending}
                                 >
                                   {voteOnEnqueteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                   {hasVoted ? "Alterar Voto" : "Votar"}

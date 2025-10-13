@@ -1,54 +1,92 @@
-/// <reference types="react" />
 "use client";
 
 import React from "react";
 import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, GitCommit, Users, CalendarDays, MessageSquare, ListTodo, PlusCircle, Edit, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integrations/supabase/api/comites";
-import { getReunioesByComiteId, Reuniao } from "@/integrations/supabase/api/reunioes";
-import { getAtasReuniaoByReuniaoId, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
+import { getReunioesByComiteId, createReuniao, updateReuniao, deleteReuniao, Reuniao } from "@/integrations/supabase/api/reunioes";
+import { getAtasReuniaoByReuniaoId, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { getAtividadesComiteByAtaId, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
 import { getEnquetesByComiteId, Enquete } from "@/integrations/supabase/api/enquetes";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
+import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
+import { showSuccess, showError } from "@/utils/toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { MeetingForm, MeetingFormValues } from "@/components/forms/MeetingForm"; // Import MeetingForm
+import { MeetingMinutesForm, MeetingMinutesFormValues } from "@/components/forms/MeetingMinutesForm"; // Import MeetingMinutesForm
 
 const CommitteeDetails = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id: comiteId } = useParams<{ id: string }>();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
+  const { user } = useSession(); // Get current user for created_by fields
 
+  // Permissions
   const canViewComiteDetails = can('comites', 'view');
   const canManageComiteMembers = can('comite_membros', 'manage');
   const canViewReunioes = can('reunioes', 'view');
+  const canInsertReunioes = can('reunioes', 'insert');
+  const canEditReunioes = can('reunioes', 'edit');
+  const canDeleteReunioes = can('reunioes', 'delete');
   const canViewAtasReuniao = can('atas_reuniao', 'view');
+  const canInsertAtasReuniao = can('atas_reuniao', 'insert');
+  const canEditAtasReuniao = can('atas_reuniao', 'edit');
+  const canDeleteAtasReuniao = can('atas_reuniao', 'delete');
   const canViewAtividadesComite = can('atividades_comite', 'view');
+  const canInsertAtividadesComite = can('atividades_comite', 'insert');
   const canViewEnquetes = can('enquetes', 'view');
   const canViewVotosEnquete = can('votos_enquete', 'view');
 
+  // State for forms and dialogs
+  const [isMeetingFormOpen, setIsMeetingFormOpen] = React.useState(false);
+  const [editingMeeting, setEditingMeeting] = React.useState<Reuniao | null>(null);
+  const [isMeetingDeleteDialogOpen, setIsMeetingDeleteDialogOpen] = React.useState(false);
+  const [meetingToDelete, setMeetingToDelete] = React.useState<string | null>(null);
+
+  const [isMinutesFormOpen, setIsMinutesFormOpen] = React.useState(false);
+  const [editingMinutes, setEditingMinutes] = React.useState<AtaReuniao | null>(null);
+  const [selectedMeetingForMinutes, setSelectedMeetingForMinutes] = React.useState<Reuniao | null>(null);
+  const [isMinutesDeleteDialogOpen, setIsMinutesDeleteDialogOpen] = React.useState(false);
+  const [minutesToDelete, setMinutesToDelete] = React.useState<string | null>(null);
+
+  // Expansion states
   const [expandedMeetings, setExpandedMeetings] = React.useState<Set<string>>(new Set());
   const [expandedMinutes, setExpandedMinutes] = React.useState<Set<string>>(new Set());
 
+  const queryClient = useQueryClient();
+
+  // Data queries
   const { data: comite, isLoading: isLoadingComite, error: errorComite } = useQuery<Comite | null, Error>({
-    queryKey: ["comite", id],
-    queryFn: () => getComiteById(id!),
-    enabled: !!id && canViewComiteDetails && !permissionsLoading,
+    queryKey: ["comite", comiteId],
+    queryFn: () => getComiteById(comiteId!),
+    enabled: !!comiteId && canViewComiteDetails && !permissionsLoading,
   });
 
   const { data: members, isLoading: isLoadingMembers, error: errorMembers } = useQuery<ComiteMember[] | null, Error>({
-    queryKey: ["comiteMembers", id],
-    queryFn: () => getComiteMembers(id!),
-    enabled: !!id && canViewComiteDetails && !permissionsLoading, // Members are part of committee details view
+    queryKey: ["comiteMembers", comiteId],
+    queryFn: () => getComiteMembers(comiteId!),
+    enabled: !!comiteId && canViewComiteDetails && !permissionsLoading,
   });
 
   const { data: meetings, isLoading: isLoadingMeetings, error: errorMeetings } = useQuery<Reuniao[] | null, Error>({
-    queryKey: ["reunioes", id],
-    queryFn: () => getReunioesByComiteId(id!),
-    enabled: !!id && canViewReunioes && !permissionsLoading,
+    queryKey: ["reunioes", comiteId],
+    queryFn: () => getReunioesByComiteId(comiteId!),
+    enabled: !!comiteId && canViewReunioes && !permissionsLoading,
   });
 
   const { data: minutesMap, isLoading: isLoadingMinutes } = useQuery<Map<string, AtaReuniao[]>, Error>({
@@ -83,10 +121,140 @@ const CommitteeDetails = () => {
   });
 
   const { data: polls, isLoading: isLoadingPolls, error: errorPolls } = useQuery<Enquete[] | null, Error>({
-    queryKey: ["enquetes", id],
-    queryFn: () => getEnquetesByComiteId(id!),
-    enabled: !!id && canViewEnquetes && !permissionsLoading,
+    queryKey: ["enquetes", comiteId],
+    queryFn: () => getEnquetesByComiteId(comiteId!),
+    enabled: !!comiteId && canViewEnquetes && !permissionsLoading,
   });
+
+  // Mutations for Meetings
+  const createMeetingMutation = useMutation({
+    mutationFn: (values: MeetingFormValues) => {
+      if (!user?.id || !comiteId) throw new Error("User not authenticated or committee not found.");
+      return createReuniao(comiteId, values.titulo, values.data_reuniao.toISOString(), values.local, user.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reunioes", comiteId] });
+      setIsMeetingFormOpen(false);
+    },
+    onError: (err) => {
+      showError(`Erro ao agendar reunião: ${err.message}`);
+    },
+  });
+
+  const updateMeetingMutation = useMutation({
+    mutationFn: ({ id, ...values }: MeetingFormValues & { id: string }) =>
+      updateReuniao(id, values.titulo, values.data_reuniao.toISOString(), values.local),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reunioes", comiteId] });
+      setIsMeetingFormOpen(false);
+      setEditingMeeting(null);
+    },
+    onError: (err) => {
+      showError(`Erro ao atualizar reunião: ${err.message}`);
+    },
+  });
+
+  const deleteMeetingMutation = useMutation({
+    mutationFn: deleteReuniao,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reunioes", comiteId] });
+      setIsMeetingDeleteDialogOpen(false);
+      setMeetingToDelete(null);
+    },
+    onError: (err) => {
+      showError(`Erro ao excluir reunião: ${err.message}`);
+    },
+  });
+
+  // Mutations for Meeting Minutes
+  const createMinutesMutation = useMutation({
+    mutationFn: (values: MeetingMinutesFormValues) => {
+      if (!user?.id || !selectedMeetingForMinutes?.id) throw new Error("User not authenticated or meeting not selected.");
+      return createAtaReuniao(selectedMeetingForMinutes.id, values.conteudo, values.decisoes_tomadas, user.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
+      setIsMinutesFormOpen(false);
+      setSelectedMeetingForMinutes(null);
+    },
+    onError: (err) => {
+      showError(`Erro ao criar ata de reunião: ${err.message}`);
+    },
+  });
+
+  const updateMinutesMutation = useMutation({
+    mutationFn: ({ id, ...values }: MeetingMinutesFormValues & { id: string }) =>
+      updateAtaReuniao(id, values.conteudo, values.decisoes_tomadas),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
+      setIsMinutesFormOpen(false);
+      setEditingMinutes(null);
+    },
+    onError: (err) => {
+      showError(`Erro ao atualizar ata de reunião: ${err.message}`);
+    },
+  });
+
+  const deleteMinutesMutation = useMutation({
+    mutationFn: deleteAtaReuniao,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
+      setIsMinutesDeleteDialogOpen(false);
+      setMinutesToDelete(null);
+    },
+    onError: (err) => {
+      showError(`Erro ao excluir ata de reunião: ${err.message}`);
+    },
+  });
+
+  // Handlers for forms and dialogs
+  const handleAddMeetingClick = () => {
+    setEditingMeeting(null);
+    setIsMeetingFormOpen(true);
+  };
+
+  const handleEditMeetingClick = (meeting: Reuniao) => {
+    setEditingMeeting(meeting);
+    setIsMeetingFormOpen(true);
+  };
+
+  const handleDeleteMeetingClick = (meetingId: string) => {
+    setMeetingToDelete(meetingId);
+    setIsMeetingDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteMeeting = () => {
+    if (meetingToDelete) {
+      deleteMeetingMutation.mutate(meetingToDelete);
+    }
+  };
+
+  const handleAddMinutesClick = (meeting: Reuniao) => {
+    setEditingMinutes(null);
+    setSelectedMeetingForMinutes(meeting);
+    setIsMinutesFormOpen(true);
+  };
+
+  const handleEditMinutesClick = (minutes: AtaReuniao) => {
+    setEditingMinutes(minutes);
+    // Find the parent meeting to pass to the form if needed, or just rely on initialData
+    const parentMeeting = meetings?.find(m => m.id === minutes.reuniao_id);
+    if (parentMeeting) {
+      setSelectedMeetingForMinutes(parentMeeting);
+    }
+    setIsMinutesFormOpen(true);
+  };
+
+  const handleDeleteMinutesClick = (minutesId: string) => {
+    setMinutesToDelete(minutesId);
+    setIsMinutesDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteMinutes = () => {
+    if (minutesToDelete) {
+      deleteMinutesMutation.mutate(minutesToDelete);
+    }
+  };
 
   const toggleMeetingExpansion = (meetingId: string) => {
     setExpandedMeetings(prev => {
@@ -202,8 +370,8 @@ const CommitteeDetails = () => {
             <CardTitle className="text-xl font-semibold flex items-center">
               <CalendarDays className="mr-2 h-5 w-5" /> Reuniões ({meetings?.length || 0})
             </CardTitle>
-            {can('reunioes', 'insert') && (
-              <Button size="sm" variant="outline">
+            {canInsertReunioes && (
+              <Button size="sm" variant="outline" onClick={handleAddMeetingClick}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Agendar Reunião
               </Button>
             )}
@@ -219,9 +387,23 @@ const CommitteeDetails = () => {
                   <div key={meeting.id} className="border rounded-md p-3">
                     <div className="flex justify-between items-center">
                       <h3 className="font-semibold">{meeting.titulo}</h3>
-                      <Button variant="ghost" size="icon" onClick={() => toggleMeetingExpansion(meeting.id)}>
-                        {expandedMeetings.has(meeting.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        {canEditReunioes && (
+                          <Button variant="ghost" size="icon" onClick={() => handleEditMeetingClick(meeting)}>
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Editar Reunião</span>
+                          </Button>
+                        )}
+                        {canDeleteReunioes && (
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteMeetingClick(meeting.id)}>
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Excluir Reunião</span>
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" onClick={() => toggleMeetingExpansion(meeting.id)}>
+                          {expandedMeetings.has(meeting.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
+                      </div>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {format(new Date(meeting.data_reuniao), "PPP 'às' HH:mm", { locale: ptBR })} - {meeting.local || 'Local não informado'}
@@ -232,8 +414,8 @@ const CommitteeDetails = () => {
                           <h4 className="font-medium flex items-center">
                             <MessageSquare className="mr-2 h-4 w-4" /> Atas de Reunião ({minutesMap?.get(meeting.id)?.length || 0})
                           </h4>
-                          {can('atas_reuniao', 'insert') && (
-                            <Button size="sm" variant="outline">
+                          {canInsertAtasReuniao && (
+                            <Button size="sm" variant="outline" onClick={() => handleAddMinutesClick(meeting)}>
                               <PlusCircle className="mr-2 h-4 w-4" /> Nova Ata
                             </Button>
                           )}
@@ -246,9 +428,23 @@ const CommitteeDetails = () => {
                               <li key={minutes.id} className="border rounded-md p-2">
                                 <div className="flex justify-between items-center">
                                   <p className="font-medium">Ata de {format(new Date(minutes.created_at!), "PPP", { locale: ptBR })}</p>
-                                  <Button variant="ghost" size="icon" onClick={() => toggleMinutesExpansion(minutes.id)}>
-                                    {expandedMinutes.has(minutes.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                  </Button>
+                                  <div className="flex items-center gap-2">
+                                    {canEditAtasReuniao && (
+                                      <Button variant="ghost" size="icon" onClick={() => handleEditMinutesClick(minutes)}>
+                                        <Edit className="h-4 w-4" />
+                                        <span className="sr-only">Editar Ata</span>
+                                      </Button>
+                                    )}
+                                    {canDeleteAtasReuniao && (
+                                      <Button variant="ghost" size="icon" onClick={() => handleDeleteMinutesClick(minutes.id)}>
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Excluir Ata</span>
+                                      </Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" onClick={() => toggleMinutesExpansion(minutes.id)}>
+                                      {expandedMinutes.has(minutes.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                    </Button>
+                                  </div>
                                 </div>
                                 {expandedMinutes.has(minutes.id) && (
                                   <div className="mt-2 text-sm text-muted-foreground">
@@ -262,7 +458,7 @@ const CommitteeDetails = () => {
                                       <h5 className="font-medium flex items-center">
                                         <ListTodo className="mr-2 h-4 w-4" /> Atividades ({activitiesMap?.get(minutes.id)?.length || 0})
                                       </h5>
-                                      {can('atividades_comite', 'insert') && (
+                                      {canInsertAtividadesComite && (
                                         <Button size="sm" variant="outline">
                                           <PlusCircle className="mr-2 h-4 w-4" /> Nova Atividade
                                         </Button>
@@ -360,6 +556,82 @@ const CommitteeDetails = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Meeting Form */}
+      {(canInsertReunioes || canEditReunioes) && (
+        <MeetingForm
+          open={isMeetingFormOpen}
+          onOpenChange={setIsMeetingFormOpen}
+          onSubmit={(values) => {
+            if (editingMeeting) {
+              updateMeetingMutation.mutate({ id: editingMeeting.id, ...values });
+            } else {
+              createMeetingMutation.mutate(values);
+            }
+          }}
+          initialData={editingMeeting}
+          isLoading={createMeetingMutation.isPending || updateMeetingMutation.isPending}
+        />
+      )}
+
+      {/* Meeting Delete Confirmation */}
+      {canDeleteReunioes && (
+        <AlertDialog open={isMeetingDeleteDialogOpen} onOpenChange={setIsMeetingDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente a reunião e todas as atas e atividades do comitê associadas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteMeeting} disabled={deleteMeetingMutation.isPending}>
+                {deleteMeetingMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {deleteMeetingMutation.isPending ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {/* Meeting Minutes Form */}
+      {(canInsertAtasReuniao || canEditAtasReuniao) && (
+        <MeetingMinutesForm
+          open={isMinutesFormOpen}
+          onOpenChange={setIsMinutesFormOpen}
+          onSubmit={(values) => {
+            if (editingMinutes) {
+              updateMinutesMutation.mutate({ id: editingMinutes.id, ...values });
+            } else {
+              createMinutesMutation.mutate(values);
+            }
+          }}
+          initialData={editingMinutes}
+          isLoading={createMinutesMutation.isPending || updateMinutesMutation.isPending}
+        />
+      )}
+
+      {/* Meeting Minutes Delete Confirmation */}
+      {canDeleteAtasReuniao && (
+        <AlertDialog open={isMinutesDeleteDialogOpen} onOpenChange={setIsMinutesDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente a ata de reunião e todas as atividades do comitê associadas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteMinutes} disabled={deleteMinutesMutation.isPending}>
+                {deleteMinutesMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {deleteMinutesMutation.isPending ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 };

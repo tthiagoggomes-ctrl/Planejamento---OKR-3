@@ -8,12 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ListTodo, Hourglass, CheckCircle, Edit, Trash2, Kanban, StopCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { showError } from "@/utils/toast"; // Import showError
 
 interface KanbanBoardProps {
   atividades: Atividade[];
   onStatusChange: (atividadeId: string, newStatus: Atividade['status']) => void;
   onEdit: (atividade: Atividade) => void;
   onDelete: (atividadeId: string) => void;
+  // Novas props de permissão
+  canEditAtividades: boolean;
+  canDeleteAtividades: boolean;
+  canChangeActivityStatus: boolean;
 }
 
 type ColumnId = Atividade['status'];
@@ -30,29 +35,37 @@ const columns: Record<ColumnId, Column> = {
     id: 'todo',
     title: 'A Fazer',
     icon: <ListTodo className="h-4 w-4" />,
-    colorClass: 'bg-gray-900 text-white dark:bg-gray-900 dark:text-white', // Preto
+    colorClass: 'bg-gray-900 text-white dark:bg-gray-900 dark:text-white',
   },
   in_progress: {
     id: 'in_progress',
     title: 'Em Progresso',
     icon: <Hourglass className="h-4 w-4" />,
-    colorClass: 'bg-blue-600 text-white dark:bg-blue-600 dark:text-white', // Azul
+    colorClass: 'bg-blue-600 text-white dark:bg-blue-600 dark:text-white',
   },
   stopped: {
     id: 'stopped',
     title: 'Parado',
     icon: <StopCircle className="h-4 w-4" />,
-    colorClass: 'bg-red-600 text-white dark:bg-red-600 dark:text-white', // Vermelho
+    colorClass: 'bg-red-600 text-white dark:bg-red-600 dark:text-white',
   },
   done: {
     id: 'done',
     title: 'Concluído',
     icon: <CheckCircle className="h-4 w-4" />,
-    colorClass: 'bg-green-600 text-white dark:bg-green-600 dark:text-white', // Verde
+    colorClass: 'bg-green-600 text-white dark:bg-green-600 dark:text-white',
   },
 };
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusChange, onEdit, onDelete }) => {
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({
+  atividades,
+  onStatusChange,
+  onEdit,
+  onDelete,
+  canEditAtividades,
+  canDeleteAtividades,
+  canChangeActivityStatus,
+}) => {
   const [orderedAtividades, setOrderedAtividades] = React.useState<Atividade[]>(atividades);
   const [expandedColumns, setExpandedColumns] = React.useState<Record<ColumnId, boolean>>({
     todo: false,
@@ -90,10 +103,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusCh
       return;
     }
 
+    if (!canChangeActivityStatus) {
+      showError("Você não tem permissão para alterar o status de atividades.");
+      return;
+    }
+
     const draggedAtividade = orderedAtividades.find(ativ => ativ.id === draggableId);
     if (!draggedAtividade) return;
 
-    // Temporarily update local state for immediate visual feedback
+    const newStatus = destination.droppableId as Atividade['status'];
+
+    // Optimistic update
     const newOrderedAtividades = Array.from(orderedAtividades);
     const sourceActivities = newOrderedAtividades.filter(a => a.status === source.droppableId);
     const destinationActivities = newOrderedAtividades.filter(a => a.status === destination.droppableId);
@@ -101,7 +121,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusCh
     // Remove from source
     sourceActivities.splice(source.index, 1);
     // Add to destination
-    destinationActivities.splice(destination.index, 0, { ...draggedAtividade, status: destination.droppableId as Atividade['status'] });
+    destinationActivities.splice(destination.index, 0, { ...draggedAtividade, status: newStatus });
 
     // Reconstruct the full list
     const updatedList = [
@@ -111,8 +131,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusCh
     ];
     setOrderedAtividades(updatedList);
 
-
-    const newStatus = destination.droppableId as Atividade['status'];
+    // Call the actual status change handler
     if (draggedAtividade.status !== newStatus) {
       onStatusChange(draggedAtividade.id, newStatus);
     }
@@ -123,10 +142,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusCh
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {Object.values(columns).map(column => {
           const activitiesInColumn = getActivitiesByStatus(column.id);
-          const displayedActivities = expandedColumns[column.id] ? activitiesInColumn : activitiesInColumn.slice(-5); // Show last 5 or all
+          const displayedActivities = expandedColumns[column.id] ? activitiesInColumn : activitiesInColumn.slice(-5);
 
           return (
-            <Droppable droppableId={column.id} key={column.id}>
+            <Droppable droppableId={column.id} key={column.id} isDropDisabled={!canChangeActivityStatus}>
               {(provided) => (
                 <Card
                   className="flex flex-col h-full"
@@ -143,7 +162,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusCh
                   </CardHeader>
                   <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto">
                     {displayedActivities.map((atividade, index) => (
-                      <Draggable key={atividade.id} draggableId={atividade.id} index={index}>
+                      <Draggable key={atividade.id} draggableId={atividade.id} index={index} isDragDisabled={!canChangeActivityStatus}>
                         {(provided) => (
                           <div
                             ref={provided.innerRef}
@@ -155,24 +174,28 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ atividades, onStatusCh
                                 <div className="flex justify-between items-start mb-2">
                                   <h4 className="font-semibold text-base">{atividade.titulo}</h4>
                                   <div className="flex space-x-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => onEdit(atividade)}
-                                      className="h-7 w-7"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                      <span className="sr-only">Editar Atividade</span>
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => onDelete(atividade.id)}
-                                      className="h-7 w-7"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                      <span className="sr-only">Excluir Atividade</span>
-                                    </Button>
+                                    {canEditAtividades && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => onEdit(atividade)}
+                                        className="h-7 w-7"
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                        <span className="sr-only">Editar Atividade</span>
+                                      </Button>
+                                    )}
+                                    {canDeleteAtividades && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => onDelete(atividade.id)}
+                                        className="h-7 w-7"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Excluir Atividade</span>
+                                      </Button>
+                                    )}
                                   </div>
                                 </div>
                                 <p className="text-sm text-muted-foreground mb-1">

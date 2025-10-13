@@ -12,6 +12,9 @@ interface ActivityItemProps {
   onEdit: (atividade: Atividade) => void;
   onDelete: (atividadeId: string) => void;
   getAtividadeStatusBadgeClass: (status: Atividade['status']) => string;
+  // Novas props de permissão
+  canEditAtividades: boolean;
+  canDeleteAtividades: boolean;
 }
 
 export const ActivityItem: React.FC<ActivityItemProps> = ({
@@ -19,6 +22,8 @@ export const ActivityItem: React.FC<ActivityItemProps> = ({
   onEdit,
   onDelete,
   getAtividadeStatusBadgeClass,
+  canEditAtividades,
+  canDeleteAtividades,
 }) => {
   return (
     <TableRow>
@@ -36,23 +41,27 @@ export const ActivityItem: React.FC<ActivityItemProps> = ({
         </span>
       </TableCell>
       <TableCell className="text-right">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onEdit(atividade)}
-          className="mr-2"
-        >
-          <Edit className="h-4 w-4" />
-          <span className="sr-only">Editar Atividade</span>
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onDelete(atividade.id)}
-        >
-          <Trash2 className="h-4 w-4" />
-          <span className="sr-only">Excluir Atividade</span>
-        </Button>
+        {canEditAtividades && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onEdit(atividade)}
+            className="mr-2"
+          >
+            <Edit className="h-4 w-4" />
+            <span className="sr-only">Editar Atividade</span>
+          </Button>
+        )}
+        {canDeleteAtividades && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(atividade.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="sr-only">Excluir Atividade</span>
+          </Button>
+        )}
       </TableCell>
     </TableRow>
   );

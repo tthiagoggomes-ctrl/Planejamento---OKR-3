@@ -22,6 +22,12 @@ interface KeyResultItemProps {
   onDeleteAtividade: (atividadeId: string) => void;
   getKeyResultStatusBadgeClass: (status: KeyResult['status']) => string;
   getAtividadeStatusBadgeClass: (status: Atividade['status']) => string;
+  // Novas props de permissão
+  canEditKeyResults: boolean;
+  canDeleteKeyResults: boolean;
+  canInsertAtividades: boolean;
+  canEditAtividades: boolean;
+  canDeleteAtividades: boolean;
 }
 
 export const KeyResultItem: React.FC<KeyResultItemProps> = ({
@@ -36,6 +42,11 @@ export const KeyResultItem: React.FC<KeyResultItemProps> = ({
   onDeleteAtividade,
   getKeyResultStatusBadgeClass,
   getAtividadeStatusBadgeClass,
+  canEditKeyResults,
+  canDeleteKeyResults,
+  canInsertAtividades,
+  canEditAtividades,
+  canDeleteAtividades,
 }) => {
   const krProgress = calculateKeyResultProgress(kr);
   const isExpanded = expandedKeyResults.has(kr.id);
@@ -82,23 +93,27 @@ export const KeyResultItem: React.FC<KeyResultItemProps> = ({
           </span>
         </TableCell>
         <TableCell className="text-right">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onEditKeyResult(kr, objetivo)}
-            className="mr-2"
-          >
-            <Edit className="h-4 w-4" />
-            <span className="sr-only">Editar KR</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDeleteKeyResult(kr.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-            <span className="sr-only">Excluir KR</span>
-          </Button>
+          {canEditKeyResults && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onEditKeyResult(kr, objetivo)}
+              className="mr-2"
+            >
+              <Edit className="h-4 w-4" />
+              <span className="sr-only">Editar KR</span>
+            </Button>
+          )}
+          {canDeleteKeyResults && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDeleteKeyResult(kr.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="sr-only">Excluir KR</span>
+            </Button>
+          )}
         </TableCell>
       </TableRow>
       {isExpanded && (
@@ -109,9 +124,11 @@ export const KeyResultItem: React.FC<KeyResultItemProps> = ({
                 <h5 className="text-md font-semibold flex items-center">
                   <ListTodo className="mr-2 h-4 w-4" /> Atividades para "{kr.titulo}"
                 </h5>
-                <Button size="sm" onClick={() => onAddAtividade(kr)}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Atividade
-                </Button>
+                {canInsertAtividades && (
+                  <Button size="sm" onClick={() => onAddAtividade(kr)}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Atividade
+                  </Button>
+                )}
               </div>
               {kr.atividades && kr.atividades.length > 0 ? (
                 <Table className="bg-white dark:bg-gray-900">
@@ -132,6 +149,8 @@ export const KeyResultItem: React.FC<KeyResultItemProps> = ({
                         onEdit={(a) => onEditAtividade(a, kr)}
                         onDelete={onDeleteAtividade}
                         getAtividadeStatusBadgeClass={getAtividadeStatusBadgeClass}
+                        canEditAtividades={canEditAtividades} // Pass permissions
+                        canDeleteAtividades={canDeleteAtividades}
                       />
                     ))}
                   </TableBody>

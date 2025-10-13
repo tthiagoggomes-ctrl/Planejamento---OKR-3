@@ -8,19 +8,26 @@ import { getCurrentUserProfile, updateUserProfile, UserProfile } from "@/integra
 import { ProfileForm, ProfileFormValues } from "@/components/forms/ProfileForm";
 import { showSuccess, showError } from "@/utils/toast";
 import { Separator } from "@/components/ui/separator";
+import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
 
 const Profile = () => {
   const queryClient = useQueryClient();
+  const { can, isLoading: permissionsLoading } = useUserPermissions();
+
+  const canViewProfile = can('profile', 'view');
+  const canEditProfile = can('profile', 'edit');
 
   const { data: userProfile, isLoading, error } = useQuery<UserProfile, Error>({
     queryKey: ["currentUserProfile"],
     queryFn: getCurrentUserProfile,
+    enabled: canViewProfile && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   const updateUserProfileMutation = useMutation({
     mutationFn: (values: ProfileFormValues) => {
       if (!userProfile) throw new Error("User profile not loaded.");
-      // Reusing updateUserProfile from users.ts, but only updating allowed fields
+      if (!canEditProfile) throw new Error("Você não tem permissão para editar o perfil.");
+      
       return updateUserProfile(
         userProfile.id,
         values.first_name,
@@ -56,10 +63,18 @@ const Profile = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || permissionsLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canViewProfile) {
+    return (
+      <div className="container mx-auto py-6 text-center text-red-500">
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -119,14 +134,17 @@ const Profile = () => {
             </div>
           </div>
 
-          <Separator />
-
-          <h3 className="text-xl font-semibold mb-4">Editar Informações do Perfil</h3>
-          <ProfileForm
-            initialData={userProfile}
-            onSubmit={handleSubmit}
-            isLoading={updateUserProfileMutation.isPending}
-          />
+          {canEditProfile && (
+            <>
+              <Separator />
+              <h3 className="text-xl font-semibold mb-4">Editar Informações do Perfil</h3>
+              <ProfileForm
+                initialData={userProfile}
+                onSubmit={handleSubmit}
+                isLoading={updateUserProfileMutation.isPending}
+              />
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, CalendarDays, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from "lucide-react"; // Import ArrowUp/Down
+import { PlusCircle, Edit, Trash2, Loader2, CalendarDays, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -33,9 +33,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
 
 const Periodos = () => {
   const queryClient = useQueryClient();
+  const { can, isLoading: permissionsLoading } = useUserPermissions();
+
+  const canViewPeriods = can('periodos', 'view');
+  const canInsertPeriods = can('periodos', 'insert');
+  const canEditPeriods = can('periodos', 'edit');
+  const canDeletePeriods = can('periodos', 'delete');
+
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingPeriodo, setEditingPeriodo] = React.useState<Periodo | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -43,16 +51,15 @@ const Periodos = () => {
   const [parentPeriodIdForNewQuarter, setParentPeriodIdForNewQuarter] = React.useState<string | null>(null);
   const [expandedAnnualPeriods, setExpandedAnnualPeriods] = React.useState<Set<string>>(new Set());
 
-  // NOVO: Estados para ordenação
   const [sortBy, setSortBy] = React.useState<keyof Periodo>('nome');
   const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
 
   const { data: allPeriods, isLoading, error } = useQuery<Periodo[], Error>({
-    queryKey: ["periodos", { sortBy, sortOrder }], // Incluir ordenação na chave da query
+    queryKey: ["periodos", { sortBy, sortOrder }],
     queryFn: () => getPeriodos({ sortBy, sortOrder }),
+    enabled: canViewPeriods && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
-  // Group periods into annual and quarterly
   const { annualPeriods, quarterlyPeriodsMap } = React.useMemo(() => {
     const annual: Periodo[] = [];
     const quarterlyMap = new Map<string, Periodo[]>();
@@ -69,7 +76,6 @@ const Periodos = () => {
       }
     });
 
-    // Sort quarterly periods within each annual group (e.g., Q1, Q2, Q3, Q4)
     quarterlyMap.forEach((quarters) => {
       quarters.sort((a, b) => {
         const getQuarterOrder = (name: string) => {
@@ -190,7 +196,6 @@ const Periodos = () => {
     });
   };
 
-  // NOVO: Função para alternar a ordenação
   const handleSort = (column: keyof Periodo) => {
     if (sortBy === column) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -200,10 +205,18 @@ const Periodos = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || permissionsLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canViewPeriods) {
+    return (
+      <div className="container mx-auto py-6 text-center text-red-500">
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -221,9 +234,11 @@ const Periodos = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-2xl font-bold">Gestão de Períodos</CardTitle>
-          <Button onClick={handleAddAnnualPeriodClick}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Novo Período Anual
-          </Button>
+          {canInsertPeriods && (
+            <Button onClick={handleAddAnnualPeriodClick}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Novo Período Anual
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {annualPeriods && annualPeriods.length > 0 ? (
@@ -285,34 +300,40 @@ const Periodos = () => {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditClick(annualPeriod)}
-                          className="mr-2"
-                        >
-                          <Edit className="h-4 w-4" />
-                          <span className="sr-only">Editar</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteClick(annualPeriod.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Excluir</span>
-                        </Button>
+                        {canEditPeriods && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditClick(annualPeriod)}
+                            className="mr-2"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Editar</span>
+                          </Button>
+                        )}
+                        {canDeletePeriods && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteClick(annualPeriod.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Excluir</span>
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                     {expandedAnnualPeriods.has(annualPeriod.id) && (
                       <TableRow>
-                        <TableCell colSpan={4} className="p-0"> {/* Adjusted colSpan */}
+                        <TableCell colSpan={4} className="p-0">
                           <div className="bg-gray-100 dark:bg-gray-700 p-4 border-t border-b">
                             <div className="flex justify-between items-center mb-3">
                               <h4 className="text-md font-semibold">Trimestres para "{annualPeriod.nome}"</h4>
-                              <Button size="sm" onClick={() => handleAddQuarterClick(annualPeriod.id)}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Trimestre
-                              </Button>
+                              {canInsertPeriods && (
+                                <Button size="sm" onClick={() => handleAddQuarterClick(annualPeriod.id)}>
+                                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Trimestre
+                                </Button>
+                              )}
                             </div>
                             {quarterlyPeriodsMap.get(annualPeriod.id)?.length > 0 ? (
                               <Table className="bg-white dark:bg-gray-900">
@@ -357,23 +378,27 @@ const Periodos = () => {
                                         </span>
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          onClick={() => handleEditClick(quarterPeriod)}
-                                          className="mr-2"
-                                        >
-                                          <Edit className="h-4 w-4" />
-                                          <span className="sr-only">Editar</span>
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          onClick={() => handleDeleteClick(quarterPeriod.id)}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                          <span className="sr-only">Excluir</span>
-                                        </Button>
+                                        {canEditPeriods && (
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleEditClick(quarterPeriod)}
+                                            className="mr-2"
+                                          >
+                                            <Edit className="h-4 w-4" />
+                                            <span className="sr-only">Editar</span>
+                                          </Button>
+                                        )}
+                                        {canDeletePeriods && (
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleDeleteClick(quarterPeriod.id)}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                            <span className="sr-only">Excluir</span>
+                                          </Button>
+                                        )}
                                       </TableCell>
                                     </TableRow>
                                   ))}
@@ -396,32 +421,36 @@ const Periodos = () => {
         </CardContent>
       </Card>
 
-      <PeriodoForm
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSubmit={handleCreateOrUpdatePeriodo}
-        initialData={editingPeriodo}
-        isLoading={createPeriodoMutation.isPending || updatePeriodoMutation.isPending}
-        parentPeriodIdForNew={parentPeriodIdForNewQuarter}
-      />
+      {(canInsertPeriods || canEditPeriods) && (
+        <PeriodoForm
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSubmit={handleCreateOrUpdatePeriodo}
+          initialData={editingPeriodo}
+          isLoading={createPeriodoMutation.isPending || updatePeriodoMutation.isPending}
+          parentPeriodIdForNew={parentPeriodIdForNewQuarter}
+        />
+      )}
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isso excluirá permanentemente o período selecionado e todos os sub-períodos (trimestres) associados, se houver.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} disabled={deletePeriodoMutation.isPending}>
-              {deletePeriodoMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {deletePeriodoMutation.isPending ? "Excluindo..." : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {canDeletePeriods && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente o período selecionado e todos os sub-períodos (trimestres) associados, se houver.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} disabled={deletePeriodoMutation.isPending}>
+                {deletePeriodoMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {deletePeriodoMutation.isPending ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 };

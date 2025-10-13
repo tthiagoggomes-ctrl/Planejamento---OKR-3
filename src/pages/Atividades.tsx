@@ -25,8 +25,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AtividadeForm, AtividadeFormValues } from "@/components/forms/AtividadeForm";
 import { getAtividades, createAtividade, updateAtividade, deleteAtividade, Atividade } from "@/integrations/supabase/api/atividades";
-import { getObjetivos, Objetivo } from "@/integrations/supabase/api/objetivos"; // Import Objetivo API
-import { getAllKeyResults, KeyResult } from "@/integrations/supabase/api/key_results"; // Import KeyResult API
+import { getObjetivos, Objetivo } from "@/integrations/supabase/api/objetivos";
+import { getAllKeyResults, KeyResult } from "@/integrations/supabase/api/key_results";
 import { showSuccess, showError } from "@/utils/toast";
 import { format } from "date-fns";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -40,72 +40,83 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/use-debounce";
-import GanttChart from "@/components/GanttChart"; // Import the new GanttChart component
-import { Switch } from "@/components/ui/switch"; // Import Switch for Gantt grouping
-import { Label } from "@/components/ui/label"; // Import Label for Switch
+import GanttChart from "@/components/GanttChart";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
 
 const Atividades = () => {
   const queryClient = useQueryClient();
+  const { can, isLoading: permissionsLoading } = useUserPermissions();
+
+  const canViewAtividades = can('atividades', 'view');
+  const canInsertAtividades = can('atividades', 'insert');
+  const canEditAtividades = can('atividades', 'edit');
+  const canDeleteAtividades = can('atividades', 'delete');
+  const canChangeActivityStatus = can('atividades', 'change_status');
+
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingAtividade, setEditingAtividade] = React.useState<Atividade | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [atividadeToDelete, setAtividadeToDelete] = React.useState<string | null>(null);
-  const [viewMode, setViewMode] = React.useState<'list' | 'kanban' | 'gantt'>('kanban'); // Added 'gantt'
+  const [viewMode, setViewMode] = React.useState<'list' | 'kanban' | 'gantt'>('kanban');
 
-  // Estados para filtros
   const [selectedObjectiveFilter, setSelectedObjectiveFilter] = React.useState<string | 'all'>('all');
   const [selectedKeyResultFilter, setSelectedKeyResultFilter] = React.useState<string | 'all'>('all');
   const [searchQuery, setSearchQuery] = React.useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
-  const [groupByKr, setGroupByKr] = React.useState(false); // New state for Gantt grouping
+  const [groupByKr, setGroupByKr] = React.useState(false);
 
-  // Estados para classificação do Gantt
   const [ganttSortBy, setGanttSortBy] = React.useState<'date' | 'krTitle'>('date');
   const [ganttSortOrder, setGanttSortOrder] = React.useState<'asc' | 'desc'>('asc');
 
   const { data: objetivos, isLoading: isLoadingObjetivos } = useQuery<Objetivo[] | null, Error>({
     queryKey: ["objetivos"],
     queryFn: () => getObjetivos(),
+    enabled: canViewAtividades && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   const { data: allKeyResults, isLoading: isLoadingAllKeyResults } = useQuery<KeyResult[] | null, Error>({
-    queryKey: ["allKeyResults", selectedObjectiveFilter], // Adicionar selectedObjectiveFilter como dependência
-    queryFn: ({ queryKey }) => getAllKeyResults(queryKey[1] as string | 'all'), // Filtrar KRs pelo objetivo selecionado
+    queryKey: ["allKeyResults", selectedObjectiveFilter],
+    queryFn: ({ queryKey }) => getAllKeyResults(queryKey[1] as string | 'all'),
+    enabled: canViewAtividades && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   const { data: atividades, isLoading, error } = useQuery<Atividade[] | null, Error>({
     queryKey: ["atividades", selectedObjectiveFilter, selectedKeyResultFilter, debouncedSearchQuery],
     queryFn: ({ queryKey }) => getAtividades(
-      undefined, // limit
-      queryKey[1] as string | 'all', // objectiveId
-      queryKey[2] as string | 'all'  // keyResultId
+      undefined,
+      queryKey[1] as string | 'all',
+      queryKey[2] as string | 'all'
     ),
+    enabled: canViewAtividades && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
-  // Helper function to format due_date for API
   const formatDueDateForApi = (date: Date | string | null | undefined): string | null => {
     if (date instanceof Date) {
       return date.toISOString();
     }
     if (typeof date === 'string') {
-      return date; // Already an ISO string
+      return date;
     }
     return null;
   };
 
   const createAtividadeMutation = useMutation({
-    mutationFn: (values: AtividadeFormValues) =>
-      createAtividade(
+    mutationFn: (values: AtividadeFormValues) => {
+      if (!canInsertAtividades) throw new Error("Você não tem permissão para criar atividades.");
+      return createAtividade(
         values.key_result_id,
         values.user_id,
         values.titulo,
         values.descricao,
         formatDueDateForApi(values.due_date),
         values.status
-      ),
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atividades"] });
-      queryClient.invalidateQueries({ queryKey: ["allKeyResults"] }); // Invalidate KRs to update progress
+      queryClient.invalidateQueries({ queryKey: ["allKeyResults"] });
       setIsFormOpen(false);
       showSuccess("Atividade criada com sucesso!");
     },
@@ -115,8 +126,9 @@ const Atividades = () => {
   });
 
   const updateAtividadeMutation = useMutation({
-    mutationFn: ({ id, ...values }: AtividadeFormValues & { id: string }) =>
-      updateAtividade(
+    mutationFn: ({ id, ...values }: AtividadeFormValues & { id: string }) => {
+      if (!canEditAtividades) throw new Error("Você não tem permissão para editar atividades.");
+      return updateAtividade(
         id,
         values.key_result_id,
         values.user_id,
@@ -124,10 +136,11 @@ const Atividades = () => {
         values.descricao,
         formatDueDateForApi(values.due_date),
         values.status
-      ),
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atividades"] });
-      queryClient.invalidateQueries({ queryKey: ["allKeyResults"] }); // Invalidate KRs to update progress
+      queryClient.invalidateQueries({ queryKey: ["allKeyResults"] });
       setIsFormOpen(false);
       setEditingAtividade(null);
       showSuccess("Atividade atualizada com sucesso!");
@@ -138,10 +151,13 @@ const Atividades = () => {
   });
 
   const deleteAtividadeMutation = useMutation({
-    mutationFn: deleteAtividade,
+    mutationFn: (id: string) => {
+      if (!canDeleteAtividades) throw new Error("Você não tem permissão para excluir atividades.");
+      return deleteAtividade(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atividades"] });
-      queryClient.invalidateQueries({ queryKey: ["allKeyResults"] }); // Invalidate KRs to update progress
+      queryClient.invalidateQueries({ queryKey: ["allKeyResults"] });
       setIsDeleteDialogOpen(false);
       setAtividadeToDelete(null);
       showSuccess("Atividade excluída com sucesso!");
@@ -176,6 +192,10 @@ const Atividades = () => {
   };
 
   const handleStatusChangeFromKanban = (atividadeId: string, newStatus: Atividade['status']) => {
+    if (!canChangeActivityStatus) {
+      showError("Você não tem permissão para alterar o status de atividades.");
+      return;
+    }
     const atividadeToUpdate = atividades?.find(ativ => ativ.id === atividadeId);
     if (atividadeToUpdate) {
       updateAtividadeMutation.mutate({
@@ -184,7 +204,7 @@ const Atividades = () => {
         user_id: atividadeToUpdate.user_id,
         titulo: atividadeToUpdate.titulo,
         descricao: atividadeToUpdate.descricao,
-        due_date: atividadeToUpdate.due_date ? new Date(atividadeToUpdate.due_date) : null, // Convert string to Date
+        due_date: atividadeToUpdate.due_date ? new Date(atividadeToUpdate.due_date) : null,
         status: newStatus,
       });
     }
@@ -192,18 +212,26 @@ const Atividades = () => {
 
   const getStatusBadgeClass = (status: Atividade['status']) => {
     switch (status) {
-      case 'todo': return 'bg-gray-900 text-white'; // Preto
-      case 'in_progress': return 'bg-blue-600 text-white'; // Azul
-      case 'done': return 'bg-green-600 text-white'; // Verde
-      case 'stopped': return 'bg-red-600 text-white'; // Vermelho
+      case 'todo': return 'bg-gray-900 text-white';
+      case 'in_progress': return 'bg-blue-600 text-white';
+      case 'done': return 'bg-green-600 text-white';
+      case 'stopped': return 'bg-red-600 text-white';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  if (isLoading || isLoadingObjetivos || isLoadingAllKeyResults) {
+  if (isLoading || isLoadingObjetivos || isLoadingAllKeyResults || permissionsLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canViewAtividades) {
+    return (
+      <div className="container mx-auto py-6 text-center text-red-500">
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -216,7 +244,6 @@ const Atividades = () => {
     );
   }
 
-  // Filtrar atividades pelo termo de busca (client-side, pois o filtro de busca não foi adicionado ao getAtividades)
   const filteredAtividades = atividades?.filter(atividade =>
     atividade.titulo.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
     atividade.key_result_title?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
@@ -240,9 +267,11 @@ const Atividades = () => {
                 <GanttChartSquare className="h-4 w-4 mr-2" /> Gantt
               </ToggleGroupItem>
             </ToggleGroup>
-            <Button onClick={() => { setEditingAtividade(null); setIsFormOpen(true); }}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Nova Atividade
-            </Button>
+            {canInsertAtividades && (
+              <Button onClick={() => { setEditingAtividade(null); setIsFormOpen(true); }}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Nova Atividade
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -261,7 +290,7 @@ const Atividades = () => {
               value={selectedObjectiveFilter}
               onValueChange={(value: string | 'all') => {
                 setSelectedObjectiveFilter(value);
-                setSelectedKeyResultFilter('all'); // Reset KR filter when objective changes
+                setSelectedKeyResultFilter('all');
               }}
             >
               <SelectTrigger className="w-[180px]">
@@ -327,23 +356,27 @@ const Atividades = () => {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditClick(atividade)}
-                          className="mr-2"
-                        >
-                          <Edit className="h-4 w-4" />
-                          <span className="sr-only">Editar</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteClick(atividade.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Excluir</span>
-                        </Button>
+                        {canEditAtividades && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditClick(atividade)}
+                            className="mr-2"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Editar</span>
+                          </Button>
+                        )}
+                        {canDeleteAtividades && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteClick(atividade.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Excluir</span>
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -358,6 +391,9 @@ const Atividades = () => {
               onStatusChange={handleStatusChangeFromKanban}
               onEdit={handleEditClick}
               onDelete={handleDeleteClick}
+              canEditAtividades={canEditAtividades} // Pass permissions
+              canDeleteAtividades={canDeleteAtividades}
+              canChangeActivityStatus={canChangeActivityStatus}
             />
           ) : ( // Gantt view
             <GanttChart
@@ -367,37 +403,41 @@ const Atividades = () => {
               ganttSortBy={ganttSortBy}
               onGanttSortByChange={setGanttSortBy}
               ganttSortOrder={ganttSortOrder}
-              onGanttSortOrderChange={setGanttSortOrder}
+              onGanttSortOrderChange={setGanttSortOrder} {/* Corrigido aqui */}
             />
           )}
         </CardContent>
       </Card>
 
-      <AtividadeForm
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSubmit={handleCreateOrUpdateAtividade}
-        initialData={editingAtividade}
-        isLoading={createAtividadeMutation.isPending || updateAtividadeMutation.isPending}
-      />
+      {canInsertAtividades && (
+        <AtividadeForm
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSubmit={handleCreateOrUpdateAtividade}
+          initialData={editingAtividade}
+          isLoading={createAtividadeMutation.isPending || updateAtividadeMutation.isPending}
+        />
+      )}
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isso excluirá permanentemente a atividade selecionada.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} disabled={deleteAtividadeMutation.isPending}>
-              {deleteAtividadeMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {deleteAtividadeMutation.isPending ? "Excluindo..." : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {canDeleteAtividades && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente a atividade selecionada.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} disabled={deleteAtividadeMutation.isPending}>
+                {deleteAtividadeMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {deleteAtividadeMutation.isPending ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 };

@@ -3,7 +3,7 @@
 import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronDown, ChevronUp, Edit, Trash2, PlusCircle } from "lucide-react"; // Import PlusCircle
+import { Loader2, ChevronDown, ChevronUp, Edit, Trash2, PlusCircle } from "lucide-react";
 import { Objetivo } from "@/integrations/supabase/api/objetivos";
 import { KeyResult } from "@/integrations/supabase/api/key_results";
 import { Atividade } from "@/integrations/supabase/api/atividades";
@@ -31,6 +31,15 @@ interface ObjetivoListProps {
   getObjetivoStatusBadgeClass: (status: Objetivo['status']) => string;
   getKeyResultStatusBadgeClass: (status: KeyResult['status']) => string;
   getAtividadeStatusBadgeClass: (status: Atividade['status']) => string;
+  // Novas props de permissão
+  canEditObjetivos: boolean;
+  canDeleteObjetivos: boolean;
+  canInsertKeyResults: boolean;
+  canEditKeyResults: boolean;
+  canDeleteKeyResults: boolean;
+  canInsertAtividades: boolean;
+  canEditAtividades: boolean;
+  canDeleteAtividades: boolean;
 }
 
 export const ObjetivoList: React.FC<ObjetivoListProps> = ({
@@ -53,6 +62,14 @@ export const ObjetivoList: React.FC<ObjetivoListProps> = ({
   getObjetivoStatusBadgeClass,
   getKeyResultStatusBadgeClass,
   getAtividadeStatusBadgeClass,
+  canEditObjetivos,
+  canDeleteObjetivos,
+  canInsertKeyResults,
+  canEditKeyResults,
+  canDeleteKeyResults,
+  canInsertAtividades,
+  canEditAtividades,
+  canDeleteAtividades,
 }) => {
   if (!objetivos || objetivos.length === 0) {
     return <p className="text-gray-600">Nenhum objetivo cadastrado ainda.</p>;
@@ -114,23 +131,27 @@ export const ObjetivoList: React.FC<ObjetivoListProps> = ({
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onEditObjetivo(objetivo)}
-                    className="mr-2"
-                  >
-                    <Edit className="h-4 w-4" />
-                    <span className="sr-only">Editar Objetivo</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onDeleteObjetivo(objetivo.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Excluir Objetivo</span>
-                  </Button>
+                  {canEditObjetivos && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEditObjetivo(objetivo)}
+                      className="mr-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span className="sr-only">Editar Objetivo</span>
+                    </Button>
+                  )}
+                  {canDeleteObjetivos && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDeleteObjetivo(objetivo.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Excluir Objetivo</span>
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
               {isObjetivoExpanded && (
@@ -139,9 +160,11 @@ export const ObjetivoList: React.FC<ObjetivoListProps> = ({
                     <div className="bg-gray-50 dark:bg-gray-800 p-4 border-t border-b">
                       <div className="flex justify-between items-center mb-3">
                         <h4 className="text-lg font-semibold">Key Results para "{objetivo.titulo}"</h4>
-                        <Button size="sm" onClick={() => onAddKeyResult(objetivo)}>
-                          <PlusCircle className="mr-2 h-4 w-4" /> Adicionar KR
-                        </Button>
+                        {canInsertKeyResults && (
+                          <Button size="sm" onClick={() => onAddKeyResult(objetivo)}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar KR
+                          </Button>
+                        )}
                       </div>
                       {isLoadingKeyResults ? (
                         <div className="flex justify-center items-center py-4">
@@ -177,6 +200,11 @@ export const ObjetivoList: React.FC<ObjetivoListProps> = ({
                                   onDeleteAtividade={onDeleteAtividade}
                                   getKeyResultStatusBadgeClass={getKeyResultStatusBadgeClass}
                                   getAtividadeStatusBadgeClass={getAtividadeStatusBadgeClass}
+                                  canEditKeyResults={canEditKeyResults} // Pass permissions
+                                  canDeleteKeyResults={canDeleteKeyResults}
+                                  canInsertAtividades={canInsertAtividades}
+                                  canEditAtividades={canEditAtividades}
+                                  canDeleteAtividades={canDeleteAtividades}
                                 />
                               ))}
                             </TableBody>

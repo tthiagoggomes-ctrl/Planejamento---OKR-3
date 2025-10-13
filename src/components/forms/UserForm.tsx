@@ -180,13 +180,13 @@ export const UserForm: React.FC<UserFormProps> = ({
   }, [allPermissions]);
 
   const permissionResources = [
-    { key: 'module', label: 'Acesso a Módulos' }, // NOVO: Adicionado para agrupar as permissões de módulo
+    { key: 'module', label: 'Acesso a Módulos' },
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'profile', label: 'Meu Perfil' },
     { key: 'areas', label: 'Áreas' },
-    { key: 'usuarios', label: 'Usuários' },
     { key: 'periodos', label: 'Períodos' },
-    { key: 'objetivos', label: 'Objetivos & KRs' },
+    { key: 'usuarios', label: 'Usuários' },
+    { key: 'objetivos', label: 'Objetivos' },
     { key: 'key_results', label: 'Key Results' },
     { key: 'atividades', label: 'Atividades' },
     { key: 'comentarios', label: 'Comentários' },

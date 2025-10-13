@@ -13,33 +13,42 @@ import { Progress } from "@/components/ui/progress";
 import AreaProgressList from '@/components/dashboard/AreaProgressList';
 import RecentActivitiesList from '@/components/dashboard/RecentActivitiesList';
 import AlertsAndPending from '@/components/dashboard/AlertsAndPending';
-import KeyResultsByPeriodList from '@/components/dashboard/KeyResultsByPeriodList'; // Import the new component
+import KeyResultsByPeriodList from '@/components/dashboard/KeyResultsByPeriodList';
+import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
 
 const Index = () => {
+  const { can, isLoading: permissionsLoading } = useUserPermissions();
+  const canViewDashboard = can('dashboard', 'view');
+
   const { data: objetivosSummary, isLoading: isLoadingObjetivosSummary, error: errorObjetivosSummary } = useQuery<ObjetivoSummary[] | null, Error>({
     queryKey: ["objetivosSummary"],
     queryFn: getObjetivosSummary,
+    enabled: canViewDashboard && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   const { data: keyResultsSummary, isLoading: isLoadingKeyResultsSummary, error: errorKeyResultsSummary } = useQuery<KeyResultSummary[] | null, Error>({
     queryKey: ["keyResultsSummary"],
     queryFn: getKeyResultsSummary,
+    enabled: canViewDashboard && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   const { data: atividadesSummary, isLoading: isLoadingAtividades, error: errorAtividades } = useQuery<AtividadeSummary[] | null, Error>({
     queryKey: ["atividadesSummary"],
     queryFn: getAtividadesSummary,
+    enabled: canViewDashboard && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   // Fetch all objectives and key results for overall progress calculation
   const { data: allObjetivos, isLoading: isLoadingAllObjetivos, error: errorAllObjetivos } = useQuery<Objetivo[] | null, Error>({
     queryKey: ["allObjetivos"],
     queryFn: () => getObjetivos(),
+    enabled: canViewDashboard && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   const { data: allKeyResults, isLoading: isLoadingAllKeyResults, error: errorAllKeyResults } = useQuery<KeyResult[] | null, Error>({
     queryKey: ["allKeyResults"],
     queryFn: () => getAllKeyResults(), // This now fetches activities too
+    enabled: canViewDashboard && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   const getTotalCount = (summary: { count: number }[] | null) => {
@@ -108,8 +117,20 @@ const Index = () => {
     { name: 'Concluídas', value: getStatusCount(atividadesSummary, 'done'), color: '#16a34a' }, // Verde (green-600)
   ].filter(item => item.value > 0);
 
-  const isLoadingOverallData = isLoadingAllObjetivos || isLoadingAllKeyResults || isLoadingObjetivosSummary || isLoadingKeyResultsSummary || isLoadingAtividades;
+  const isLoadingOverallData = isLoadingAllObjetivos || isLoadingAllKeyResults || isLoadingObjetivosSummary || isLoadingKeyResultsSummary || isLoadingAtividades || permissionsLoading;
   const errorOverallData = errorAllObjetivos || errorAllKeyResults || errorObjetivosSummary || errorKeyResultsSummary || errorAtividades;
+
+  if (permissionsLoading) {
+    return renderLoading();
+  }
+
+  if (!canViewDashboard) {
+    return (
+      <div className="container mx-auto py-6 text-center text-red-500">
+        Você não tem permissão para visualizar o Dashboard.
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6">

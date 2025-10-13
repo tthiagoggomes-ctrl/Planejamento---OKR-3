@@ -29,23 +29,31 @@ import { getAtividades, Atividade } from "@/integrations/supabase/api/atividades
 import { showSuccess, showError } from "@/utils/toast";
 import { useSession } from "@/components/auth/SessionContextProvider";
 import { format } from "date-fns";
-import { Textarea } from "@/components/ui/textarea"; // Import Textarea for inline form
-import { ComentarioItem } from "@/components/ComentarioItem"; // Import the new ComentarioItem
+import { Textarea } from "@/components/ui/textarea";
+import { ComentarioItem } from "@/components/ComentarioItem";
+import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
 
 const Comentarios = () => {
   const queryClient = useQueryClient();
   const { user } = useSession();
+  const { can, isLoading: permissionsLoading } = useUserPermissions();
 
-  const [isFormOpen, setIsFormOpen] = React.useState(false); // For editing existing comments
+  const canViewComentarios = can('comentarios', 'view');
+  const canInsertComentarios = can('comentarios', 'insert');
+  const canEditComentarios = can('comentarios', 'edit');
+  const canDeleteComentarios = can('comentarios', 'delete');
+
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingComentario, setEditingComentario] = React.useState<Comentario | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [comentarioToDelete, setComentarioToDelete] = React.useState<string | null>(null);
   const [expandedAtividades, setExpandedAtividades] = React.useState<Set<string>>(new Set());
-  const [inlineCommentContent, setInlineCommentContent] = React.useState<Record<string, string>>({}); // For inline comment input
+  const [inlineCommentContent, setInlineCommentContent] = React.useState<Record<string, string>>({});
 
   const { data: atividades, isLoading: isLoadingAtividades, error: atividadesError } = useQuery<Atividade[] | null, Error>({
     queryKey: ["atividades"],
-    queryFn: () => getAtividades(), // Wrap in arrow function to match QueryFunction signature
+    queryFn: () => getAtividades(),
+    enabled: canViewComentarios && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   const { data: comentariosMap, isLoading: isLoadingComentarios } = useQuery<Map<string, Comentario[]>, Error>({
@@ -60,7 +68,7 @@ const Comentarios = () => {
       const results = await Promise.all(commentPromises);
       return new Map(results);
     },
-    enabled: !!atividades,
+    enabled: !!atividades && canViewComentarios && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   const createComentarioMutation = useMutation({
@@ -68,11 +76,14 @@ const Comentarios = () => {
       if (!user?.id) {
         throw new Error("User not authenticated.");
       }
+      if (!canInsertComentarios) {
+        throw new Error("Você não tem permissão para criar comentários.");
+      }
       return createComentario(atividade_id, user.id, conteudo);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["comentarios_by_atividade"] });
-      setInlineCommentContent((prev) => ({ ...prev, [variables.atividade_id]: "" })); // Clear inline input
+      setInlineCommentContent((prev) => ({ ...prev, [variables.atividade_id]: "" }));
       showSuccess("Comentário adicionado com sucesso!");
     },
     onError: (err) => {
@@ -81,8 +92,12 @@ const Comentarios = () => {
   });
 
   const updateComentarioMutation = useMutation({
-    mutationFn: ({ id, conteudo }: ComentarioFormValues & { id: string }) =>
-      updateComentario(id, conteudo),
+    mutationFn: ({ id, conteudo }: ComentarioFormValues & { id: string }) => {
+      if (!canEditComentarios) {
+        throw new Error("Você não tem permissão para editar comentários.");
+      }
+      return updateComentario(id, conteudo);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comentarios_by_atividade"] });
       setIsFormOpen(false);
@@ -95,7 +110,12 @@ const Comentarios = () => {
   });
 
   const deleteComentarioMutation = useMutation({
-    mutationFn: deleteComentario,
+    mutationFn: (id: string) => {
+      if (!canDeleteComentarios) {
+        throw new Error("Você não tem permissão para excluir comentários.");
+      }
+      return deleteComentario(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comentarios_by_atividade"] });
       setIsDeleteDialogOpen(false);
@@ -150,10 +170,18 @@ const Comentarios = () => {
     });
   };
 
-  if (isLoadingAtividades) {
+  if (isLoadingAtividades || permissionsLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canViewComentarios) {
+    return (
+      <div className="container mx-auto py-6 text-center text-red-500">
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -227,6 +255,8 @@ const Comentarios = () => {
                                       comment={comment}
                                       onEdit={handleEditCommentClick}
                                       onDelete={handleDeleteCommentClick}
+                                      canEditComentarios={canEditComentarios} // Pass permissions
+                                      canDeleteComentarios={canDeleteComentarios}
                                     />
                                   ))}
                                 </div>
@@ -234,26 +264,28 @@ const Comentarios = () => {
                                 <p className="text-gray-600 text-center py-4">Nenhum comentário para esta atividade.</p>
                               )
                             )}
-                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                              <h5 className="text-md font-semibold mb-2">Adicionar novo comentário</h5>
-                              <Textarea
-                                placeholder="Escreva seu comentário aqui..."
-                                value={inlineCommentContent[atividade.id] || ""}
-                                onChange={(e) => setInlineCommentContent((prev) => ({ ...prev, [atividade.id]: e.target.value }))}
-                                className="mb-2"
-                              />
-                              <Button
-                                onClick={() => handleAddInlineComment(atividade.id)}
-                                disabled={createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id}
-                              >
-                                {createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id ? (
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                  <MessageSquare className="mr-2 h-4 w-4" />
-                                )}
-                                {createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id ? "Adicionando..." : "Adicionar Comentário"}
-                              </Button>
-                            </div>
+                            {canInsertComentarios && (
+                              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                <h5 className="text-md font-semibold mb-2">Adicionar novo comentário</h5>
+                                <Textarea
+                                  placeholder="Escreva seu comentário aqui..."
+                                  value={inlineCommentContent[atividade.id] || ""}
+                                  onChange={(e) => setInlineCommentContent((prev) => ({ ...prev, [atividade.id]: e.target.value }))}
+                                  className="mb-2"
+                                />
+                                <Button
+                                  onClick={() => handleAddInlineComment(atividade.id)}
+                                  disabled={createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id}
+                                >
+                                  {createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <MessageSquare className="mr-2 h-4 w-4" />
+                                  )}
+                                  {createComentarioMutation.isPending && createComentarioMutation.variables?.atividade_id === atividade.id ? "Adicionando..." : "Adicionar Comentário"}
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -268,33 +300,35 @@ const Comentarios = () => {
         </CardContent>
       </Card>
 
-      {/* Comentario Form (for editing existing comments) */}
-      <ComentarioForm
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSubmit={handleUpdateComentario}
-        initialData={editingComentario}
-        isLoading={updateComentarioMutation.isPending}
-      />
+      {(canInsertComentarios || canEditComentarios) && (
+        <ComentarioForm
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSubmit={handleUpdateComentario}
+          initialData={editingComentario}
+          isLoading={updateComentarioMutation.isPending}
+        />
+      )}
 
-      {/* Comentario Delete Confirmation */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isso excluirá permanentemente o comentário selecionado.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteComment} disabled={deleteComentarioMutation.isPending}>
-              {deleteComentarioMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {deleteComentarioMutation.isPending ? "Excluindo..." : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {canDeleteComentarios && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente o comentário selecionado.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteComment} disabled={deleteComentarioMutation.isPending}>
+                {deleteComentarioMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {deleteComentarioMutation.isPending ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 };

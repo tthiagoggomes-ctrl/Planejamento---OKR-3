@@ -16,11 +16,32 @@ import { useLocation } from "react-router-dom";
 import { ObjetivoFilters } from "@/components/objetivos/ObjetivoFilters";
 import { ObjetivoList } from "@/components/objetivos/ObjetivoList";
 import { ObjetivoModalsAndAlerts } from "@/components/objetivos/ObjetivoModalsAndAlerts";
+import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
 
 const Objetivos = () => {
   const queryClient = useQueryClient();
   const { user } = useSession();
   const location = useLocation();
+  const { can, isLoading: permissionsLoading } = useUserPermissions();
+
+  // Permissões para Objetivos
+  const canViewObjetivos = can('objetivos', 'view');
+  const canInsertObjetivos = can('objetivos', 'insert');
+  const canEditObjetivos = can('objetivos', 'edit');
+  const canDeleteObjetivos = can('objetivos', 'delete');
+
+  // Permissões para Key Results
+  const canViewKeyResults = can('key_results', 'view');
+  const canInsertKeyResults = can('key_results', 'insert');
+  const canEditKeyResults = can('key_results', 'edit');
+  const canDeleteKeyResults = can('key_results', 'delete');
+
+  // Permissões para Atividades
+  const canViewAtividades = can('atividades', 'view');
+  const canInsertAtividades = can('atividades', 'insert');
+  const canEditAtividades = can('atividades', 'edit');
+  const canDeleteAtividades = can('atividades', 'delete');
+
 
   // State for filters and sorting
   const [statusFilter, setStatusFilter] = useState<Objetivo['status'] | 'all'>('all');
@@ -85,6 +106,7 @@ const Objetivos = () => {
         sortOrder: params.sortOrder,
       });
     },
+    enabled: canViewObjetivos && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   const { data: keyResultsMap, isLoading: isLoadingKeyResults } = useQuery<Map<string, KeyResult[]>, Error>({
@@ -100,7 +122,7 @@ const Objetivos = () => {
       const results = await Promise.all(krPromises);
       return new Map(results);
     },
-    enabled: !!objetivos,
+    enabled: !!objetivos && canViewKeyResults && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   // NEW: Effect to expand objective and KR if keyResultId is in location.state
@@ -236,10 +258,18 @@ const Objetivos = () => {
     return Math.round(totalProgress / krs.length);
   };
 
-  if (isLoadingObjetivos) {
+  if (isLoadingObjetivos || permissionsLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canViewObjetivos) {
+    return (
+      <div className="container mx-auto py-6 text-center text-red-500">
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -257,9 +287,11 @@ const Objetivos = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-2xl font-bold">Gestão de Objetivos & KRs</CardTitle>
-          <Button onClick={() => { setEditingObjetivo(null); setIsObjetivoFormOpen(true); }}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Novo Objetivo
-          </Button>
+          {canInsertObjetivos && (
+            <Button onClick={() => { setEditingObjetivo(null); setIsObjetivoFormOpen(true); }}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Novo Objetivo
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <ObjetivoFilters
@@ -295,6 +327,14 @@ const Objetivos = () => {
             getObjetivoStatusBadgeClass={getObjetivoStatusBadgeClass}
             getKeyResultStatusBadgeClass={getKeyResultStatusBadgeClass}
             getAtividadeStatusBadgeClass={getAtividadeStatusBadgeClass}
+            canEditObjetivos={canEditObjetivos} // Pass permissions to children
+            canDeleteObjetivos={canDeleteObjetivos}
+            canInsertKeyResults={canInsertKeyResults}
+            canEditKeyResults={canEditKeyResults}
+            canDeleteKeyResults={canDeleteKeyResults}
+            canInsertAtividades={canInsertAtividades}
+            canEditAtividades={canEditAtividades}
+            canDeleteAtividades={canDeleteAtividades}
           />
         </CardContent>
       </Card>

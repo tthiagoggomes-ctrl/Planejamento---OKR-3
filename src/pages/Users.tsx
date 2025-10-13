@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, Lock, Unlock, Mail, ArrowUp, ArrowDown } from "lucide-react"; // Import ArrowUp/Down
+import { PlusCircle, Edit, Trash2, Loader2, Lock, Unlock, Mail, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -35,12 +35,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
 
-// Define um tipo para os argumentos da mutação de atualização
-type UpdateUserMutationArgs = UserFormValues & { id: string; email: string }; // Added email here
+type UpdateUserMutationArgs = UserFormValues & { id: string; email: string };
 
 const Users = () => {
   const queryClient = useQueryClient();
+  const { can, isLoading: permissionsLoading } = useUserPermissions();
+
+  const canViewUsers = can('usuarios', 'view');
+  const canInsertUsers = can('usuarios', 'insert');
+  const canEditUsers = can('usuarios', 'edit');
+  const canDeleteUsers = can('usuarios', 'delete');
+  const canBlockUnblockUsers = can('usuarios', 'block_unblock');
+  const canResetPasswordUsers = can('usuarios', 'reset_password');
+
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingUser, setEditingUser] = React.useState<UserProfile | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -48,28 +57,31 @@ const Users = () => {
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = React.useState(false);
   const [userToResetPassword, setUserToResetPassword] = React.useState<UserProfile | null>(null);
 
-  // NOVO: Estados para ordenação
   const [sortBy, setSortBy] = React.useState<keyof UserProfile | 'area_name' | 'email'>('first_name');
   const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
 
   const { data: users, isLoading, error } = useQuery<UserProfile[] | null, Error>({
-    queryKey: ["users", { sortBy, sortOrder }], // Incluir ordenação na chave da query
+    queryKey: ["users", { sortBy, sortOrder }],
     queryFn: ({ queryKey }) => {
       const params = queryKey[1] as { sortBy: keyof UserProfile | 'area_name' | 'email', sortOrder: 'asc' | 'desc' };
       return getUsers({ sortBy: params.sortBy, sortOrder: params.sortOrder });
     },
+    enabled: canViewUsers && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   const createUserMutation = useMutation({
-    mutationFn: (values: UserFormValues) => createUser(
-      values.email,
-      values.first_name,
-      values.last_name,
-      values.area_id,
-      values.permissao,
-      values.selected_permissions,
-      values.password, // Password is now the last optional argument
-    ),
+    mutationFn: (values: UserFormValues) => {
+      if (!canInsertUsers) throw new Error("Você não tem permissão para criar usuários.");
+      return createUser(
+        values.email,
+        values.first_name,
+        values.last_name,
+        values.area_id,
+        values.permissao,
+        values.selected_permissions,
+        values.password,
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setIsFormOpen(false);
@@ -81,8 +93,10 @@ const Users = () => {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ id, first_name, last_name, area_id, permissao, status, selected_permissions, email }: UpdateUserMutationArgs) =>
-      updateUserProfile(id, first_name, last_name, area_id, permissao, status, selected_permissions, email),
+    mutationFn: ({ id, first_name, last_name, area_id, permissao, status, selected_permissions, email }: UpdateUserMutationArgs) => {
+      if (!canEditUsers) throw new Error("Você não tem permissão para editar usuários.");
+      return updateUserProfile(id, first_name, last_name, area_id, permissao, status, selected_permissions, email);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setIsFormOpen(false);
@@ -95,7 +109,10 @@ const Users = () => {
   });
 
   const deleteUserMutation = useMutation({
-    mutationFn: deleteUser,
+    mutationFn: (id: string) => {
+      if (!canDeleteUsers) throw new Error("Você não tem permissão para excluir usuários.");
+      return deleteUser(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setIsDeleteDialogOpen(false);
@@ -108,7 +125,10 @@ const Users = () => {
   });
 
   const sendPasswordResetMutation = useMutation({
-    mutationFn: sendPasswordResetEmail,
+    mutationFn: (email: string) => {
+      if (!canResetPasswordUsers) throw new Error("Você não tem permissão para redefinir senhas.");
+      return sendPasswordResetEmail(email);
+    },
     onSuccess: () => {
       setIsResetPasswordDialogOpen(false);
       setUserToResetPassword(null);
@@ -120,7 +140,10 @@ const Users = () => {
   });
 
   const blockUserMutation = useMutation({
-    mutationFn: blockUser,
+    mutationFn: (id: string) => {
+      if (!canBlockUnblockUsers) throw new Error("Você não tem permissão para bloquear usuários.");
+      return blockUser(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       showSuccess("Usuário bloqueado com sucesso!");
@@ -131,7 +154,10 @@ const Users = () => {
   });
 
   const unblockUserMutation = useMutation({
-    mutationFn: unblockUser,
+    mutationFn: (id: string) => {
+      if (!canBlockUnblockUsers) throw new Error("Você não tem permissão para desbloquear usuários.");
+      return unblockUser(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       showSuccess("Usuário desbloqueado com sucesso!");
@@ -151,7 +177,7 @@ const Users = () => {
         permissao: values.permissao,
         status: values.status || 'active',
         selected_permissions: values.selected_permissions,
-        email: editingUser.email, // Pass email
+        email: editingUser.email,
       });
     } else {
       createUserMutation.mutate({
@@ -213,7 +239,6 @@ const Users = () => {
     }
   };
 
-  // NOVO: Função para alternar a ordenação
   const handleSort = (column: keyof UserProfile | 'area_name' | 'email') => {
     if (sortBy === column) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -223,10 +248,18 @@ const Users = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || permissionsLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canViewUsers) {
+    return (
+      <div className="container mx-auto py-6 text-center text-red-500">
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -244,9 +277,11 @@ const Users = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-2xl font-bold">Gestão de Usuários</CardTitle>
-          <Button onClick={() => { setEditingUser(null); setIsFormOpen(true); }}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Novo Usuário
-          </Button>
+          {canInsertUsers && (
+            <Button onClick={() => { setEditingUser(null); setIsFormOpen(true); }}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Novo Usuário
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {users && users.length > 0 ? (
@@ -331,42 +366,50 @@ const Users = () => {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditClick(user)}
-                        className="mr-1"
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Editar</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleBlockUnblockClick(user)}
-                        className="mr-1"
-                        disabled={blockUserMutation.isPending || unblockUserMutation.isPending}
-                      >
-                        {user.status === 'active' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                        <span className="sr-only">{user.status === 'active' ? 'Bloquear' : 'Desbloquear'}</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleResetPasswordClick(user)}
-                        className="mr-1"
-                      >
-                        <Mail className="h-4 w-4" />
-                        <span className="sr-only">Redefinir Senha</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteClick(user.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Excluir</span>
-                      </Button>
+                      {canEditUsers && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditClick(user)}
+                          className="mr-1"
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Editar</span>
+                        </Button>
+                      )}
+                      {canBlockUnblockUsers && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleBlockUnblockClick(user)}
+                          className="mr-1"
+                          disabled={blockUserMutation.isPending || unblockUserMutation.isPending}
+                        >
+                          {user.status === 'active' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                          <span className="sr-only">{user.status === 'active' ? 'Bloquear' : 'Desbloquear'}</span>
+                        </Button>
+                      )}
+                      {canResetPasswordUsers && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleResetPasswordClick(user)}
+                          className="mr-1"
+                        >
+                          <Mail className="h-4 w-4" />
+                          <span className="sr-only">Redefinir Senha</span>
+                        </Button>
+                      )}
+                      {canDeleteUsers && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteClick(user.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Excluir</span>
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -378,49 +421,55 @@ const Users = () => {
         </CardContent>
       </Card>
 
-      <UserForm
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSubmit={handleCreateOrUpdateUser}
-        initialData={editingUser}
-        isLoading={createUserMutation.isPending || updateUserMutation.isPending}
-      />
+      {(canInsertUsers || canEditUsers) && (
+        <UserForm
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSubmit={handleCreateOrUpdateUser}
+          initialData={editingUser}
+          isLoading={createUserMutation.isPending || updateUserMutation.isPending}
+        />
+      )}
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isso excluirá permanentemente o usuário e todos os dados associados.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} disabled={deleteUserMutation.isPending}>
-              {deleteUserMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {deleteUserMutation.isPending ? "Excluindo..." : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {canDeleteUsers && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente o usuário e todos os dados associados.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} disabled={deleteUserMutation.isPending}>
+                {deleteUserMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {deleteUserMutation.isPending ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
-      <AlertDialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Redefinir Senha</AlertDialogTitle>
-            <AlertDialogDescription>
-              Um e-mail de redefinição de senha será enviado para {userToResetPassword?.email}. O usuário poderá definir uma nova senha através do link no e-mail.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmResetPassword} disabled={sendPasswordResetMutation.isPending}>
-              {sendPasswordResetMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {sendPasswordResetMutation.isPending ? "Enviando..." : "Enviar E-mail"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {canResetPasswordUsers && (
+        <AlertDialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Redefinir Senha</AlertDialogTitle>
+              <AlertDialogDescription>
+                Um e-mail de redefinição de senha será enviado para {userToResetPassword?.email}. O usuário poderá definir uma nova senha através do link no e-mail.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmResetPassword} disabled={sendPasswordResetMutation.isPending}>
+                {sendPasswordResetMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {sendPasswordResetMutation.isPending ? "Enviando..." : "Enviar E-mail"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 };

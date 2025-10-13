@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, ArrowUp, ArrowDown } from "lucide-react"; // Import ArrowUp/Down
+import { PlusCircle, Edit, Trash2, Loader2, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -26,21 +26,29 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
 
 const Areas = () => {
   const queryClient = useQueryClient();
+  const { can, isLoading: permissionsLoading } = useUserPermissions();
+
+  const canViewAreas = can('areas', 'view');
+  const canInsertAreas = can('areas', 'insert');
+  const canEditAreas = can('areas', 'edit');
+  const canDeleteAreas = can('areas', 'delete');
+
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingArea, setEditingArea] = React.useState<Area | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [areaToDelete, setAreaToDelete] = React.useState<string | null>(null);
 
-  // NOVO: Estados para ordenação
   const [sortBy, setSortBy] = React.useState<keyof Area>('nome');
   const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
 
   const { data: areas, isLoading, error } = useQuery<Area[], Error>({
-    queryKey: ["areas", { sortBy, sortOrder }], // Incluir ordenação na chave da query
+    queryKey: ["areas", { sortBy, sortOrder }],
     queryFn: () => getAreas({ sortBy, sortOrder }),
+    enabled: canViewAreas && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   const createAreaMutation = useMutation({
@@ -105,7 +113,6 @@ const Areas = () => {
     }
   };
 
-  // NOVO: Função para alternar a ordenação
   const handleSort = (column: keyof Area) => {
     if (sortBy === column) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -115,10 +122,18 @@ const Areas = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || permissionsLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canViewAreas) {
+    return (
+      <div className="container mx-auto py-6 text-center text-red-500">
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -136,9 +151,11 @@ const Areas = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-2xl font-bold">Gestão de Áreas</CardTitle>
-          <Button onClick={() => { setEditingArea(null); setIsFormOpen(true); }}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Nova Área
-          </Button>
+          {canInsertAreas && (
+            <Button onClick={() => { setEditingArea(null); setIsFormOpen(true); }}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Nova Área
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {areas && areas.length > 0 ? (
@@ -165,23 +182,27 @@ const Areas = () => {
                   <TableRow key={area.id}>
                     <TableCell className="font-medium">{area.nome}</TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditClick(area)}
-                        className="mr-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Editar</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteClick(area.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Excluir</span>
-                      </Button>
+                      {canEditAreas && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditClick(area)}
+                          className="mr-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Editar</span>
+                        </Button>
+                      )}
+                      {canDeleteAreas && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteClick(area.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Excluir</span>
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -193,31 +214,35 @@ const Areas = () => {
         </CardContent>
       </Card>
 
-      <AreaForm
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSubmit={handleCreateOrUpdateArea}
-        initialData={editingArea}
-        isLoading={createAreaMutation.isPending || updateAreaMutation.isPending}
-      />
+      {(canInsertAreas || canEditAreas) && (
+        <AreaForm
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSubmit={handleCreateOrUpdateArea}
+          initialData={editingArea}
+          isLoading={createAreaMutation.isPending || updateAreaMutation.isPending}
+        />
+      )}
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isso excluirá permanentemente a área e todos os dados associados (objetivos, KRs, atividades, etc.).
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} disabled={deleteAreaMutation.isPending}>
-              {deleteAreaMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {deleteAreaMutation.isPending ? "Excluindo..." : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {canDeleteAreas && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente a área e todos os dados associados (objetivos, KRs, atividades, etc.).
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} disabled={deleteAreaMutation.isPending}>
+                {deleteAreaMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {deleteAreaMutation.isPending ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 };

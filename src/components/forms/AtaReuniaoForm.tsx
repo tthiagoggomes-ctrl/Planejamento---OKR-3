@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { Reuniao } from "@/integrations/supabase/api/reunioes";
-import { Loader2, CalendarIcon, PlusCircle, XCircle, Check } from "lucide-react"; // Import Check icon
+import { Loader2, CalendarIcon, PlusCircle, XCircle, Check, ChevronDown } from "lucide-react"; // Import ChevronDown
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO, isValid } from "date-fns";
@@ -42,14 +42,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Command, // Import Command components
+  Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Helper function to parse structured participants string
 const parseParticipants = (participantsString: string | null, allUsers: UserProfile[] | null): { selectedMembers: string[]; guestParticipantsText: string } => {
@@ -120,12 +120,12 @@ const parsePendencias = (pendenciasString: string | null, allUsers: UserProfile[
 };
 
 // Helper function to format structured pendencias for DB
-const formatPendencias = (structuredPendencias: { activity_name: string; status: 'Pendente' | 'Em andamento' | 'Concluído'; assignee_id: string; due_date: Date | null }[], allUsers: UserProfile[] | null): string => {
+const formatPendencias = (structuredPendencias: { activity_name?: string; status?: 'Pendente' | 'Em andamento' | 'Concluído'; assignee_id?: string; due_date?: Date | null }[], allUsers: UserProfile[] | null): string => {
   return structuredPendencias.map(p => {
     const assignee = allUsers?.find(u => u.id === p.assignee_id);
     const assigneeName = assignee ? `${assignee.first_name} ${assignee.last_name}` : 'N/A';
     const dueDateFormatted = p.due_date ? format(p.due_date, 'dd/MM/yyyy', { locale: ptBR }) : 'N/A';
-    return `${p.activity_name} | ${p.status} | ${assigneeName} | ${dueDateFormatted}`;
+    return `${p.activity_name || ''} | ${p.status || 'Pendente'} | ${assigneeName} | ${dueDateFormatted}`;
   }).join('\n');
 };
 

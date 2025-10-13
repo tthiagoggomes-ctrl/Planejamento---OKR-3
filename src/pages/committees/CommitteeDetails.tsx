@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, GitCommit, Users, CalendarDays, MessageSquare, ListTodo, PlusCircle, Edit, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { getComiteById, getComiteMembers, Comite, ComiteMember, updateComite } from "@/integrations/supabase/api/comites";
 import { getReunioesByComiteId, Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
-import { AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
+import { AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao"; // Corrigido: Importando getAtasReuniaoByReuniaoId
 import { getAtividadesComiteByAtaId, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
 import { getEnquetesByComiteId, Enquete, createEnquete, updateEnquete, deleteEnquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
@@ -28,19 +28,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AtaReuniaoForm, AtaReuniaoFormValues, AtaReuniaoSubmitValues } from "@/components/forms/AtaReuniaoForm"; // Import AtaReuniaoSubmitValues
+import { AtaReuniaoForm, AtaReuniaoFormValues, AtaReuniaoSubmitValues } from "@/components/forms/AtaReuniaoForm";
 import { ReuniaoForm, ReuniaoFormValues } from "@/components/forms/ReuniaoForm";
 import { EnqueteForm, EnqueteFormValues, EnqueteSubmitValues } from "@/components/forms/EnqueteForm";
 import { MeetingCalendar } from "@/components/committees/MeetingCalendar";
 import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { useLocation } from "react-router-dom"; // Import useLocation
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
   const { user } = useSession();
+  const location = useLocation(); // Initialize useLocation
 
   const canViewComiteDetails = can('comites', 'view');
   const canManageComiteMembers = can('comite_membros', 'manage');
@@ -114,7 +116,7 @@ const CommitteeDetails = () => {
       const currentMeetings = queryKey[1] as Reuniao[] | null;
       if (!currentMeetings) return new Map();
       const minutesPromises = currentMeetings.map(async (reuniao) => {
-        const minutes = await getAtasReuniaoByReuniaoId(reuniao.id);
+        const minutes = await getAtasReuniaoByReuniaoId(reuniao.id); // Corrigido: Usando a função importada corretamente
         return [reuniao.id, minutes || []] as [string, AtaReuniao[]];
       });
       const results = await Promise.all(minutesPromises);
@@ -154,6 +156,30 @@ const CommitteeDetails = () => {
       setSelectedVoteOptions(initialSelections);
     }
   }, [polls]);
+
+  // Effect to open specific meeting minutes if ataId is in location.state
+  React.useEffect(() => {
+    if (location.state && (location.state as any).ataId && meetings && minutesMap) {
+      const targetAtaId = (location.state as any).ataId;
+      let foundMeetingId: string | null = null;
+
+      for (const meeting of meetings) {
+        const minutesForMeeting = minutesMap.get(meeting.id);
+        if (minutesForMeeting?.some(ata => ata.id === targetAtaId)) {
+          foundMeetingId = meeting.id;
+          break;
+        }
+      }
+
+      if (foundMeetingId) {
+        setExpandedMeetings(prev => new Set(prev).add(foundMeetingId!));
+        setExpandedMinutes(prev => new Set(prev).add(targetAtaId));
+      }
+      // Clear the state after use to prevent re-triggering on subsequent renders
+      window.history.replaceState({}, document.title, location.pathname);
+    }
+  }, [location.state, meetings, minutesMap]);
+
 
   const updateComiteMutation = useMutation({
     mutationFn: ({ id: comiteId, ...values }: CommitteeFormValues & { id: string }) => {
@@ -296,7 +322,7 @@ const CommitteeDetails = () => {
   };
 
   const createAtaReuniaoMutation = useMutation({
-    mutationFn: (values: AtaReuniaoSubmitValues) => { // Use AtaReuniaoSubmitValues
+    mutationFn: (values: AtaReuniaoSubmitValues) => {
       if (!user?.id || !selectedMeetingForAta?.id) {
         throw new Error("User not authenticated or meeting not selected.");
       }
@@ -332,7 +358,7 @@ const CommitteeDetails = () => {
   });
 
   const updateAtaReuniaoMutation = useMutation({
-    mutationFn: ({ id: ataId, ...values }: AtaReuniaoSubmitValues & { id: string }) => { // Use AtaReuniaoSubmitValues
+    mutationFn: ({ id: ataId, ...values }: AtaReuniaoSubmitValues & { id: string }) => {
       if (!canEditAtasReuniao) {
         throw new Error("Você não tem permissão para editar atas de reunião.");
       }
@@ -381,7 +407,7 @@ const CommitteeDetails = () => {
     },
   });
 
-  const handleCreateOrUpdateAta = (values: AtaReuniaoSubmitValues) => { // Use AtaReuniaoSubmitValues
+  const handleCreateOrUpdateAta = (values: AtaReuniaoSubmitValues) => {
     if (editingAta) {
       updateAtaReuniaoMutation.mutate({ id: editingAta.id, ...values });
     } else {
@@ -1052,7 +1078,7 @@ const CommitteeDetails = () => {
       )}
 
       {canDeleteAtasReuniao && (
-        <AlertDialog open={isAtaDeleteDialogOpen} onOpenChange={setIsAataDeleteDialogOpen}>
+        <AlertDialog open={isAtaDeleteDialogOpen} onOpenChange={setIsAtaDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Tem certeza?</AlertDialogTitle>

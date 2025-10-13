@@ -17,7 +17,7 @@ export interface ComiteMember {
   role: 'membro' | 'presidente' | 'secretario';
   created_at?: string;
   user_name?: string; // Joined from profiles
-  user_email?: string; // Joined from auth.users
+  user_area_name?: string; // MODIFICADO: Substituído user_email por user_area_name
 }
 
 export const getComites = async (): Promise<Comite[] | null> => {
@@ -206,11 +206,10 @@ export const getComiteMembers = async (comite_id: string): Promise<ComiteMember[
   // Step 2: Extract all user_id's
   const userIds = membersData.map(member => member.user_id);
 
-  // Step 3: Fetch user profiles for these user_id's
-  // IMPORTANT: Only select columns that exist in public.usuarios
+  // Step 3: Fetch user profiles for these user_id's, including area name
   const { data: userProfiles, error: profilesError } = await supabase
     .from('usuarios')
-    .select('id, first_name, last_name') // Removed 'email' from here
+    .select('id, first_name, last_name, area:areas(nome)') // MODIFICADO: Incluindo a área
     .in('id', userIds);
 
   if (profilesError) {
@@ -219,8 +218,13 @@ export const getComiteMembers = async (comite_id: string): Promise<ComiteMember[
     return null;
   }
 
-  const userProfileMap = new Map<string, Pick<UserProfile, 'id' | 'first_name' | 'last_name'>>(); // Adjusted type
-  userProfiles.forEach(profile => userProfileMap.set(profile.id, profile));
+  const userProfileMap = new Map<string, Pick<UserProfile, 'id' | 'first_name' | 'last_name' | 'area_name'>>(); // Adjusted type
+  userProfiles.forEach(profile => userProfileMap.set(profile.id, {
+    id: profile.id,
+    first_name: profile.first_name,
+    last_name: profile.last_name,
+    area_name: (profile as any).area?.nome || 'N/A', // Extract area name
+  }));
 
   // Step 4: Map the results together
   return membersData.map(member => ({
@@ -228,7 +232,9 @@ export const getComiteMembers = async (comite_id: string): Promise<ComiteMember[
     user_name: userProfileMap.has(member.user_id)
       ? `${userProfileMap.get(member.user_id)?.first_name} ${userProfileMap.get(member.user_id)?.last_name}`
       : 'N/A',
-    user_email: 'N/A', // Set email to N/A for now, as it's not fetched from public.usuarios
+    user_area_name: userProfileMap.has(member.user_id)
+      ? userProfileMap.get(member.user_id)?.area_name
+      : 'N/A', // MODIFICADO: Usando o nome da área
   }));
 };
 
@@ -242,8 +248,8 @@ export const addComiteMember = async (
     .insert({ comite_id, user_id, role })
     .select(`
       *,
-      user:usuarios(first_name, last_name)
-    `) // Adjusted select
+      user:usuarios(first_name, last_name, area:areas(nome))
+    `) // Adjusted select to include area
     .single();
 
   if (error) {
@@ -255,7 +261,7 @@ export const addComiteMember = async (
   return {
     ...data,
     user_name: (data as any).user ? `${(data as any).user.first_name} ${(data as any).user.last_name}` : 'N/A',
-    user_email: 'N/A', // Set email to N/A
+    user_area_name: (data as any).user?.area?.nome || 'N/A', // MODIFICADO: Usando o nome da área
   };
 };
 
@@ -271,8 +277,8 @@ export const updateComiteMemberRole = async (
     .eq('user_id', user_id)
     .select(`
       *,
-      user:usuarios(first_name, last_name)
-    `) // Adjusted select
+      user:usuarios(first_name, last_name, area:areas(nome))
+    `) // Adjusted select to include area
     .single();
 
   if (error) {
@@ -284,7 +290,7 @@ export const updateComiteMemberRole = async (
   return {
     ...data,
     user_name: (data as any).user ? `${(data as any).user.first_name} ${(data as any).user.last_name}` : 'N/A',
-    user_email: 'N/A', // Set email to N/A
+    user_area_name: (data as any).user?.area?.nome || 'N/A', // MODIFICADO: Usando o nome da área
   };
 };
 

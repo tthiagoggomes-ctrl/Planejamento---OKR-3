@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useParams, Link } from "react-router-dom"; // Corrigido: de "react-router-router" para "react-router-dom"
+import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, GitCommit, Users, CalendarDays, MessageSquare, ListTodo, PlusCircle, Edit, Trash2, ChevronDown, ChevronUp } from "lucide-react";
@@ -630,7 +630,7 @@ const CommitteeDetails = () => {
                   <li key={member.user_id} className="flex items-center justify-between p-2 border rounded-md">
                     <div>
                       <p className="font-medium">{member.user_name}</p>
-                      <p className="text-sm text-muted-foreground">{member.user_email}</p>
+                      <p className="text-sm text-muted-foreground">{member.user_area_name || 'N/A'}</p> {/* MODIFICADO: Exibindo o nome da área */}
                     </div>
                     <span className="text-sm font-semibold text-blue-600">{member.role}</span>
                   </li>

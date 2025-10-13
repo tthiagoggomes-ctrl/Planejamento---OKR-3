@@ -1,14 +1,13 @@
-/// <reference types="react" />
 "use client";
 
 import React from "react";
 import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, GitCommit, Users, CalendarDays, MessageSquare, ListTodo, PlusCircle, Edit, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integrations/supabase/api/comites";
-import { getReunioesByComiteId, Reuniao } from "@/integrations/supabase/api/reunioes";
-import { getAtasReuniaoByReuniaoId, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
+import { getReunioesByComiteId, Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
+import { getAtasReuniaoByReuniaoId, AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { getAtividadesComiteByAtaId, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
 import { getEnquetesByComiteId, Enquete } from "@/integrations/supabase/api/enquetes";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
@@ -17,21 +16,49 @@ import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
+import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
+import { showError, showSuccess } from "@/utils/toast"; // Import toast functions
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AtaReuniaoForm, AtaReuniaoFormValues } from "@/components/forms/AtaReuniaoForm"; // Import AtaReuniaoForm
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
+  const { user } = useSession(); // Get current user for created_by
 
   const canViewComiteDetails = can('comites', 'view');
   const canManageComiteMembers = can('comite_membros', 'manage');
   const canViewReunioes = can('reunioes', 'view');
+  const canInsertReunioes = can('reunioes', 'insert');
+  const canEditReunioes = can('reunioes', 'edit');
+  const canDeleteReunioes = can('reunioes', 'delete');
   const canViewAtasReuniao = can('atas_reuniao', 'view');
+  const canInsertAtasReuniao = can('atas_reuniao', 'insert');
+  const canEditAtasReuniao = can('atas_reuniao', 'edit');
+  const canDeleteAtasReuniao = can('atas_reuniao', 'delete');
   const canViewAtividadesComite = can('atividades_comite', 'view');
   const canViewEnquetes = can('enquetes', 'view');
   const canViewVotosEnquete = can('votos_enquete', 'view');
 
   const [expandedMeetings, setExpandedMeetings] = React.useState<Set<string>>(new Set());
   const [expandedMinutes, setExpandedMinutes] = React.useState<Set<string>>(new Set());
+
+  // State for AtaReuniao Form
+  const [isAtaFormOpen, setIsAtaFormOpen] = React.useState(false);
+  const [editingAta, setEditingAta] = React.useState<AtaReuniao | null>(null);
+  const [selectedMeetingForAta, setSelectedMeetingForAta] = React.useState<Reuniao | null>(null);
+  const [isAtaDeleteDialogOpen, setIsAtaDeleteDialogOpen] = React.useState(false);
+  const [ataToDelete, setAtaToDelete] = React.useState<string | null>(null);
 
   const { data: comite, isLoading: isLoadingComite, error: errorComite } = useQuery<Comite | null, Error>({
     queryKey: ["comite", id],
@@ -87,6 +114,94 @@ const CommitteeDetails = () => {
     queryFn: () => getEnquetesByComiteId(id!),
     enabled: !!id && canViewEnquetes && !permissionsLoading,
   });
+
+  // Mutations for AtaReuniao
+  const createAtaReuniaoMutation = useMutation({
+    mutationFn: (values: AtaReuniaoFormValues) => {
+      if (!user?.id || !selectedMeetingForAta?.id) {
+        throw new Error("User not authenticated or meeting not selected.");
+      }
+      if (!canInsertAtasReuniao) {
+        throw new Error("Você não tem permissão para criar atas de reunião.");
+      }
+      return createAtaReuniao(selectedMeetingForAta.id, values.conteudo, values.decisoes_tomadas, user.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
+      setIsAtaFormOpen(false);
+      setSelectedMeetingForAta(null);
+      showSuccess("Ata de reunião criada com sucesso!");
+    },
+    onError: (err) => {
+      showError(`Erro ao criar ata de reunião: ${err.message}`);
+    },
+  });
+
+  const updateAtaReuniaoMutation = useMutation({
+    mutationFn: ({ id: ataId, ...values }: AtaReuniaoFormValues & { id: string }) => {
+      if (!canEditAtasReuniao) {
+        throw new Error("Você não tem permissão para editar atas de reunião.");
+      }
+      return updateAtaReuniao(ataId, values.conteudo, values.decisoes_tomadas);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
+      setIsAtaFormOpen(false);
+      setEditingAta(null);
+      showSuccess("Ata de reunião atualizada com sucesso!");
+    },
+    onError: (err) => {
+      showError(`Erro ao atualizar ata de reunião: ${err.message}`);
+    },
+  });
+
+  const deleteAtaReuniaoMutation = useMutation({
+    mutationFn: (ataId: string) => {
+      if (!canDeleteAtasReuniao) {
+        throw new Error("Você não tem permissão para excluir atas de reunião.");
+      }
+      return deleteAtaReuniao(ataId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
+      setIsAtaDeleteDialogOpen(false);
+      setAtaToDelete(null);
+      showSuccess("Ata de reunião excluída com sucesso!");
+    },
+    onError: (err) => {
+      showError(`Erro ao excluir ata de reunião: ${err.message}`);
+    },
+  });
+
+  const handleCreateOrUpdateAta = (values: AtaReuniaoFormValues) => {
+    if (editingAta) {
+      updateAtaReuniaoMutation.mutate({ id: editingAta.id, ...values });
+    } else {
+      createAtaReuniaoMutation.mutate(values);
+    }
+  };
+
+  const handleAddAtaClick = (meeting: Reuniao) => {
+    setEditingAta(null);
+    setSelectedMeetingForAta(meeting);
+    setIsAtaFormOpen(true);
+  };
+
+  const handleEditAtaClick = (ata: AtaReuniao) => {
+    setEditingAta(ata);
+    setIsAtaFormOpen(true);
+  };
+
+  const handleDeleteAtaClick = (ataId: string) => {
+    setAtaToDelete(ataId);
+    setIsAtaDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteAta = () => {
+    if (ataToDelete) {
+      deleteAtaReuniaoMutation.mutate(ataToDelete);
+    }
+  };
 
   const toggleMeetingExpansion = (meetingId: string) => {
     setExpandedMeetings(prev => {
@@ -202,7 +317,7 @@ const CommitteeDetails = () => {
             <CardTitle className="text-xl font-semibold flex items-center">
               <CalendarDays className="mr-2 h-5 w-5" /> Reuniões ({meetings?.length || 0})
             </CardTitle>
-            {can('reunioes', 'insert') && (
+            {canInsertReunioes && (
               <Button size="sm" variant="outline">
                 <PlusCircle className="mr-2 h-4 w-4" /> Agendar Reunião
               </Button>
@@ -232,8 +347,8 @@ const CommitteeDetails = () => {
                           <h4 className="font-medium flex items-center">
                             <MessageSquare className="mr-2 h-4 w-4" /> Atas de Reunião ({minutesMap?.get(meeting.id)?.length || 0})
                           </h4>
-                          {can('atas_reuniao', 'insert') && (
-                            <Button size="sm" variant="outline">
+                          {canInsertAtasReuniao && (
+                            <Button size="sm" variant="outline" onClick={() => handleAddAtaClick(meeting)}>
                               <PlusCircle className="mr-2 h-4 w-4" /> Nova Ata
                             </Button>
                           )}
@@ -246,9 +361,21 @@ const CommitteeDetails = () => {
                               <li key={minutes.id} className="border rounded-md p-2">
                                 <div className="flex justify-between items-center">
                                   <p className="font-medium">Ata de {format(new Date(minutes.created_at!), "PPP", { locale: ptBR })}</p>
-                                  <Button variant="ghost" size="icon" onClick={() => toggleMinutesExpansion(minutes.id)}>
-                                    {expandedMinutes.has(minutes.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                  </Button>
+                                  <div className="flex items-center gap-2">
+                                    {canEditAtasReuniao && (
+                                      <Button variant="ghost" size="icon" onClick={() => handleEditAtaClick(minutes)}>
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                    {canDeleteAtasReuniao && (
+                                      <Button variant="ghost" size="icon" onClick={() => handleDeleteAtaClick(minutes.id)}>
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" onClick={() => toggleMinutesExpansion(minutes.id)}>
+                                      {expandedMinutes.has(minutes.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                    </Button>
+                                  </div>
                                 </div>
                                 {expandedMinutes.has(minutes.id) && (
                                   <div className="mt-2 text-sm text-muted-foreground">
@@ -360,6 +487,38 @@ const CommitteeDetails = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* AtaReuniao Form */}
+      {(canInsertAtasReuniao || canEditAtasReuniao) && (
+        <AtaReuniaoForm
+          open={isAtaFormOpen}
+          onOpenChange={setIsAtaFormOpen}
+          onSubmit={handleCreateOrUpdateAta}
+          initialData={editingAta}
+          isLoading={createAtaReuniaoMutation.isPending || updateAtaReuniaoMutation.isPending}
+        />
+      )}
+
+      {/* AtaReuniao Delete Confirmation */}
+      {canDeleteAtasReuniao && (
+        <AlertDialog open={isAtaDeleteDialogOpen} onOpenChange={setIsAtaDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente a ata de reunião selecionada e todas as atividades do comitê associadas a ela.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteAta} disabled={deleteAtaReuniaoMutation.isPending}>
+                {deleteAtaReuniaoMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {deleteAtaReuniaoMutation.isPending ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 };

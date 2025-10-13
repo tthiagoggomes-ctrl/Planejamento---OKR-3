@@ -16,6 +16,7 @@ export interface Enquete {
   created_by_name?: string; // Joined from profiles
   opcoes?: OpcaoEnquete[]; // Nested options
   total_votes?: number; // Calculated client-side or via view
+  user_vote?: VotoEnquete | null; // NEW: User's vote for this poll
 }
 
 export interface OpcaoEnquete {
@@ -33,10 +34,15 @@ export interface VotoEnquete {
   created_at?: string;
 }
 
-export const getEnquetesByComiteId = async (comite_id: string): Promise<Enquete[] | null> => {
+export const getEnquetesByComiteId = async (comite_id: string, currentUserId: string | undefined): Promise<Enquete[] | null> => {
   const { data, error } = await supabase
     .from('enquetes')
-    .select(`*`) // Removido created_by_user:usuarios(first_name, last_name)
+    .select(`
+      *,
+      created_by_user:usuarios(first_name, last_name),
+      opcoes:opcoes_enquete(*),
+      votos:votos_enquete(id, opcao_id, user_id)
+    `)
     .eq('comite_id', comite_id)
     .order('created_at', { ascending: false });
 
@@ -47,11 +53,23 @@ export const getEnquetesByComiteId = async (comite_id: string): Promise<Enquete[
   }
 
   return (data as any[]).map((enquete: any) => {
+    const totalVotes = enquete.votos ? enquete.votos.length : 0;
+    const userVote = currentUserId ? enquete.votos?.find((vote: VotoEnquete) => vote.user_id === currentUserId) : null;
+
+    const optionsWithCounts = enquete.opcoes?.map((option: OpcaoEnquete) => {
+      const voteCount = enquete.votos?.filter((vote: VotoEnquete) => vote.opcao_id === option.id).length || 0;
+      return {
+        ...option,
+        vote_count: voteCount,
+      };
+    });
+
     return {
       ...enquete,
-      created_by_name: 'N/A', // Definido como N/A já que não estamos buscando o nome do criador
-      opcoes: [],
-      total_votes: 0,
+      created_by_name: enquete.created_by_user ? `${enquete.created_by_user.first_name} ${enquete.created_by_user.last_name}` : 'N/A',
+      opcoes: optionsWithCounts || [],
+      total_votes: totalVotes,
+      user_vote: userVote || null,
     };
   });
 };
@@ -180,6 +198,35 @@ export const voteOnEnquete = async (
   opcao_id: string,
   user_id: string
 ): Promise<VotoEnquete | null> => {
+  // First, check if the user has already voted on this poll
+  const { data: existingVote, error: fetchVoteError } = await supabase
+    .from('votos_enquete')
+    .select('id')
+    .eq('enquete_id', enquete_id)
+    .eq('user_id', user_id)
+    .single();
+
+  if (fetchVoteError && fetchVoteError.code !== 'PGRST116') { // PGRST116 means no rows found, which is fine
+    console.error('Error checking existing vote:', fetchVoteError.message);
+    showError(`Erro ao verificar voto existente: ${fetchVoteError.message}`);
+    return null;
+  }
+
+  if (existingVote) {
+    // If an existing vote is found, delete it first to allow changing the vote
+    const { error: deleteVoteError } = await supabase
+      .from('votos_enquete')
+      .delete()
+      .eq('id', existingVote.id);
+
+    if (deleteVoteError) {
+      console.error('Error deleting existing vote:', deleteVoteError.message);
+      showError(`Erro ao alterar voto: ${deleteVoteError.message}`);
+      return null;
+    }
+  }
+
+  // Now insert the new vote
   const { data, error } = await supabase
     .from('votos_enquete')
     .insert({ enquete_id, opcao_id, user_id })

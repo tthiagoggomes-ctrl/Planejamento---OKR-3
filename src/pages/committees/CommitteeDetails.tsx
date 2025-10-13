@@ -9,11 +9,11 @@ import { getComiteById, getComiteMembers, Comite, ComiteMember, updateComite } f
 import { getReunioesByComiteId, Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
 import { AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
 import { getAtividadesComiteByAtaId, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
-import { getEnquetesByComiteId, Enquete, createEnquete, updateEnquete, deleteEnquete } from "@/integrations/supabase/api/enquetes";
+import { getEnquetesByComiteId, Enquete, createEnquete, updateEnquete, deleteEnquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { format } from "date-fns";
+import { format, isPast } from "date-fns"; // Import isPast
 import { ptBR } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
 import { useSession } from "@/components/auth/SessionContextProvider";
@@ -33,6 +33,8 @@ import { ReuniaoForm, ReuniaoFormValues } from "@/components/forms/ReuniaoForm";
 import { EnqueteForm, EnqueteFormValues, EnqueteSubmitValues } from "@/components/forms/EnqueteForm";
 import { MeetingCalendar } from "@/components/committees/MeetingCalendar";
 import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm"; // Importar CommitteeForm
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"; // Import RadioGroup
+import { Label } from "@/components/ui/label"; // Import Label
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -51,6 +53,7 @@ const CommitteeDetails = () => {
   const canEditAtasReuniao = can('atas_reuniao', 'edit');
   const canDeleteAtasReuniao = can('atas_reuniao', 'delete');
   const canViewAtividadesComite = can('atividades_comite', 'view');
+  const canInsertAtividadesComite = can('atividades_comite', 'insert'); // NEW: Permission for committee activities
   const canViewEnquetes = can('enquetes', 'view');
   const canInsertEnquetes = can('enquetes', 'insert');
   const canEditEnquetes = can('enquetes', 'edit');
@@ -60,6 +63,7 @@ const CommitteeDetails = () => {
 
   const [expandedMeetings, setExpandedMeetings] = React.useState<Set<string>>(new Set());
   const [expandedMinutes, setExpandedMinutes] = React.useState<Set<string>>(new Set());
+  const [expandedPolls, setExpandedPolls] = React.useState<Set<string>>(new Set()); // NEW: State for poll expansion
 
   // State for CommitteeForm (for managing members)
   const [isCommitteeFormOpen, setIsCommitteeFormOpen] = React.useState(false);
@@ -88,6 +92,7 @@ const CommitteeDetails = () => {
   const [editingEnquete, setEditingEnquete] = React.useState<Enquete | null>(null);
   const [isEnqueteDeleteDialogOpen, setIsEnqueteDeleteDialogOpen] = React.useState(false);
   const [enqueteToDelete, setEnqueteToDelete] = React.useState<string | null>(null);
+  const [selectedVoteOption, setSelectedVoteOption] = React.useState<string | null>(null); // NEW: For voting
 
   const { data: comite, isLoading: isLoadingComite, error: errorComite } = useQuery<Comite | null, Error>({
     queryKey: ["comite", id],
@@ -100,18 +105,6 @@ const CommitteeDetails = () => {
     queryFn: () => getComiteMembers(id!),
     enabled: !!id && canViewComiteDetails && !permissionsLoading,
   });
-
-  // Log para depuração de membros
-  // React.useEffect(() => {
-  //   if (errorMembers) {
-  //     console.error("Erro ao carregar membros do comitê (query):", errorMembers);
-  //     showError(`Erro ao carregar membros do comitê: ${errorMembers.message}`);
-  //   }
-  //   if (members) {
-  //     console.log("Membros carregados:", members);
-  //   }
-  // }, [members, errorMembers]);
-
 
   const { data: meetings, isLoading: isLoadingMeetings, error: errorMeetings } = useQuery<Reuniao[] | null, Error>({
     queryKey: ["reunioes", id],
@@ -151,8 +144,8 @@ const CommitteeDetails = () => {
   });
 
   const { data: polls, isLoading: isLoadingPolls, error: errorPolls } = useQuery<Enquete[] | null, Error>({
-    queryKey: ["enquetes", id],
-    queryFn: () => getEnquetesByComiteId(id!),
+    queryKey: ["enquetes", id, user?.id], // Add user.id to queryKey for re-fetching user_vote
+    queryFn: ({ queryKey }) => getEnquetesByComiteId(queryKey[1] as string, queryKey[2] as string | undefined),
     enabled: !!id && canViewEnquetes && !permissionsLoading,
   });
 
@@ -488,6 +481,31 @@ const CommitteeDetails = () => {
     }
   };
 
+  // NEW: Mutation for voting on a poll
+  const voteOnEnqueteMutation = useMutation({
+    mutationFn: ({ enqueteId, opcaoId }: { enqueteId: string; opcaoId: string }) => {
+      if (!user?.id) {
+        throw new Error("User not authenticated.");
+      }
+      if (!canVoteEnquete) {
+        throw new Error("Você não tem permissão para votar em enquetes.");
+      }
+      return voteOnEnquete(enqueteId, opcaoId, user.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["enquetes", id] }); // Re-fetch polls to update vote counts
+      showSuccess("Voto registrado com sucesso!");
+      setSelectedVoteOption(null); // Clear selected option after voting
+    },
+    onError: (err) => {
+      showError(`Erro ao registrar voto: ${err.message}`);
+    },
+  });
+
+  const handleVote = (enqueteId: string, opcaoId: string) => {
+    voteOnEnqueteMutation.mutate({ enqueteId, opcaoId });
+  };
+
   const toggleMeetingExpansion = (meetingId: string) => {
     setExpandedMeetings(prev => {
       const newSet = new Set(prev);
@@ -507,6 +525,18 @@ const CommitteeDetails = () => {
         newSet.delete(minutesId);
       } else {
         newSet.add(minutesId);
+      }
+      return newSet;
+    });
+  };
+
+  const togglePollExpansion = (pollId: string) => { // NEW: Toggle for polls
+    setExpandedPolls(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(pollId)) {
+        newSet.delete(pollId);
+      } else {
+        newSet.add(pollId);
       }
       return newSet;
     });
@@ -692,7 +722,7 @@ const CommitteeDetails = () => {
                                       <h5 className="font-medium flex items-center">
                                         <ListTodo className="mr-2 h-4 w-4" /> Atividades ({activitiesMap?.get(minutes.id)?.length || 0})
                                       </h5>
-                                      {can('atividades_comite', 'insert') && (
+                                      {canInsertAtividadesComite && (
                                         <Button size="sm" variant="outline">
                                           <PlusCircle className="mr-2 h-4 w-4" /> Nova Atividade
                                         </Button>
@@ -753,54 +783,95 @@ const CommitteeDetails = () => {
               <p className="text-red-500">Erro ao carregar enquetes: {errorPolls.message}</p>
             ) : polls && polls.length > 0 ? (
               <div className="space-y-4">
-                {polls.map(poll => (
-                  <div key={poll.id} className="border rounded-md p-3">
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-semibold text-lg">{poll.titulo}</h3>
-                      <div className="flex items-center gap-2">
-                        {canEditEnquetes && (
-                          <Button variant="ghost" size="icon" onClick={() => handleEditEnqueteClick(poll)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {canDeleteEnquetes && (
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteEnqueteClick(poll.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{poll.descricao}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Período: {format(new Date(poll.start_date), "PPP", { locale: ptBR })} - {format(new Date(poll.end_date), "PPP", { locale: ptBR })}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Criado por: {poll.created_by_name}</p>
+                {polls.map(poll => {
+                  const isPollActive = !isPast(new Date(poll.start_date)) && isPast(new Date(poll.end_date));
+                  const hasVoted = !!poll.user_vote;
+                  const canUserVote = canVoteEnquete && isPollActive && user?.id;
+                  const isCreatorOrAdmin = user?.id === poll.created_by || can('enquetes', 'edit'); // Simplified check for edit/delete
 
-                    {/* Temporarily display vote counts as 0 */}
-                    {/* {canViewVotosEnquete && poll.opcoes && poll.opcoes.length > 0 && (
-                      <div className="mt-3 pt-3 border-t">
-                        <h4 className="font-medium mb-2">Resultados da Votação (0 votos)</h4>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          (Contagem de votos desabilitada temporariamente para depuração. Todas as opções terão 0 votos.)
-                        </p>
-                        <div className="space-y-2">
-                          {poll.opcoes.map(option => (
-                            <div key={option.id}>
-                              <div className="flex justify-between text-sm">
-                                <span>{option.texto_opcao}</span>
-                                <span>0%</span>
-                              </div>
-                              <Progress value={0} className="h-2" />
-                            </div>
-                          ))}
+                  return (
+                    <div key={poll.id} className="border rounded-md p-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-semibold text-lg">{poll.titulo}</h3>
+                        <div className="flex items-center gap-2">
+                          {(canEditEnquetes || isCreatorOrAdmin) && (
+                            <Button variant="ghost" size="icon" onClick={() => handleEditEnqueteClick(poll)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {(canDeleteEnquetes || isCreatorOrAdmin) && (
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteEnqueteClick(poll.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" onClick={() => togglePollExpansion(poll.id)}>
+                            {expandedPolls.has(poll.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          </Button>
                         </div>
-                        {canVoteEnquete && (
-                          <Button size="sm" className="mt-3">Votar</Button>
-                        )}
                       </div>
-                    )} */}
-                  </div>
-                ))}
+                      <p className="text-sm text-muted-foreground">{poll.descricao}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Período: {format(new Date(poll.start_date), "PPP", { locale: ptBR })} - {format(new Date(poll.end_date), "PPP", { locale: ptBR })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Criado por: {poll.created_by_name}</p>
+
+                      {expandedPolls.has(poll.id) && (
+                        <div className="mt-3 pt-3 border-t">
+                          {poll.opcoes && poll.opcoes.length > 0 ? (
+                            <>
+                              <h4 className="font-medium mb-2">Opções da Enquete</h4>
+                              <RadioGroup
+                                onValueChange={setSelectedVoteOption}
+                                value={selectedVoteOption || poll.user_vote?.opcao_id || ""}
+                                disabled={!canUserVote || voteOnEnqueteMutation.isPending}
+                              >
+                                {poll.opcoes.map(option => {
+                                  const percentage = poll.total_votes && poll.total_votes > 0
+                                    ? Math.round((option.vote_count! / poll.total_votes) * 100)
+                                    : 0;
+                                  const isSelected = option.id === poll.user_vote?.opcao_id;
+
+                                  return (
+                                    <div key={option.id} className="flex items-center space-x-2 mb-2">
+                                      <RadioGroupItem
+                                        value={option.id}
+                                        id={`option-${option.id}`}
+                                        checked={isSelected}
+                                        onClick={() => setSelectedVoteOption(option.id)}
+                                      />
+                                      <Label htmlFor={`option-${option.id}`} className="flex-1">
+                                        <div className="flex justify-between text-sm">
+                                          <span>{option.texto_opcao}</span>
+                                          {canViewVotosEnquete && <span>{percentage}% ({option.vote_count} votos)</span>}
+                                        </div>
+                                        {canViewVotosEnquete && <Progress value={percentage} className="h-2 mt-1" />}
+                                      </Label>
+                                    </div>
+                                  );
+                                })}
+                              </RadioGroup>
+                              {canUserVote && (
+                                <Button
+                                  size="sm"
+                                  className="mt-3"
+                                  onClick={() => handleVote(poll.id, selectedVoteOption!)}
+                                  disabled={!selectedVoteOption || voteOnEnqueteMutation.isPending}
+                                >
+                                  {voteOnEnqueteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                  {hasVoted ? "Alterar Voto" : "Votar"}
+                                </Button>
+                              )}
+                              {!isPollActive && <p className="text-sm text-red-500 mt-2">Esta enquete não está ativa para votação.</p>}
+                              {hasVoted && isPollActive && <p className="text-sm text-green-600 mt-2">Você já votou nesta enquete.</p>}
+                            </>
+                          ) : (
+                            <p className="text-gray-600 text-center py-2">Nenhuma opção cadastrada para esta enquete.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-gray-600">Nenhuma enquete ativa para este comitê.</p>

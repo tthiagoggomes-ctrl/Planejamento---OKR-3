@@ -185,13 +185,15 @@ const CommitteeDetails = () => {
       if (!canEditReunioes) {
         throw new Error("Você não tem permissão para editar reuniões.");
       }
+      // When updating, recurrence fields are not passed from the form, so use existing values
+      const existingMeeting = meetings?.find(m => m.id === reuniaoId);
       return updateReuniao(
         reuniaoId,
         values.titulo,
         values.data_reuniao.toISOString(),
         values.local,
-        values.recurrence_type, // NEW
-        values.recurrence_end_date?.toISOString() || null // NEW
+        existingMeeting?.recurrence_type || 'none', // Use existing recurrence type
+        existingMeeting?.recurrence_end_date || null // Use existing recurrence end date
       );
     },
     onSuccess: () => {

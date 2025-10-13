@@ -84,8 +84,9 @@ export const ReuniaoForm: React.FC<ReuniaoFormProps> = ({
       titulo: initialData?.titulo || "",
       data_reuniao: initialData?.data_reuniao ? new Date(initialData.data_reuniao) : undefined,
       local: initialData?.local || "",
-      recurrence_type: initialData?.recurrence_type || "none", // NEW
-      recurrence_end_date: initialData?.recurrence_end_date ? new Date(initialData.recurrence_end_date) : undefined, // NEW
+      // Recurrence fields should only be set if it's a new meeting or if initialData is not present
+      recurrence_type: initialData ? "none" : "none", // Default to none for new, or keep none for edit
+      recurrence_end_date: initialData ? undefined : undefined, // Clear for edit, or keep undefined for new
     },
   });
 
@@ -95,16 +96,17 @@ export const ReuniaoForm: React.FC<ReuniaoFormProps> = ({
         titulo: initialData.titulo,
         data_reuniao: new Date(initialData.data_reuniao),
         local: initialData.local,
-        recurrence_type: initialData.recurrence_type, // NEW
-        recurrence_end_date: initialData.recurrence_end_date ? new Date(initialData.recurrence_end_date) : null, // NEW
+        // When editing, we don't want to show or allow changing recurrence, so reset to default/none
+        recurrence_type: "none",
+        recurrence_end_date: undefined,
       });
     } else {
       form.reset({
         titulo: "",
         data_reuniao: undefined,
         local: "",
-        recurrence_type: "none", // NEW
-        recurrence_end_date: undefined, // NEW
+        recurrence_type: "none",
+        recurrence_end_date: undefined,
       });
     }
   }, [initialData, form]);
@@ -210,33 +212,35 @@ export const ReuniaoForm: React.FC<ReuniaoFormProps> = ({
               )}
             />
 
-            {/* NEW: Recurrence Type Field */}
-            <FormField
-              control={form.control}
-              name="recurrence_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo de Recorrência</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo de recorrência" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhuma</SelectItem>
-                      <SelectItem value="weekly">Semanal</SelectItem>
-                      <SelectItem value="bi_weekly">Quinzenal</SelectItem>
-                      <SelectItem value="monthly">Mensal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* NEW: Recurrence Type Field - Only visible for new meetings */}
+            {!initialData && (
+              <FormField
+                control={form.control}
+                name="recurrence_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Recorrência</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo de recorrência" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhuma</SelectItem>
+                        <SelectItem value="weekly">Semanal</SelectItem>
+                        <SelectItem value="bi_weekly">Quinzenal</SelectItem>
+                        <SelectItem value="monthly">Mensal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
-            {/* NEW: Recurrence End Date Field (conditional) */}
-            {selectedRecurrenceType !== 'none' && (
+            {/* NEW: Recurrence End Date Field (conditional) - Only visible for new meetings and if recurrence type is not 'none' */}
+            {!initialData && selectedRecurrenceType !== 'none' && (
               <FormField
                 control={form.control}
                 name="recurrence_end_date"

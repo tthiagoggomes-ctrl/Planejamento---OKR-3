@@ -43,16 +43,25 @@ const strategicPlanningItems = [
 ];
 
 const committeesModuleItems = [
-  // These will be filled in a later step
+  {
+    name: "Dashboard Comitês",
+    href: "/comites/dashboard",
+    icon: <LayoutDashboard className="h-4 w-4" />,
+  },
+  {
+    name: "Meus Comitês",
+    href: "/comites",
+    icon: <GitCommit className="h-4 w-4" />,
+  },
   // {
-  //   name: "Dashboard Comitês",
-  //   href: "/comites/dashboard",
-  //   icon: <LayoutDashboard className="h-4 w-4" />,
+  //   name: "Reuniões",
+  //   href: "/comites/reunioes",
+  //   icon: <CalendarDays className="h-4 w-4" />,
   // },
   // {
-  //   name: "Comitês",
-  //   href: "/comites",
-  //   icon: <GitCommit className="h-4 w-4" />,
+  //   name: "Enquetes",
+  //   href: "/comites/enquetes",
+  //   icon: <MessageSquare className="h-4 w-4" />,
   // },
 ];
 
@@ -165,7 +174,7 @@ export function Sidebar({ isOpen, onClose, className }: SidebarProps) {
             </Collapsible>
           )}
 
-          {/* Comitês (Placeholder for now) */}
+          {/* Comitês */}
           {canViewCommittees && (
             <Collapsible open={isCommitteesOpen} onOpenChange={setIsCommitteesOpen} className="space-y-2">
               <CollapsibleTrigger className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-all hover:text-sidebar-primary hover:bg-sidebar-accent [&[data-state=open]>svg]:rotate-180">
@@ -174,21 +183,17 @@ export function Sidebar({ isOpen, onClose, className }: SidebarProps) {
                 <ChevronDown className="ml-auto h-4 w-4 transition-transform" />
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-1 pl-6">
-                {committeesModuleItems.length > 0 ? (
-                  committeesModuleItems.map((item) => (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-all hover:text-sidebar-primary hover:bg-sidebar-accent"
-                      onClick={onClose}
-                    >
-                      {item.icon}
-                      {item.name}
-                    </Link>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground px-3 py-2">Em desenvolvimento...</p>
-                )}
+                {committeesModuleItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-all hover:text-sidebar-primary hover:bg-sidebar-accent"
+                    onClick={onClose}
+                  >
+                    {item.icon}
+                    {item.name}
+                  </Link>
+                ))}
               </CollapsibleContent>
             </Collapsible>
           )}

@@ -16,6 +16,9 @@ import Comentarios from "./pages/Comentarios";
 import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import { SessionContextProvider } from "./components/auth/SessionContextProvider";
+import CommitteesDashboard from "@/pages/committees/CommitteesDashboard"; // NEW: Usando alias @/
+import CommitteesList from "@/pages/committees/CommitteesList"; // NEW: Usando alias @/
+import CommitteeDetails from "@/pages/committees/CommitteeDetails"; // NEW: Usando alias @/
 
 const queryClient = new QueryClient();
 
@@ -36,6 +39,11 @@ const App = () => (
               <Route path="atividades" element={<Atividades />} />
               <Route path="comentarios" element={<Comentarios />} />
 
+              {/* Módulo de Comitês */}
+              <Route path="comites/dashboard" element={<CommitteesDashboard />} />
+              <Route path="comites" element={<CommitteesList />} />
+              <Route path="comites/:id" element={<CommitteeDetails />} />
+
               {/* Telas de Cadastro (acesso geral) */}
               <Route path="areas" element={<Areas />} />
               <Route path="usuarios" element={<Users />} />
@@ -43,11 +51,6 @@ const App = () => (
               
               {/* Meu Perfil (acesso geral) */}
               <Route path="profile" element={<Profile />} />
-
-              {/* Módulo de Comitês (Rotas a serem adicionadas) */}
-              {/* <Route path="comites/dashboard" element={<CommitteesDashboard />} /> */}
-              {/* <Route path="comites" element={<CommitteesList />} /> */}
-              {/* ... outras rotas do módulo de comitês */}
 
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

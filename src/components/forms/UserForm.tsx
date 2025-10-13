@@ -190,6 +190,13 @@ export const UserForm: React.FC<UserFormProps> = ({
     { key: 'key_results', label: 'Key Results' },
     { key: 'atividades', label: 'Atividades' },
     { key: 'comentarios', label: 'Comentários' },
+    { key: 'comites', label: 'Comitês' },
+    { key: 'comite_membros', label: 'Membros do Comitê' },
+    { key: 'reunioes', label: 'Reuniões' },
+    { key: 'atas_reuniao', label: 'Atas de Reunião' },
+    { key: 'atividades_comite', label: 'Atividades do Comitê' },
+    { key: 'enquetes', label: 'Enquetes' },
+    { key: 'votos_enquete', label: 'Votação em Enquetes' },
   ];
 
   return (
@@ -250,9 +257,9 @@ export const UserForm: React.FC<UserFormProps> = ({
                       <Input placeholder="********" type="password" {...field} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
+                </FormItem>
+              )}
+            />
             )}
             <FormField
               control={form.control}

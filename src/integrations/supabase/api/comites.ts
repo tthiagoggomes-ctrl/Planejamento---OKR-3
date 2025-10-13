@@ -1,5 +1,6 @@
 import { supabase } from '../client';
 import { showError, showSuccess } from '@/utils/toast';
+import { UserProfile } from './users'; // Import UserProfile para tipagem
 
 export interface Comite {
   id: string;
@@ -186,24 +187,49 @@ export const deleteComite = async (id: string): Promise<boolean> => {
 };
 
 export const getComiteMembers = async (comite_id: string): Promise<ComiteMember[] | null> => {
-  const { data, error } = await supabase
+  // Step 1: Fetch comite_membros data
+  const { data: membersData, error: membersError } = await supabase
     .from('comite_membros')
-    .select(`
-      *,
-      user:usuarios(first_name, last_name, email)
-    `)
+    .select('*') // Select all columns, but don't try to join here
     .eq('comite_id', comite_id);
 
-  if (error) {
-    console.error('Error fetching committee members:', error.message);
-    // Do NOT show a toast here, let the UI handle the error display
+  if (membersError) {
+    console.error('Error fetching committee members (raw):', membersError.message);
+    showError('Erro ao carregar membros do comitê.');
     return null;
   }
 
-  return data.map(member => ({
+  if (!membersData || membersData.length === 0) {
+    return []; // No members found
+  }
+
+  // Step 2: Extract all user_id's
+  const userIds = membersData.map(member => member.user_id);
+
+  // Step 3: Fetch user profiles for these user_id's
+  const { data: userProfiles, error: profilesError } = await supabase
+    .from('usuarios')
+    .select('id, first_name, last_name, email') // Select only necessary fields
+    .in('id', userIds);
+
+  if (profilesError) {
+    console.error('Error fetching user profiles for committee members:', profilesError.message);
+    showError('Erro ao carregar perfis dos membros do comitê.');
+    return null;
+  }
+
+  const userProfileMap = new Map<string, Pick<UserProfile, 'id' | 'first_name' | 'last_name' | 'email'>>();
+  userProfiles.forEach(profile => userProfileMap.set(profile.id, profile));
+
+  // Step 4: Map the results together
+  return membersData.map(member => ({
     ...member,
-    user_name: (member as any).user ? `${(member as any).user.first_name} ${(member as any).user.last_name}` : 'N/A',
-    user_email: (member as any).user?.email || 'N/A',
+    user_name: userProfileMap.has(member.user_id)
+      ? `${userProfileMap.get(member.user_id)?.first_name} ${userProfileMap.get(member.user_id)?.last_name}`
+      : 'N/A',
+    user_email: userProfileMap.has(member.user_id)
+      ? userProfileMap.get(member.user_id)?.email || 'N/A'
+      : 'N/A',
   }));
 };
 

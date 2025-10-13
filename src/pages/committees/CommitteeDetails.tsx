@@ -102,15 +102,15 @@ const CommitteeDetails = () => {
   });
 
   // Log para depuração de membros
-  React.useEffect(() => {
-    if (errorMembers) {
-      console.error("Erro ao carregar membros do comitê (query):", errorMembers);
-      showError(`Erro ao carregar membros do comitê: ${errorMembers.message}`);
-    }
-    if (members) {
-      console.log("Membros carregados:", members);
-    }
-  }, [members, errorMembers]);
+  // React.useEffect(() => {
+  //   if (errorMembers) {
+  //     console.error("Erro ao carregar membros do comitê (query):", errorMembers);
+  //     showError(`Erro ao carregar membros do comitê: ${errorMembers.message}`);
+  //   }
+  //   if (members) {
+  //     console.log("Membros carregados:", members);
+  //   }
+  // }, [members, errorMembers]);
 
 
   const { data: meetings, isLoading: isLoadingMeetings, error: errorMeetings } = useQuery<Reuniao[] | null, Error>({

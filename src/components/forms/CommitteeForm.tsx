@@ -34,6 +34,7 @@ import { UserProfile, getUsers } from "@/integrations/supabase/api/users";
 import { Loader2, PlusCircle, XCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
+import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
 
 const memberSchema = z.object({
   user_id: z.string().uuid({ message: "Selecione um usuário válido." }),
@@ -72,6 +73,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
   initialMembers,
   isLoading,
 }) => {
+  const { user } = useSession(); // Get current user
   const form = useForm<CommitteeFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -101,23 +103,26 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
         members: initialMembers?.map(m => ({ user_id: m.user_id, role: m.role })) || [],
       });
     } else {
+      // For new committees, automatically add the current user as a 'presidente'
+      const defaultMembers = user?.id ? [{ user_id: user.id, role: "presidente" as const }] : [];
       form.reset({
         nome: "",
         descricao: "",
         status: "active",
-        members: [],
+        members: defaultMembers,
       });
     }
-  }, [initialData, initialMembers, form]);
+  }, [initialData, initialMembers, form, user]); // Add user to dependencies
 
   const handleSubmit = (values: CommitteeFormValues) => {
     onSubmit(values);
     if (!initialData) { // Only reset if creating a new committee
+      const defaultMembers = user?.id ? [{ user_id: user.id, role: "presidente" as const }] : [];
       form.reset({
         nome: "",
         descricao: "",
         status: "active",
-        members: [],
+        members: defaultMembers,
       });
     }
   };
@@ -133,8 +138,9 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
     { value: "secretario", label: "Secretário" },
   ];
 
+  // Filter out users already selected in the form, and the current user if they are already a default member
   const availableUsers = users?.filter(
-    (user) => !fields.some((member) => member.user_id === user.id)
+    (u) => !fields.some((member) => member.user_id === u.id)
   );
 
   return (
@@ -216,13 +222,13 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                             {isLoadingUsers ? (
                               <SelectItem value="" disabled>Carregando usuários...</SelectItem>
                             ) : (
-                              users?.map((user) => (
+                              users?.map((u) => (
                                 <SelectItem
-                                  key={user.id}
-                                  value={user.id}
-                                  disabled={fields.some((m, i) => i !== index && m.user_id === user.id)}
+                                  key={u.id}
+                                  value={u.id}
+                                  disabled={fields.some((m, i) => i !== index && m.user_id === u.id)}
                                 >
-                                  {user.first_name} {user.last_name} ({user.email})
+                                  {u.first_name} {u.last_name} ({u.email})
                                 </SelectItem>
                               ))
                             )}

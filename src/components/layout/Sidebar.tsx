@@ -126,11 +126,11 @@ export function Sidebar({ isOpen, onClose, className }: SidebarProps) {
             Meu Perfil
           </Link>
 
-          {/* Módulo de Planejamento Estratégico */}
+          {/* Planejamento Estratégico */}
           <Collapsible open={isStrategicPlanningOpen} onOpenChange={setIsStrategicPlanningOpen} className="space-y-2">
             <CollapsibleTrigger className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-all hover:text-sidebar-primary hover:bg-sidebar-accent [&[data-state=open]>svg]:rotate-180">
               <Target className="h-4 w-4" />
-              <span className="text-base">Módulo de Planejamento Estratégico</span>
+              <span className="text-base">Planejamento Estratégico</span>
               <ChevronDown className="ml-auto h-4 w-4 transition-transform" />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-1 pl-6">
@@ -148,11 +148,11 @@ export function Sidebar({ isOpen, onClose, className }: SidebarProps) {
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Módulo de Comitês (Placeholder for now) */}
+          {/* Comitês (Placeholder for now) */}
           <Collapsible open={isCommitteesOpen} onOpenChange={setIsCommitteesOpen} className="space-y-2">
             <CollapsibleTrigger className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-all hover:text-sidebar-primary hover:bg-sidebar-accent [&[data-state=open]>svg]:rotate-180">
               <GitCommit className="h-4 w-4" />
-              <span className="text-base">Módulo de Comitês</span>
+              <span className="text-base">Comitês</span>
               <ChevronDown className="ml-auto h-4 w-4 transition-transform" />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-1 pl-6">

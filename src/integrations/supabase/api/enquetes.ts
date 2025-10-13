@@ -47,7 +47,7 @@ export const getEnquetesByComiteId = async (comite_id: string, currentUserId: st
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Error fetching polls:', error.message);
+    console.error('Error fetching polls:', error.message); // Adicionado log detalhado
     showError('Erro ao carregar enquetes.');
     return null;
   }

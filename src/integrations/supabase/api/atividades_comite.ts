@@ -1,5 +1,7 @@
+"use client";
+
 import { supabase } from '../client';
-import { showError, showSuccess } from '@/utils/toast';
+import { showError } from '@/utils/toast';
 
 export interface AtividadeComite {
   id: string;
@@ -17,6 +19,7 @@ export interface AtividadeComite {
 }
 
 export const getAtividadesComiteByAtaId = async (ata_reuniao_id: string): Promise<AtividadeComite[] | null> => {
+  console.log(`Fetching committee activities for ata_reuniao_id: ${ata_reuniao_id}`);
   const { data, error } = await supabase
     .from('atividades_comite')
     .select(`
@@ -28,88 +31,14 @@ export const getAtividadesComiteByAtaId = async (ata_reuniao_id: string): Promis
     .order('created_at', { ascending: true });
 
   if (error) {
-    console.error('Error fetching committee activities:', error.message);
+    console.error('Error fetching committee activities:', error.message, error); // Log do objeto de erro completo
     showError('Erro ao carregar atividades do comitê.');
     return null;
   }
+  console.log(`Successfully fetched ${data?.length || 0} committee activities.`);
   return data.map(ativ => ({
     ...ativ,
     assignee_name: (ativ as any).assignee ? `${(ativ as any).assignee.first_name} ${(ativ as any).assignee.last_name}` : 'N/A',
     created_by_name: (ativ as any).creator ? `${(ativ as any).creator.first_name} ${(ativ as any).creator.last_name}` : 'N/A',
   }));
-};
-
-export const createAtividadeComite = async (
-  ata_reuniao_id: string,
-  titulo: string,
-  descricao: string | null,
-  due_date: string | null,
-  status: 'todo' | 'in_progress' | 'done' | 'stopped',
-  assignee_id: string | null,
-  created_by: string
-): Promise<AtividadeComite | null> => {
-  const { data, error } = await supabase
-    .from('atividades_comite')
-    .insert({ ata_reuniao_id, titulo, descricao, due_date, status, assignee_id, created_by })
-    .select(`
-      *,
-      assignee:usuarios!assignee_id(first_name, last_name),
-      creator:usuarios!created_by(first_name, last_name)
-    `)
-    .single();
-
-  if (error) {
-    console.error('Error creating committee activity:', error.message);
-    showError(`Erro ao criar atividade do comitê: ${error.message}`);
-    return null;
-  }
-  showSuccess('Atividade do comitê criada com sucesso!');
-  return {
-    ...data,
-    assignee_name: (data as any).assignee ? `${(data as any).assignee.first_name} ${(data as any).assignee.last_name}` : 'N/A',
-    created_by_name: (data as any).creator ? `${(data as any).creator.first_name} ${(data as any).creator.last_name}` : 'N/A',
-  };
-};
-
-export const updateAtividadeComite = async (
-  id: string,
-  titulo: string,
-  descricao: string | null,
-  due_date: string | null,
-  status: 'todo' | 'in_progress' | 'done' | 'stopped',
-  assignee_id: string | null
-): Promise<AtividadeComite | null> => {
-  const { data, error } = await supabase
-    .from('atividades_comite')
-    .update({ titulo, descricao, due_date, status, assignee_id, updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select(`
-      *,
-      assignee:usuarios!assignee_id(first_name, last_name),
-      creator:usuarios!created_by(first_name, last_name)
-    `)
-    .single();
-
-  if (error) {
-    console.error('Error updating committee activity:', error.message);
-    showError(`Erro ao atualizar atividade do comitê: ${error.message}`);
-    return null;
-  }
-  showSuccess('Atividade do comitê atualizada com sucesso!');
-  return {
-    ...data,
-    assignee_name: (data as any).assignee ? `${(data as any).assignee.first_name} ${(data as any).assignee.last_name}` : 'N/A',
-    created_by_name: (data as any).creator ? `${(data as any).creator.first_name} ${(data as any).creator.last_name}` : 'N/A',
-  };
-};
-
-export const deleteAtividadeComite = async (id: string): Promise<boolean> => {
-  const { error } = await supabase.from('atividades_comite').delete().eq('id', id);
-  if (error) {
-    console.error('Error deleting committee activity:', error.message);
-    showError(`Erro ao excluir atividade do comitê: ${error.message}`);
-    return false;
-  }
-  showSuccess('Atividade do comitê excluída com sucesso!');
-  return true;
 };

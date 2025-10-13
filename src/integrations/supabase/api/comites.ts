@@ -51,43 +51,127 @@ export const getComiteById = async (id: string): Promise<Comite | null> => {
 export const createComite = async (
   nome: string,
   descricao: string | null,
-  status: 'active' | 'archived' = 'active'
+  status: 'active' | 'archived' = 'active',
+  members: { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[] = []
 ): Promise<Comite | null> => {
-  const { data, error } = await supabase
+  const { data: comiteData, error: comiteError } = await supabase
     .from('comites')
     .insert({ nome, descricao, status })
     .select()
     .single();
 
-  if (error) {
-    console.error('Error creating comite:', error.message);
-    showError(`Erro ao criar comitê: ${error.message}`);
+  if (comiteError) {
+    console.error('Error creating comite:', comiteError.message);
+    showError(`Erro ao criar comitê: ${comiteError.message}`);
     return null;
   }
+
+  if (comiteData && members.length > 0) {
+    const membersToInsert = members.map(member => ({
+      comite_id: comiteData.id,
+      user_id: member.user_id,
+      role: member.role,
+    }));
+    const { error: membersError } = await supabase
+      .from('comite_membros')
+      .insert(membersToInsert);
+
+    if (membersError) {
+      console.error('Error adding committee members:', membersError.message);
+      showError(`Erro ao adicionar membros ao comitê: ${membersError.message}`);
+      // Optionally, roll back committee creation if members are essential
+      await deleteComite(comiteData.id);
+      return null;
+    }
+  }
+
   showSuccess('Comitê criado com sucesso!');
-  return data;
+  return comiteData;
 };
 
 export const updateComite = async (
   id: string,
   nome: string,
   descricao: string | null,
-  status: 'active' | 'archived'
+  status: 'active' | 'archived',
+  members: { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[] = []
 ): Promise<Comite | null> => {
-  const { data, error } = await supabase
+  const { data: comiteData, error: comiteError } = await supabase
     .from('comites')
     .update({ nome, descricao, status, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single();
 
-  if (error) {
-    console.error('Error updating comite:', error.message);
-    showError(`Erro ao atualizar comitê: ${error.message}`);
+  if (comiteError) {
+    console.error('Error updating comite:', comiteError.message);
+    showError(`Erro ao atualizar comitê: ${comiteError.message}`);
     return null;
   }
+
+  // Update members
+  const { data: currentMembers, error: fetchMembersError } = await supabase
+    .from('comite_membros')
+    .select('user_id, role')
+    .eq('comite_id', id);
+
+  if (fetchMembersError) {
+    console.error('Error fetching current committee members:', fetchMembersError.message);
+    showError(`Erro ao carregar membros atuais do comitê: ${fetchMembersError.message}`);
+    return null;
+  }
+
+  const currentMemberIds = new Set(currentMembers.map(m => m.user_id));
+  const newMemberIds = new Set(members.map(m => m.user_id));
+
+  const membersToAdd = members.filter(m => !currentMemberIds.has(m.user_id));
+  const membersToUpdate = members.filter(m => currentMemberIds.has(m.user_id) &&
+    currentMembers.find(cm => cm.user_id === m.user_id)?.role !== m.role
+  );
+  const membersToRemove = currentMembers.filter(m => !newMemberIds.has(m.user_id));
+
+  // Add new members
+  if (membersToAdd.length > 0) {
+    const { error: addError } = await supabase
+      .from('comite_membros')
+      .insert(membersToAdd.map(m => ({ comite_id: id, user_id: m.user_id, role: m.role })));
+    if (addError) {
+      console.error('Error adding new members:', addError.message);
+      showError(`Erro ao adicionar novos membros: ${addError.message}`);
+      return null;
+    }
+  }
+
+  // Update existing members' roles
+  for (const member of membersToUpdate) {
+    const { error: updateRoleError } = await supabase
+      .from('comite_membros')
+      .update({ role: member.role })
+      .eq('comite_id', id)
+      .eq('user_id', member.user_id);
+    if (updateRoleError) {
+      console.error('Error updating member role:', updateRoleError.message);
+      showError(`Erro ao atualizar função do membro: ${updateRoleError.message}`);
+      return null;
+    }
+  }
+
+  // Remove old members
+  if (membersToRemove.length > 0) {
+    const { error: removeError } = await supabase
+      .from('comite_membros')
+      .delete()
+      .eq('comite_id', id)
+      .in('user_id', membersToRemove.map(m => m.user_id));
+    if (removeError) {
+      console.error('Error removing old members:', removeError.message);
+      showError(`Erro ao remover membros antigos: ${removeError.message}`);
+      return null;
+    }
+  }
+
   showSuccess('Comitê atualizado com sucesso!');
-  return data;
+  return comiteData;
 };
 
 export const deleteComite = async (id: string): Promise<boolean> => {

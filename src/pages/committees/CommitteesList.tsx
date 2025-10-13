@@ -1,4 +1,3 @@
-/// <reference types="react" />
 "use client";
 
 import React from "react";
@@ -24,45 +23,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { getComites, createComite, updateComite, deleteComite, Comite } from "@/integrations/supabase/api/comites";
+import { getComites, createComite, updateComite, deleteComite, Comite, getComiteMembers, ComiteMember } from "@/integrations/supabase/api/comites";
 import { showSuccess, showError } from "@/utils/toast";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { Link } from "react-router-dom";
-
-// Placeholder for CommitteeForm (will be created in a later step)
-interface CommitteeFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (values: any) => void;
-  initialData?: Comite | null;
-  isLoading?: boolean;
-}
-const CommitteeForm: React.FC<CommitteeFormProps> = ({ open, onOpenChange, onSubmit, initialData, isLoading }) => {
-  // This is a placeholder. Actual form implementation will come later.
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{initialData ? "Editar Comitê" : "Criar Novo Comitê"}</AlertDialogTitle>
-          <AlertDialogDescription>
-            Formulário de comitê em desenvolvimento.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <Button onClick={() => {
-            onSubmit({ nome: "Novo Comitê", descricao: "Descrição", status: "active" });
-            onOpenChange(false);
-          }} disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {isLoading ? "Salvando..." : "Salvar (Placeholder)"}
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-};
-
+import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm"; // Importar o novo formulário
 
 const CommitteesList = () => {
   const queryClient = useQueryClient();
@@ -75,6 +40,7 @@ const CommitteesList = () => {
 
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingComite, setEditingComite] = React.useState<Comite | null>(null);
+  const [editingComiteMembers, setEditingComiteMembers] = React.useState<ComiteMember[] | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [comiteToDelete, setComiteToDelete] = React.useState<string | null>(null);
 
@@ -85,8 +51,13 @@ const CommitteesList = () => {
   });
 
   const createComiteMutation = useMutation({
-    mutationFn: (values: { nome: string; descricao: string | null; status: 'active' | 'archived' }) =>
-      createComite(values.nome, values.descricao, values.status),
+    mutationFn: (values: CommitteeFormValues) =>
+      createComite(
+        values.nome,
+        values.descricao,
+        values.status,
+        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[]
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comites"] });
       setIsFormOpen(false);
@@ -97,12 +68,20 @@ const CommitteesList = () => {
   });
 
   const updateComiteMutation = useMutation({
-    mutationFn: ({ id, nome, descricao, status }: { id: string; nome: string; descricao: string | null; status: 'active' | 'archived' }) =>
-      updateComite(id, nome, descricao, status),
-    onSuccess: () => {
+    mutationFn: ({ id, ...values }: CommitteeFormValues & { id: string }) =>
+      updateComite(
+        id,
+        values.nome,
+        values.descricao,
+        values.status,
+        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[]
+      ),
+    onSuccess: (data, variables) => { // Adicionado 'variables' aqui
       queryClient.invalidateQueries({ queryKey: ["comites"] });
+      queryClient.invalidateQueries({ queryKey: ["comiteMembers", variables.id] }); // Usando variables.id
       setIsFormOpen(false);
       setEditingComite(null);
+      setEditingComiteMembers(null);
     },
     onError: (err) => {
       showError(`Erro ao atualizar comitê: ${err.message}`);
@@ -121,7 +100,7 @@ const CommitteesList = () => {
     },
   });
 
-  const handleCreateOrUpdateComite = (values: any) => { // 'any' because CommitteeForm is a placeholder
+  const handleCreateOrUpdateComite = (values: CommitteeFormValues) => {
     if (editingComite) {
       updateComiteMutation.mutate({ id: editingComite.id, ...values });
     } else {
@@ -129,8 +108,11 @@ const CommitteesList = () => {
     }
   };
 
-  const handleEditClick = (comite: Comite) => {
+  const handleEditClick = async (comite: Comite) => {
     setEditingComite(comite);
+    // Fetch members for the committee being edited
+    const members = await getComiteMembers(comite.id);
+    setEditingComiteMembers(members);
     setIsFormOpen(true);
   };
 
@@ -177,7 +159,7 @@ const CommitteesList = () => {
             <GitCommit className="mr-2 h-6 w-6" /> Gestão de Comitês
           </CardTitle>
           {canInsertComites && (
-            <Button onClick={() => { setEditingComite(null); setIsFormOpen(true); }}>
+            <Button onClick={() => { setEditingComite(null); setEditingComiteMembers(null); setIsFormOpen(true); }}>
               <PlusCircle className="mr-2 h-4 w-4" /> Novo Comitê
             </Button>
           )}
@@ -248,6 +230,7 @@ const CommitteesList = () => {
           onOpenChange={setIsFormOpen}
           onSubmit={handleCreateOrUpdateComite}
           initialData={editingComite}
+          initialMembers={editingComiteMembers}
           isLoading={createComiteMutation.isPending || updateComiteMutation.isPending}
         />
       )}

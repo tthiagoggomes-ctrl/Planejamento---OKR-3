@@ -5,7 +5,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, GitCommit, Users, CalendarDays, MessageSquare, ListTodo, PlusCircle, Edit, Trash2, ChevronDown, ChevronUp } from "lucide-react";
-import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integrations/supabase/api/comites";
+import { getComiteById, getComiteMembers, Comite, ComiteMember, updateComite } from "@/integrations/supabase/api/comites"; // Importar updateComite
 import { getReunioesByComiteId, Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
 import { AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
 import { getAtividadesComiteByAtaId, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
@@ -31,7 +31,8 @@ import {
 import { AtaReuniaoForm, AtaReuniaoFormValues } from "@/components/forms/AtaReuniaoForm";
 import { ReuniaoForm, ReuniaoFormValues } from "@/components/forms/ReuniaoForm";
 import { EnqueteForm, EnqueteFormValues, EnqueteSubmitValues } from "@/components/forms/EnqueteForm";
-import { MeetingCalendar } from "@/components/committees/MeetingCalendar"; // Corrigido: Importação do componente MeetingCalendar
+import { MeetingCalendar } from "@/components/committees/MeetingCalendar";
+import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm"; // Importar CommitteeForm
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -60,13 +61,16 @@ const CommitteeDetails = () => {
   const [expandedMeetings, setExpandedMeetings] = React.useState<Set<string>>(new Set());
   const [expandedMinutes, setExpandedMinutes] = React.useState<Set<string>>(new Set());
 
+  // State for CommitteeForm (for managing members)
+  const [isCommitteeFormOpen, setIsCommitteeFormOpen] = React.useState(false);
+
   // State for Reuniao Form
   const [isReuniaoFormOpen, setIsReuniaoFormOpen] = React.useState(false);
   const [editingReuniao, setEditingReuniao] = React.useState<Reuniao | null>(null);
   const [isReuniaoDeleteDialogOpen, setIsReuniaoDeleteDialogOpen] = React.useState(false);
   const [reuniaoToDelete, setReuniaoToDelete] = React.useState<string | null>(null);
 
-  // NEW: State for Recurring Meeting Delete Confirmation
+  // State for Recurring Meeting Delete Confirmation
   const [isDeleteRecurringDialogOpen, setIsDeleteRecurringDialogOpen] = React.useState(false);
   const [recurringMeetingToDelete, setRecurringMeetingToDelete] = React.useState<Reuniao | null>(null);
   const [deleteRecurringOption, setDeleteRecurringOption] = React.useState<'single' | 'series'>('single');
@@ -151,6 +155,37 @@ const CommitteeDetails = () => {
     queryFn: () => getEnquetesByComiteId(id!),
     enabled: !!id && canViewEnquetes && !permissionsLoading,
   });
+
+  // Mutations for Committee (for members management)
+  const updateComiteMutation = useMutation({
+    mutationFn: ({ id: comiteId, ...values }: CommitteeFormValues & { id: string }) => {
+      if (!canManageComiteMembers) {
+        throw new Error("Você não tem permissão para gerenciar membros do comitê.");
+      }
+      return updateComite(
+        comiteId,
+        values.nome,
+        values.descricao,
+        values.status,
+        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[]
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["comite", id] }); // Invalidate committee details
+      queryClient.invalidateQueries({ queryKey: ["comiteMembers", id] }); // Invalidate members list
+      setIsCommitteeFormOpen(false);
+      showSuccess("Membros do comitê atualizados com sucesso!");
+    },
+    onError: (err) => {
+      showError(`Erro ao atualizar membros do comitê: ${err.message}`);
+    },
+  });
+
+  const handleUpdateComiteMembers = (values: CommitteeFormValues) => {
+    if (comite) {
+      updateComiteMutation.mutate({ id: comite.id, ...values });
+    }
+  };
 
   // Mutations for Reuniao
   const createReuniaoMutation = useMutation({
@@ -533,7 +568,7 @@ const CommitteeDetails = () => {
               <Users className="mr-2 h-5 w-5" /> Membros ({members?.length || 0})
             </CardTitle>
             {canManageComiteMembers && (
-              <Button size="sm" variant="outline">
+              <Button size="sm" variant="outline" onClick={() => setIsCommitteeFormOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Gerenciar Membros
               </Button>
             )}
@@ -769,6 +804,18 @@ const CommitteeDetails = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Committee Form (for managing members) */}
+      {canManageComiteMembers && comite && (
+        <CommitteeForm
+          open={isCommitteeFormOpen}
+          onOpenChange={setIsCommitteeFormOpen}
+          onSubmit={handleUpdateComiteMembers}
+          initialData={comite}
+          initialMembers={members}
+          isLoading={updateComiteMutation.isPending}
+        />
+      )}
 
       {/* Reuniao Form */}
       {(canInsertReunioes || canEditReunioes) && (

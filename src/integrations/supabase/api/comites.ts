@@ -196,7 +196,7 @@ export const getComiteMembers = async (comite_id: string): Promise<ComiteMember[
 
   if (error) {
     console.error('Error fetching committee members:', error.message);
-    showError('Erro ao carregar membros do comitê.');
+    // Do NOT show a toast here, let the UI handle the error display
     return null;
   }
 

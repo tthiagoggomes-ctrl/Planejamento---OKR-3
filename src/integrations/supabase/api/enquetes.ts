@@ -86,7 +86,7 @@ export const createEnquete = async (
     return null;
   }
 
-  if (opcoes_texto.length > 0) {
+  if (enqueteData && opcoes_texto.length > 0) { // Verificação adicionada para enqueteData
     const opcoesToInsert = opcoes_texto.map(texto_opcao => ({
       enquete_id: enqueteData.id,
       texto_opcao,
@@ -113,22 +113,69 @@ export const updateEnquete = async (
   titulo: string,
   descricao: string | null,
   start_date: string,
-  end_date: string
+  end_date: string,
+  opcoes_texto: string[] // NEW: Add options to update
 ): Promise<Enquete | null> => {
-  const { data, error } = await supabase
+  const { data: enqueteData, error: enqueteError } = await supabase
     .from('enquetes')
     .update({ titulo, descricao, start_date, end_date, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single();
 
-  if (error) {
-    console.error('Error updating poll:', error.message);
-    showError(`Erro ao atualizar enquete: ${error.message}`);
+  if (enqueteError) {
+    console.error('Error updating poll:', enqueteError.message);
+    showError(`Erro ao atualizar enquete: ${enqueteError.message}`);
     return null;
   }
+
+  // Handle options update
+  // Fetch current options
+  const { data: currentOptions, error: fetchOptionsError } = await supabase
+    .from('opcoes_enquete')
+    .select('id, texto_opcao')
+    .eq('enquete_id', id);
+
+  if (fetchOptionsError) {
+    console.error('Error fetching current poll options:', fetchOptionsError.message);
+    showError(`Erro ao carregar opções atuais da enquete: ${fetchOptionsError.message}`);
+    return null;
+  }
+
+  const currentOptionsMap = new Map(currentOptions.map(opt => [opt.texto_opcao, opt.id]));
+  const newOptionsSet = new Set(opcoes_texto);
+
+  const optionsToAdd = opcoes_texto.filter(optText => !currentOptionsMap.has(optText));
+  const optionsToRemove = currentOptions.filter(opt => !newOptionsSet.has(opt.texto_opcao));
+
+  // Add new options
+  if (optionsToAdd.length > 0) {
+    const { error: addError } = await supabase
+      .from('opcoes_enquete')
+      .insert(optionsToAdd.map(texto_opcao => ({ enquete_id: id, texto_opcao })));
+    if (addError) {
+      console.error('Error adding new poll options:', addError.message);
+      showError(`Erro ao adicionar novas opções da enquete: ${addError.message}`);
+      return null;
+    }
+  }
+
+  // Remove old options
+  if (optionsToRemove.length > 0) {
+    const { error: removeError } = await supabase
+      .from('opcoes_enquete')
+      .delete()
+      .eq('enquete_id', id)
+      .in('id', optionsToRemove.map(opt => opt.id));
+    if (removeError) {
+      console.error('Error removing old poll options:', removeError.message);
+      showError(`Erro ao remover opções antigas da enquete: ${removeError.message}`);
+      return null;
+    }
+  }
+
   showSuccess('Enquete atualizada com sucesso!');
-  return data;
+  return enqueteData;
 };
 
 export const deleteEnquete = async (id: string): Promise<boolean> => {

@@ -9,15 +9,15 @@ import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integra
 import { getReunioesByComiteId, Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
 import { getAtasReuniaoByReuniaoId, AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { getAtividadesComiteByAtaId, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
-import { getEnquetesByComiteId, Enquete } from "@/integrations/supabase/api/enquetes";
+import { getEnquetesByComiteId, Enquete, createEnquete, updateEnquete, deleteEnquete } from "@/integrations/supabase/api/enquetes"; // Adicionado createEnquete, updateEnquete, deleteEnquete
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
-import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
-import { showError, showSuccess } from "@/utils/toast"; // Import toast functions
+import { useSession } from "@/components/auth/SessionContextProvider";
+import { showError, showSuccess } from "@/utils/toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,13 +28,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AtaReuniaoForm, AtaReuniaoFormValues } from "@/components/forms/AtaReuniaoForm"; // Import AtaReuniaoForm
+import { AtaReuniaoForm, AtaReuniaoFormValues } from "@/components/forms/AtaReuniaoForm";
+import { ReuniaoForm, ReuniaoFormValues } from "@/components/forms/ReuniaoForm";
+import { EnqueteForm, EnqueteFormValues } from "@/components/forms/EnqueteForm"; // Adicionado EnqueteForm e EnqueteFormValues
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
-  const { user } = useSession(); // Get current user for created_by
+  const { user } = useSession();
 
   const canViewComiteDetails = can('comites', 'view');
   const canManageComiteMembers = can('comite_membros', 'manage');
@@ -48,10 +50,20 @@ const CommitteeDetails = () => {
   const canDeleteAtasReuniao = can('atas_reuniao', 'delete');
   const canViewAtividadesComite = can('atividades_comite', 'view');
   const canViewEnquetes = can('enquetes', 'view');
+  const canInsertEnquetes = can('enquetes', 'insert');
+  const canEditEnquetes = can('enquetes', 'edit');
+  const canDeleteEnquetes = can('enquetes', 'delete');
   const canViewVotosEnquete = can('votos_enquete', 'view');
+  const canVoteEnquete = can('votos_enquete', 'vote');
 
   const [expandedMeetings, setExpandedMeetings] = React.useState<Set<string>>(new Set());
   const [expandedMinutes, setExpandedMinutes] = React.useState<Set<string>>(new Set());
+
+  // State for Reuniao Form
+  const [isReuniaoFormOpen, setIsReuniaoFormOpen] = React.useState(false);
+  const [editingReuniao, setEditingReuniao] = React.useState<Reuniao | null>(null);
+  const [isReuniaoDeleteDialogOpen, setIsReuniaoDeleteDialogOpen] = React.useState(false);
+  const [reuniaoToDelete, setReuniaoToDelete] = React.useState<string | null>(null);
 
   // State for AtaReuniao Form
   const [isAtaFormOpen, setIsAtaFormOpen] = React.useState(false);
@@ -59,6 +71,12 @@ const CommitteeDetails = () => {
   const [selectedMeetingForAta, setSelectedMeetingForAta] = React.useState<Reuniao | null>(null);
   const [isAtaDeleteDialogOpen, setIsAtaDeleteDialogOpen] = React.useState(false);
   const [ataToDelete, setAtaToDelete] = React.useState<string | null>(null);
+
+  // State for Enquete Form
+  const [isEnqueteFormOpen, setIsEnqueteFormOpen] = React.useState(false);
+  const [editingEnquete, setEditingEnquete] = React.useState<Enquete | null>(null);
+  const [isEnqueteDeleteDialogOpen, setIsEnqueteDeleteDialogOpen] = React.useState(false);
+  const [enqueteToDelete, setEnqueteToDelete] = React.useState<string | null>(null);
 
   const { data: comite, isLoading: isLoadingComite, error: errorComite } = useQuery<Comite | null, Error>({
     queryKey: ["comite", id],
@@ -69,8 +87,20 @@ const CommitteeDetails = () => {
   const { data: members, isLoading: isLoadingMembers, error: errorMembers } = useQuery<ComiteMember[] | null, Error>({
     queryKey: ["comiteMembers", id],
     queryFn: () => getComiteMembers(id!),
-    enabled: !!id && canViewComiteDetails && !permissionsLoading, // Members are part of committee details view
+    enabled: !!id && canViewComiteDetails && !permissionsLoading,
   });
+
+  // Log para depuração de membros
+  React.useEffect(() => {
+    if (errorMembers) {
+      console.error("Erro ao carregar membros do comitê (query):", errorMembers);
+      showError(`Erro ao carregar membros do comitê: ${errorMembers.message}`);
+    }
+    if (members) {
+      console.log("Membros carregados:", members);
+    }
+  }, [members, errorMembers]);
+
 
   const { data: meetings, isLoading: isLoadingMeetings, error: errorMeetings } = useQuery<Reuniao[] | null, Error>({
     queryKey: ["reunioes", id],
@@ -114,6 +144,92 @@ const CommitteeDetails = () => {
     queryFn: () => getEnquetesByComiteId(id!),
     enabled: !!id && canViewEnquetes && !permissionsLoading,
   });
+
+  // Mutations for Reuniao
+  const createReuniaoMutation = useMutation({
+    mutationFn: (values: ReuniaoFormValues) => {
+      if (!user?.id || !id) {
+        throw new Error("User not authenticated or committee ID not available.");
+      }
+      if (!canInsertReunioes) {
+        throw new Error("Você não tem permissão para agendar reuniões.");
+      }
+      return createReuniao(id, values.titulo, values.data_reuniao.toISOString(), values.local, user.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reunioes"] });
+      setIsReuniaoFormOpen(false);
+      showSuccess("Reunião agendada com sucesso!");
+    },
+    onError: (err) => {
+      showError(`Erro ao agendar reunião: ${err.message}`);
+    },
+  });
+
+  const updateReuniaoMutation = useMutation({
+    mutationFn: ({ id: reuniaoId, ...values }: ReuniaoFormValues & { id: string }) => {
+      if (!canEditReunioes) {
+        throw new Error("Você não tem permissão para editar reuniões.");
+      }
+      return updateReuniao(reuniaoId, values.titulo, values.data_reuniao.toISOString(), values.local);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reunioes"] });
+      setIsReuniaoFormOpen(false);
+      setEditingReuniao(null);
+      showSuccess("Reunião atualizada com sucesso!");
+    },
+    onError: (err) => {
+      showError(`Erro ao atualizar reunião: ${err.message}`);
+    },
+  });
+
+  const deleteReuniaoMutation = useMutation({
+    mutationFn: (reuniaoId: string) => {
+      if (!canDeleteReunioes) {
+        throw new Error("Você não tem permissão para excluir reuniões.");
+      }
+      return deleteReuniao(reuniaoId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reunioes"] });
+      setIsReuniaoDeleteDialogOpen(false);
+      setReuniaoToDelete(null);
+      showSuccess("Reunião excluída com sucesso!");
+    },
+    onError: (err) => {
+      showError(`Erro ao excluir reunião: ${err.message}`);
+    },
+  });
+
+  const handleCreateOrUpdateReuniao = (values: ReuniaoFormValues) => {
+    if (editingReuniao) {
+      updateReuniaoMutation.mutate({ id: editingReuniao.id, ...values });
+    } else {
+      createReuniaoMutation.mutate(values);
+    }
+  };
+
+  const handleAddReuniaoClick = () => {
+    setEditingReuniao(null);
+    setIsReuniaoFormOpen(true);
+  };
+
+  const handleEditReuniaoClick = (reuniao: Reuniao) => {
+    setEditingReuniao(reuniao);
+    setIsReuniaoFormOpen(true);
+  };
+
+  const handleDeleteReuniaoClick = (reuniaoId: string) => {
+    setReuniaoToDelete(reuniaoId);
+    setIsReuniaoDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteReuniao = () => {
+    if (reuniaoToDelete) {
+      deleteReuniaoMutation.mutate(reuniaoToDelete);
+    }
+  };
 
   // Mutations for AtaReuniao
   const createAtaReuniaoMutation = useMutation({
@@ -200,6 +316,107 @@ const CommitteeDetails = () => {
   const confirmDeleteAta = () => {
     if (ataToDelete) {
       deleteAtaReuniaoMutation.mutate(ataToDelete);
+    }
+  };
+
+  // Mutations for Enquetes
+  const createEnqueteMutation = useMutation({
+    mutationFn: (values: EnqueteFormValues) => {
+      if (!user?.id || !id) {
+        throw new Error("User not authenticated or committee ID not available.");
+      }
+      if (!canInsertEnquetes) {
+        throw new Error("Você não tem permissão para criar enquetes.");
+      }
+      return createEnquete(
+        id,
+        values.titulo,
+        values.descricao,
+        values.start_date.toISOString(),
+        values.end_date.toISOString(),
+        user.id,
+        values.opcoes_texto || []
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["enquetes"] });
+      setIsEnqueteFormOpen(false);
+      showSuccess("Enquete criada com sucesso!");
+    },
+    onError: (err) => {
+      showError(`Erro ao criar enquete: ${err.message}`);
+    },
+  });
+
+  const updateEnqueteMutation = useMutation({
+    mutationFn: ({ id: enqueteId, ...values }: EnqueteFormValues & { id: string }) => {
+      if (!canEditEnquetes) {
+        throw new Error("Você não tem permissão para editar enquetes.");
+      }
+      return updateEnquete(
+        enqueteId,
+        values.titulo,
+        values.descricao,
+        values.start_date.toISOString(),
+        values.end_date.toISOString(),
+        values.opcoes_texto || [] // Pass options for update
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["enquetes"] });
+      setIsEnqueteFormOpen(false);
+      setEditingEnquete(null);
+      showSuccess("Enquete atualizada com sucesso!");
+    },
+    onError: (err) => {
+      showError(`Erro ao atualizar enquete: ${err.message}`);
+    },
+  });
+
+  const deleteEnqueteMutation = useMutation({
+    mutationFn: (enqueteId: string) => {
+      if (!canDeleteEnquetes) {
+        throw new Error("Você não tem permissão para excluir enquetes.");
+      }
+      return deleteEnquete(enqueteId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["enquetes"] });
+      setIsEnqueteDeleteDialogOpen(false);
+      setEnqueteToDelete(null);
+      showSuccess("Enquete excluída com sucesso!");
+    },
+    onError: (err) => {
+      showError(`Erro ao excluir enquete: ${err.message}`);
+    },
+  });
+
+  const handleCreateOrUpdateEnquete = (values: EnqueteFormValues) => {
+    if (editingEnquete) {
+      updateEnqueteMutation.mutate({ id: editingEnquete.id, ...values });
+    } else {
+      createEnqueteMutation.mutate(values);
+    }
+  };
+
+  const handleAddEnqueteClick = () => {
+    setEditingEnquete(null);
+    setIsEnqueteFormOpen(true);
+  };
+
+  const handleEditEnqueteClick = (enquete: Enquete) => {
+    setEditingEnquete(enquete);
+    setIsEnqueteFormOpen(true);
+  };
+
+  const handleDeleteEnqueteClick = (enqueteId: string) => {
+    setEnqueteToDelete(enqueteId);
+    setIsEnqueteDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteEnquete = () => {
+    if (enqueteToDelete) {
+      deleteEnqueteMutation.mutate(enqueteToDelete);
     }
   };
 
@@ -292,7 +509,7 @@ const CommitteeDetails = () => {
             {isLoadingMembers ? (
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             ) : errorMembers ? (
-              <p className="text-red-500">Erro ao carregar membros.</p>
+              <p className="text-red-500">Erro ao carregar membros: {errorMembers.message}</p>
             ) : members && members.length > 0 ? (
               <ul className="space-y-2">
                 {members.map(member => (
@@ -318,7 +535,7 @@ const CommitteeDetails = () => {
               <CalendarDays className="mr-2 h-5 w-5" /> Reuniões ({meetings?.length || 0})
             </CardTitle>
             {canInsertReunioes && (
-              <Button size="sm" variant="outline">
+              <Button size="sm" variant="outline" onClick={handleAddReuniaoClick}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Agendar Reunião
               </Button>
             )}
@@ -327,16 +544,28 @@ const CommitteeDetails = () => {
             {isLoadingMeetings ? (
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             ) : errorMeetings ? (
-              <p className="text-red-500">Erro ao carregar reuniões.</p>
+              <p className="text-red-500">Erro ao carregar reuniões: {errorMeetings.message}</p>
             ) : meetings && meetings.length > 0 ? (
               <div className="space-y-4">
                 {meetings.map(meeting => (
                   <div key={meeting.id} className="border rounded-md p-3">
                     <div className="flex justify-between items-center">
                       <h3 className="font-semibold">{meeting.titulo}</h3>
-                      <Button variant="ghost" size="icon" onClick={() => toggleMeetingExpansion(meeting.id)}>
-                        {expandedMeetings.has(meeting.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        {canEditReunioes && (
+                          <Button variant="ghost" size="icon" onClick={() => handleEditReuniaoClick(meeting)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDeleteReunioes && (
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteReuniaoClick(meeting.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" onClick={() => toggleMeetingExpansion(meeting.id)}>
+                          {expandedMeetings.has(meeting.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
+                      </div>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {format(new Date(meeting.data_reuniao), "PPP 'às' HH:mm", { locale: ptBR })} - {meeting.local || 'Local não informado'}
@@ -437,8 +666,8 @@ const CommitteeDetails = () => {
             <CardTitle className="text-xl font-semibold flex items-center">
               <MessageSquare className="mr-2 h-5 w-5" /> Enquetes ({polls?.length || 0})
             </CardTitle>
-            {can('enquetes', 'insert') && (
-              <Button size="sm" variant="outline">
+            {canInsertEnquetes && (
+              <Button size="sm" variant="outline" onClick={handleAddEnqueteClick}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Criar Enquete
               </Button>
             )}
@@ -447,12 +676,26 @@ const CommitteeDetails = () => {
             {isLoadingPolls ? (
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             ) : errorPolls ? (
-              <p className="text-red-500">Erro ao carregar enquetes.</p>
+              <p className="text-red-500">Erro ao carregar enquetes: {errorPolls.message}</p>
             ) : polls && polls.length > 0 ? (
               <div className="space-y-4">
                 {polls.map(poll => (
                   <div key={poll.id} className="border rounded-md p-3">
-                    <h3 className="font-semibold text-lg">{poll.titulo}</h3>
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="font-semibold text-lg">{poll.titulo}</h3>
+                      <div className="flex items-center gap-2">
+                        {canEditEnquetes && (
+                          <Button variant="ghost" size="icon" onClick={() => handleEditEnqueteClick(poll)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDeleteEnquetes && (
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteEnqueteClick(poll.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                     <p className="text-sm text-muted-foreground">{poll.descricao}</p>
                     <p className="text-xs text-muted-foreground">
                       Período: {format(new Date(poll.start_date), "PPP", { locale: ptBR })} - {format(new Date(poll.end_date), "PPP", { locale: ptBR })}
@@ -473,7 +716,7 @@ const CommitteeDetails = () => {
                             </div>
                           ))}
                         </div>
-                        {can('votos_enquete', 'vote') && (
+                        {canVoteEnquete && (
                           <Button size="sm" className="mt-3">Votar</Button>
                         )}
                       </div>
@@ -487,6 +730,38 @@ const CommitteeDetails = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Reuniao Form */}
+      {(canInsertReunioes || canEditReunioes) && (
+        <ReuniaoForm
+          open={isReuniaoFormOpen}
+          onOpenChange={setIsReuniaoFormOpen}
+          onSubmit={handleCreateOrUpdateReuniao}
+          initialData={editingReuniao}
+          isLoading={createReuniaoMutation.isPending || updateReuniaoMutation.isPending}
+        />
+      )}
+
+      {/* Reuniao Delete Confirmation */}
+      {canDeleteReunioes && (
+        <AlertDialog open={isReuniaoDeleteDialogOpen} onOpenChange={setIsReuniaoDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente a reunião selecionada e todas as atas e atividades do comitê associadas a ela.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteReuniao} disabled={deleteReuniaoMutation.isPending}>
+                {deleteReuniaoMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {deleteReuniaoMutation.isPending ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
       {/* AtaReuniao Form */}
       {(canInsertAtasReuniao || canEditAtasReuniao) && (
@@ -514,6 +789,38 @@ const CommitteeDetails = () => {
               <AlertDialogAction onClick={confirmDeleteAta} disabled={deleteAtaReuniaoMutation.isPending}>
                 {deleteAtaReuniaoMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {deleteAtaReuniaoMutation.isPending ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {/* Enquete Form */}
+      {(canInsertEnquetes || canEditEnquetes) && (
+        <EnqueteForm
+          open={isEnqueteFormOpen}
+          onOpenChange={setIsEnqueteFormOpen}
+          onSubmit={handleCreateOrUpdateEnquete}
+          initialData={editingEnquete}
+          isLoading={createEnqueteMutation.isPending || updateEnqueteMutation.isPending}
+        />
+      )}
+
+      {/* Enquete Delete Confirmation */}
+      {canDeleteEnquetes && (
+        <AlertDialog open={isEnqueteDeleteDialogOpen} onOpenChange={setIsEnqueteDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente a enquete selecionada e todas as suas opções e votos.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteEnquete} disabled={deleteEnqueteMutation.isPending}>
+                {deleteEnqueteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {deleteEnqueteMutation.isPending ? "Excluindo..." : "Excluir"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

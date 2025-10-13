@@ -776,17 +776,21 @@ const CommitteeDetails = () => {
                     </p>
                     <p className="text-xs text-muted-foreground">Criado por: {poll.created_by_name}</p>
 
+                    {/* Temporarily display vote counts as 0 */}
                     {canViewVotosEnquete && poll.opcoes && poll.opcoes.length > 0 && (
                       <div className="mt-3 pt-3 border-t">
-                        <h4 className="font-medium mb-2">Resultados da Votação ({poll.total_votes} votos)</h4>
+                        <h4 className="font-medium mb-2">Resultados da Votação (0 votos)</h4>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          (Contagem de votos desabilitada temporariamente para depuração. Todas as opções terão 0 votos.)
+                        </p>
                         <div className="space-y-2">
                           {poll.opcoes.map(option => (
                             <div key={option.id}>
                               <div className="flex justify-between text-sm">
                                 <span>{option.texto_opcao}</span>
-                                <span>{(poll.total_votes || 0) > 0 ? ((option.vote_count || 0) / poll.total_votes! * 100).toFixed(1) : 0}%</span>
+                                <span>0%</span>
                               </div>
-                              <Progress value={(poll.total_votes || 0) > 0 ? ((option.vote_count || 0) / poll.total_votes! * 100) : 0} className="h-2" />
+                              <Progress value={0} className="h-2" />
                             </div>
                           ))}
                         </div>

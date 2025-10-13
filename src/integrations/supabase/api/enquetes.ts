@@ -1,3 +1,5 @@
+"use client";
+
 import { supabase } from '../client';
 import { showError, showSuccess } from '@/utils/toast';
 
@@ -37,7 +39,7 @@ export const getEnquetesByComiteId = async (comite_id: string): Promise<Enquete[
     .select(`
       *,
       created_by_user:usuarios(first_name, last_name),
-      opcoes_enquete(id, texto_opcao, votos_enquete(id)) // Alterado para selecionar 'id' dos votos
+      opcoes_enquete(id, texto_opcao) // MODIFICADO: Removido votos_enquete(id) para depuração
     `)
     .eq('comite_id', comite_id)
     .order('created_at', { ascending: false });
@@ -53,9 +55,10 @@ export const getEnquetesByComiteId = async (comite_id: string): Promise<Enquete[
     const opcoes = enquete.opcoes_enquete.map((opcao: any) => ({
       id: opcao.id,
       texto_opcao: opcao.texto_opcao,
-      vote_count: opcao.votos_enquete ? opcao.votos_enquete.length : 0, // Contar no cliente
+      vote_count: 0, // Agora sempre 0, pois os votos não são buscados aqui
     }));
-    const totalVotes = opcoes.reduce((sum: number, op: OpcaoEnquete) => sum + (op.vote_count || 0), 0);
+    const totalVotes = 0; // Agora sempre 0
+    // const totalVotes = opcoes.reduce((sum: number, op: OpcaoEnquete) => sum + (op.vote_count || 0), 0);
 
     return {
       ...enquete, // Agora enquete é explicitamente 'any'

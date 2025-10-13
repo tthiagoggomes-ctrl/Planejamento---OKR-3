@@ -33,6 +33,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 interface FullAtaReuniao extends AtaReuniao {
   reuniao_titulo?: string;
   comite_nome?: string;
+  comite_id?: string; // Adicionado para facilitar a navegação
 }
 
 const MeetingMinutesList = () => {
@@ -74,6 +75,7 @@ const MeetingMinutesList = () => {
           ...ata,
           reuniao_titulo: meeting.titulo,
           comite_nome: comites?.find(c => c.id === meeting.comite_id)?.nome || 'N/A',
+          comite_id: meeting.comite_id, // Incluir o ID do comitê
         }));
       });
       const results = await Promise.all(minutesPromises);
@@ -87,8 +89,7 @@ const MeetingMinutesList = () => {
 
     if (comiteFilter !== 'all') {
       filtered = filtered.filter(ata => {
-        const meeting = allMeetings?.find(m => m.id === ata.reuniao_id);
-        return meeting?.comite_id === comiteFilter;
+        return ata.comite_id === comiteFilter;
       });
     }
 
@@ -265,11 +266,13 @@ const MeetingMinutesList = () => {
                     <TableCell>{ata.data_reuniao ? format(parseISO(ata.data_reuniao), "PPP", { locale: ptBR }) : 'N/A'}</TableCell>
                     <TableCell>{ata.created_by_name}</TableCell>
                     <TableCell className="text-right">
-                      <Link to={`/comites/${ata.reuniao_id}`} state={{ ataId: ata.id }}>
-                        <Button variant="ghost" size="sm">
-                          Ver Detalhes
-                        </Button>
-                      </Link>
+                      {ata.comite_id && ( // Renderizar o botão apenas se houver comite_id
+                        <Link to={`/comites/${ata.comite_id}`} state={{ ataId: ata.id }}>
+                          <Button variant="ghost" size="sm">
+                            Ver Detalhes
+                          </Button>
+                        </Link>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, GitCommit, Users, CalendarDays, MessageSquare, ListTodo, PlusCircle, Edit, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { getComiteById, getComiteMembers, Comite, ComiteMember, updateComite } from "@/integrations/supabase/api/comites";
 import { getReunioesByComiteId, Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
-import { AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao"; // Corrigido: Importando getAtasReuniaoByReuniaoId
-import { getAtividadesComiteByAtaId, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
+import { AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
+import { getAtividadesComite, AtividadeComite } from "@/integrations/supabase/api/atividades_comite"; // MODIFICADO: Usando a nova função getAtividadesComite
 import { getEnquetesByComiteId, Enquete, createEnquete, updateEnquete, deleteEnquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { Button } from "@/components/ui/button";
@@ -35,14 +35,14 @@ import { MeetingCalendar } from "@/components/committees/MeetingCalendar";
 import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { useLocation } from "react-router-dom"; // Import useLocation
+import { useLocation } from "react-router-dom";
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
   const { user } = useSession();
-  const location = useLocation(); // Initialize useLocation
+  const location = useLocation();
 
   const canViewComiteDetails = can('comites', 'view');
   const canManageComiteMembers = can('comite_membros', 'manage');
@@ -55,7 +55,7 @@ const CommitteeDetails = () => {
   const canEditAtasReuniao = can('atas_reuniao', 'edit');
   const canDeleteAtasReuniao = can('atas_reuniao', 'delete');
   const canViewAtividadesComite = can('atividades_comite', 'view');
-  const canInsertAtividadesComite = can('atividades_comite', 'insert');
+  const canInsertAtividadesComite = can('atividades_comite', 'insert'); // Mantido para o formulário de ata, mas o botão de 'Nova Atividade' será removido
   const canViewEnquetes = can('enquetes', 'view');
   const canInsertEnquetes = can('enquetes', 'insert');
   const canEditEnquetes = can('enquetes', 'edit');
@@ -116,7 +116,7 @@ const CommitteeDetails = () => {
       const currentMeetings = queryKey[1] as Reuniao[] | null;
       if (!currentMeetings) return new Map();
       const minutesPromises = currentMeetings.map(async (reuniao) => {
-        const minutes = await getAtasReuniaoByReuniaoId(reuniao.id); // Corrigido: Usando a função importada corretamente
+        const minutes = await getAtasReuniaoByReuniaoId(reuniao.id);
         return [reuniao.id, minutes || []] as [string, AtaReuniao[]];
       });
       const results = await Promise.all(minutesPromises);
@@ -132,7 +132,8 @@ const CommitteeDetails = () => {
       if (!currentMinutesMap) return new Map();
       const allMinutes = Array.from(currentMinutesMap.values()).flat();
       const activitiesPromises = allMinutes.map(async (ata) => {
-        const activities = await getAtividadesComiteByAtaId(ata.id);
+        // MODIFICADO: Usando a nova função getAtividadesComite com filtro por ata_reuniao_id
+        const activities = await getAtividadesComite({ ata_reuniao_id: ata.id });
         return [ata.id, activities || []] as [string, AtividadeComite[]];
       });
       const results = await Promise.all(activitiesPromises);
@@ -828,11 +829,12 @@ const CommitteeDetails = () => {
                                       <h5 className="font-medium flex items-center">
                                         <ListTodo className="mr-2 h-4 w-4" /> Atividades ({activitiesMap?.get(minutes.id)?.length || 0})
                                       </h5>
-                                      {canInsertAtividadesComite && (
+                                      {/* MODIFICADO: Botão de 'Nova Atividade' removido daqui */}
+                                      <Link to={`/comites/atividades`} state={{ comiteId: id, ataId: minutes.id }}>
                                         <Button size="sm" variant="outline">
-                                          <PlusCircle className="mr-2 h-4 w-4" /> Nova Atividade
+                                          <ListTodo className="mr-2 h-4 w-4" /> Gerenciar Atividades
                                         </Button>
-                                      )}
+                                      </Link>
                                     </div>
                                     {isLoadingActivities ? (
                                       <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -843,7 +845,7 @@ const CommitteeDetails = () => {
                                             <p className="font-normal">{activity.titulo}</p>
                                             <p className="text-xs text-muted-foreground">
                                               Responsável: {activity.assignee_name || 'N/A'} | Status: {activity.status}
-                                              {activity.due_date && ` | Vencimento: ${format(new Date(activity.due_date), "PPP", { locale: ptBR })}`}
+                                              {activity.due_date && ` | Vencimento: ${format(parseISO(activity.due_date), "PPP", { locale: ptBR })}`}
                                             </p>
                                           </li>
                                         ))}

@@ -3,17 +3,28 @@
 import React from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Atividade } from "@/integrations/supabase/api/atividades";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ListTodo, Hourglass, CheckCircle, Edit, Trash2, Kanban, StopCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { showError } from "@/utils/toast"; // Import showError
 
-interface KanbanBoardProps {
-  atividades: Atividade[];
-  onStatusChange: (atividadeId: string, newStatus: Atividade['status']) => void;
-  onEdit: (atividade: Atividade) => void;
+// Define a interface genérica para atividades que o KanbanBoard pode exibir
+interface GenericActivity {
+  id: string;
+  titulo: string;
+  status: 'todo' | 'in_progress' | 'done' | 'stopped';
+  assignee_name?: string;
+  due_date?: string | null;
+  // Adicione campos opcionais que podem ser usados para exibição, mas não são estritamente necessários para o drag-and-drop
+  key_result_title?: string; // Para atividades de planejamento estratégico
+  reuniao_titulo?: string; // Para atividades de comitê
+}
+
+interface KanbanBoardProps<T extends GenericActivity> {
+  atividades: T[];
+  onStatusChange: (atividadeId: string, newStatus: T['status']) => void;
+  onEdit: (atividade: T) => void;
   onDelete: (atividadeId: string) => void;
   // Novas props de permissão
   canEditAtividades: boolean;
@@ -21,7 +32,7 @@ interface KanbanBoardProps {
   canChangeActivityStatus: boolean;
 }
 
-type ColumnId = Atividade['status'];
+type ColumnId = GenericActivity['status'];
 
 interface Column {
   id: ColumnId;
@@ -57,7 +68,7 @@ const columns: Record<ColumnId, Column> = {
   },
 };
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({
+export const KanbanBoard = <T extends GenericActivity>({
   atividades,
   onStatusChange,
   onEdit,
@@ -65,8 +76,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   canEditAtividades,
   canDeleteAtividades,
   canChangeActivityStatus,
-}) => {
-  const [orderedAtividades, setOrderedAtividades] = React.useState<Atividade[]>(atividades);
+}: KanbanBoardProps<T>) => {
+  const [orderedAtividades, setOrderedAtividades] = React.useState<T[]>(atividades);
   const [expandedColumns, setExpandedColumns] = React.useState<Record<ColumnId, boolean>>({
     todo: false,
     in_progress: false,
@@ -111,7 +122,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     const draggedAtividade = orderedAtividades.find(ativ => ativ.id === draggableId);
     if (!draggedAtividade) return;
 
-    const newStatus = destination.droppableId as Atividade['status'];
+    const newStatus = destination.droppableId as T['status'];
 
     // Optimistic update
     const newOrderedAtividades = Array.from(orderedAtividades);
@@ -199,7 +210,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                   </div>
                                 </div>
                                 <p className="text-sm text-muted-foreground mb-1">
-                                  KR: {atividade.key_result_title || 'N/A'}
+                                  {atividade.key_result_title ? `KR: ${atividade.key_result_title}` : `Reunião: ${atividade.reuniao_titulo || 'N/A'}`}
                                 </p>
                                 <p className="text-sm text-muted-foreground mb-1">
                                   Responsável: {atividade.assignee_name || 'N/A'}

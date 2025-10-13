@@ -1,7 +1,6 @@
 "use client";
 
 import React from 'react';
-import { Atividade } from '@/integrations/supabase/api/atividades';
 import { format, parseISO, startOfWeek, endOfWeek, eachWeekOfInterval, isWithinInterval, differenceInWeeks, min, max } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,8 +20,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowUp, ArrowDown } from "lucide-react";
 
-interface GanttChartProps {
-  atividades: Atividade[];
+// Define a interface genérica para atividades que o GanttChart pode exibir
+interface GenericActivityForGantt {
+  id: string;
+  titulo: string;
+  status: 'todo' | 'in_progress' | 'done' | 'stopped';
+  assignee_name?: string;
+  created_at?: string;
+  due_date?: string | null;
+  key_result_title?: string; // Pode ser o título do KR ou da Reunião
+  key_result_objetivo_id?: string; // Pode ser o ID do Objetivo ou do Comitê
+}
+
+interface GanttChartProps<T extends GenericActivityForGantt> {
+  atividades: T[];
   groupByKr: boolean;
   onGroupByKrChange: (checked: boolean) => void;
   ganttSortBy: 'date' | 'krTitle';
@@ -31,7 +42,7 @@ interface GanttChartProps {
   onGanttSortOrderChange: (order: 'asc' | 'desc') => void;
 }
 
-const GanttChart: React.FC<GanttChartProps> = ({
+const GanttChart = <T extends GenericActivityForGantt>({
   atividades,
   groupByKr,
   onGroupByKrChange,
@@ -39,7 +50,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
   onGanttSortByChange,
   ganttSortOrder,
   onGanttSortOrderChange,
-}) => {
+}: GanttChartProps<T>) => {
   if (atividades.length === 0) {
     return (
       <p className="text-gray-600 text-center py-8">Nenhuma atividade para exibir no gráfico de Gantt.</p>
@@ -72,7 +83,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
 
         return ganttSortOrder === 'asc'
           ? compareA.localeCompare(compareB)
-          : compareB.localeCompare(a.key_result_title || ''); // Corrected: b.key_result_title.localeCompare(a.key_result_title)
+          : compareB.localeCompare(compareA);
       }
       return 0;
     });
@@ -110,10 +121,10 @@ const GanttChart: React.FC<GanttChartProps> = ({
         }
         acc[krTitle].push(ativ);
         return acc;
-      }, {} as Record<string, Atividade[]>)
+      }, {} as Record<string, T[]>)
     : { 'Todas as Atividades': sortedActivities }; // Single group if not grouping by KR
 
-  const getStatusColor = (atividade: Atividade) => {
+  const getStatusColor = (atividade: T) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Normalize today to start of day for comparison
 
@@ -134,7 +145,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
     }
   };
 
-  const calculateProgress = (status: Atividade['status']) => {
+  const calculateProgress = (status: T['status']) => {
     switch (status) {
       case 'done': return 100;
       case 'in_progress': return 50; // Arbitrary progress for in_progress

@@ -54,9 +54,14 @@ const committeesModuleItems = [
     icon: <GitCommit className="h-4 w-4" />,
   },
   {
-    name: "Atas de Reunião", // NEW: Added Meeting Minutes List
+    name: "Atas de Reunião",
     href: "/comites/atas",
     icon: <CalendarDays className="h-4 w-4" />,
+  },
+  {
+    name: "Atividades do Comitê", // NEW: Added Committee Activities List
+    href: "/comites/atividades",
+    icon: <ListTodo className="h-4 w-4" />,
   },
   // {
   //   name: "Reuniões",

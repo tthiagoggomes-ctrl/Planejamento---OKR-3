@@ -5,7 +5,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, GitCommit, Users, CalendarDays, MessageSquare, ListTodo, PlusCircle, Edit, Trash2, ChevronDown, ChevronUp } from "lucide-react";
-import { getComiteById, getComiteMembers, Comite, ComiteMember, updateComite } from "@/integrations/supabase/api/comites"; // Importar updateComite
+import { getComiteById, getComiteMembers, Comite, ComiteMember, updateComite } from "@/integrations/supabase/api/comites";
 import { getReunioesByComiteId, Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
 import { AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
 import { getAtividadesComiteByAtaId, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
@@ -13,7 +13,7 @@ import { getEnquetesByComiteId, Enquete, createEnquete, updateEnquete, deleteEnq
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { format, isPast, parseISO, isWithinInterval } from "date-fns"; // Import isWithinInterval
+import { format, isPast, parseISO, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
 import { useSession } from "@/components/auth/SessionContextProvider";
@@ -28,13 +28,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AtaReuniaoForm, AtaReuniaoFormValues } from "@/components/forms/AtaReuniaoForm";
+import { AtaReuniaoForm, AtaReuniaoFormValues, AtaReuniaoSubmitValues } from "@/components/forms/AtaReuniaoForm"; // Import AtaReuniaoSubmitValues
 import { ReuniaoForm, ReuniaoFormValues } from "@/components/forms/ReuniaoForm";
 import { EnqueteForm, EnqueteFormValues, EnqueteSubmitValues } from "@/components/forms/EnqueteForm";
 import { MeetingCalendar } from "@/components/committees/MeetingCalendar";
-import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm"; // Importar CommitteeForm
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"; // Import RadioGroup
-import { Label } from "@/components/ui/label"; // Import Label
+import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -53,7 +53,7 @@ const CommitteeDetails = () => {
   const canEditAtasReuniao = can('atas_reuniao', 'edit');
   const canDeleteAtasReuniao = can('atas_reuniao', 'delete');
   const canViewAtividadesComite = can('atividades_comite', 'view');
-  const canInsertAtividadesComite = can('atividades_comite', 'insert'); // NEW: Permission for committee activities
+  const canInsertAtividadesComite = can('atividades_comite', 'insert');
   const canViewEnquetes = can('enquetes', 'view');
   const canInsertEnquetes = can('enquetes', 'insert');
   const canEditEnquetes = can('enquetes', 'edit');
@@ -63,39 +63,31 @@ const CommitteeDetails = () => {
 
   const [expandedMeetings, setExpandedMeetings] = React.useState<Set<string>>(new Set());
   const [expandedMinutes, setExpandedMinutes] = React.useState<Set<string>>(new Set());
-  const [expandedPolls, setExpandedPolls] = React.useState<Set<string>>(new Set()); // NEW: State for poll expansion
+  const [expandedPolls, setExpandedPolls] = React.useState<Set<string>>(new Set());
 
-  // State for CommitteeForm (for managing members)
   const [isCommitteeFormOpen, setIsCommitteeFormOpen] = React.useState(false);
 
-  // State for Reuniao Form
   const [isReuniaoFormOpen, setIsReuniaoFormOpen] = React.useState(false);
   const [editingReuniao, setEditingReuniao] = React.useState<Reuniao | null>(null);
   const [isReuniaoDeleteDialogOpen, setIsReuniaoDeleteDialogOpen] = React.useState(false);
   const [reuniaoToDelete, setReuniaoToDelete] = React.useState<string | null>(null);
 
-  // State for Recurring Meeting Delete Confirmation
   const [isDeleteRecurringDialogOpen, setIsDeleteRecurringDialogOpen] = React.useState(false);
   const [recurringMeetingToDelete, setRecurringMeetingToDelete] = React.useState<Reuniao | null>(null);
   const [deleteRecurringOption, setDeleteRecurringOption] = React.useState<'single' | 'series'>('single');
 
-
-  // State for AtaReuniao Form
   const [isAtaFormOpen, setIsAtaFormOpen] = React.useState(false);
   const [editingAta, setEditingAta] = React.useState<AtaReuniao | null>(null);
   const [selectedMeetingForAta, setSelectedMeetingForAta] = React.useState<Reuniao | null>(null);
   const [isAtaDeleteDialogOpen, setIsAtaDeleteDialogOpen] = React.useState(false);
   const [ataToDelete, setAtaToDelete] = React.useState<string | null>(null);
 
-  // State for Enquete Form
   const [isEnqueteFormOpen, setIsEnqueteFormOpen] = React.useState(false);
   const [editingEnquete, setEditingEnquete] = React.useState<Enquete | null>(null);
   const [isEnqueteDeleteDialogOpen, setIsEnqueteDeleteDialogOpen] = React.useState(false);
   const [enqueteToDelete, setEnqueteToDelete] = React.useState<string | null>(null);
-  // MODIFIED: Use an object to store selected option for each poll
   const [selectedVoteOptions, setSelectedVoteOptions] = React.useState<Record<string, string | null>>({}); 
 
-  // Use useRef to get a stable 'now' for consistent date comparisons within a render cycle
   const now = React.useRef(new Date()).current;
 
   const { data: comite, isLoading: isLoadingComite, error: errorComite } = useQuery<Comite | null, Error>({
@@ -148,12 +140,11 @@ const CommitteeDetails = () => {
   });
 
   const { data: polls, isLoading: isLoadingPolls, error: errorPolls } = useQuery<Enquete[] | null, Error>({
-    queryKey: ["enquetes", id, user?.id], // Add user.id to queryKey for re-fetching user_vote
+    queryKey: ["enquetes", id, user?.id],
     queryFn: ({ queryKey }) => getEnquetesByComiteId(queryKey[1] as string, queryKey[2] as string | undefined),
     enabled: !!id && canViewEnquetes && !permissionsLoading,
   });
 
-  // NEW: Effect to initialize selectedVoteOptions when polls data changes
   React.useEffect(() => {
     if (polls) {
       const initialSelections: Record<string, string | null> = {};
@@ -164,7 +155,6 @@ const CommitteeDetails = () => {
     }
   }, [polls]);
 
-  // Mutations for Committee (for members management)
   const updateComiteMutation = useMutation({
     mutationFn: ({ id: comiteId, ...values }: CommitteeFormValues & { id: string }) => {
       if (!canManageComiteMembers) {
@@ -179,8 +169,8 @@ const CommitteeDetails = () => {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comite", id] }); // Invalidate committee details
-      queryClient.invalidateQueries({ queryKey: ["comiteMembers", id] }); // Invalidate members list
+      queryClient.invalidateQueries({ queryKey: ["comite", id] });
+      queryClient.invalidateQueries({ queryKey: ["comiteMembers", id] });
       setIsCommitteeFormOpen(false);
       showSuccess("Membros do comitê atualizados com sucesso!");
     },
@@ -195,7 +185,6 @@ const CommitteeDetails = () => {
     }
   };
 
-  // Mutations for Reuniao
   const createReuniaoMutation = useMutation({
     mutationFn: (values: ReuniaoFormValues) => {
       if (!user?.id || !id) {
@@ -205,17 +194,17 @@ const CommitteeDetails = () => {
         throw new Error("Você não tem permissão para agendar reuniões.");
       }
       return createReuniao(
-        id, // comite_id
+        id,
         values.titulo,
         values.data_reuniao.toISOString(),
         values.local,
-        user.id, // created_by
+        user.id,
         values.recurrence_type,
         values.recurrence_end_date?.toISOString() || null
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reunioes", id] }); // Invalidate specific committee meetings
+      queryClient.invalidateQueries({ queryKey: ["reunioes", id] });
       setIsReuniaoFormOpen(false);
       showSuccess("Reunião agendada com sucesso!");
     },
@@ -229,19 +218,18 @@ const CommitteeDetails = () => {
       if (!canEditReunioes) {
         throw new Error("Você não tem permissão para editar reuniões.");
       }
-      // When updating, recurrence fields are not passed from the form, so use existing values
       const existingMeeting = meetings?.find(m => m.id === reuniaoId);
       return updateReuniao(
         reuniaoId,
         values.titulo,
         values.data_reuniao.toISOString(),
         values.local,
-        existingMeeting?.recurrence_type || 'none', // Use existing recurrence type
-        existingMeeting?.recurrence_end_date || null // Use existing recurrence end date
+        existingMeeting?.recurrence_type || 'none',
+        existingMeeting?.recurrence_end_date || null
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reunioes", id] }); // Invalidate specific committee meetings
+      queryClient.invalidateQueries({ queryKey: ["reunioes", id] });
       setIsReuniaoFormOpen(false);
       setEditingReuniao(null);
       showSuccess("Reunião atualizada com sucesso!");
@@ -259,7 +247,7 @@ const CommitteeDetails = () => {
       return deleteReuniao(reuniaoId, option);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reunioes", id] }); // Invalidate specific committee meetings
+      queryClient.invalidateQueries({ queryKey: ["reunioes", id] });
       setIsReuniaoDeleteDialogOpen(false);
       setIsDeleteRecurringDialogOpen(false);
       setReuniaoToDelete(null);
@@ -307,9 +295,8 @@ const CommitteeDetails = () => {
     }
   };
 
-  // Mutations for AtaReuniao
   const createAtaReuniaoMutation = useMutation({
-    mutationFn: (values: AtaReuniaoFormValues) => {
+    mutationFn: (values: AtaReuniaoSubmitValues) => { // Use AtaReuniaoSubmitValues
       if (!user?.id || !selectedMeetingForAta?.id) {
         throw new Error("User not authenticated or meeting not selected.");
       }
@@ -318,11 +305,10 @@ const CommitteeDetails = () => {
       }
       return createAtaReuniao(
         selectedMeetingForAta.id,
-        values.conteudo || "", // Conteúdo geral
+        values.conteudo,
         values.decisoes_tomadas,
         user.id,
-        // NOVOS PARÂMETROS
-        values.data_reuniao ? values.data_reuniao.toISOString() : null,
+        values.data_reuniao,
         values.horario_inicio,
         values.horario_fim,
         values.local_reuniao,
@@ -346,16 +332,15 @@ const CommitteeDetails = () => {
   });
 
   const updateAtaReuniaoMutation = useMutation({
-    mutationFn: ({ id: ataId, ...values }: AtaReuniaoFormValues & { id: string }) => {
+    mutationFn: ({ id: ataId, ...values }: AtaReuniaoSubmitValues & { id: string }) => { // Use AtaReuniaoSubmitValues
       if (!canEditAtasReuniao) {
         throw new Error("Você não tem permissão para editar atas de reunião.");
       }
       return updateAtaReuniao(
         ataId,
-        values.conteudo || "", // Conteúdo geral
+        values.conteudo,
         values.decisoes_tomadas,
-        // NOVOS PARÂMETROS
-        values.data_reuniao ? values.data_reuniao.toISOString() : null,
+        values.data_reuniao,
         values.horario_inicio,
         values.horario_fim,
         values.local_reuniao,
@@ -396,7 +381,7 @@ const CommitteeDetails = () => {
     },
   });
 
-  const handleCreateOrUpdateAta = (values: AtaReuniaoFormValues) => {
+  const handleCreateOrUpdateAta = (values: AtaReuniaoSubmitValues) => { // Use AtaReuniaoSubmitValues
     if (editingAta) {
       updateAtaReuniaoMutation.mutate({ id: editingAta.id, ...values });
     } else {
@@ -406,14 +391,13 @@ const CommitteeDetails = () => {
 
   const handleAddAtaClick = (meeting: Reuniao) => {
     setEditingAta(null);
-    setSelectedMeetingForAta(meeting); // Passar a reunião selecionada
+    setSelectedMeetingForAta(meeting);
     setIsAtaFormOpen(true);
   };
 
   const handleEditAtaClick = (ata: AtaReuniao) => {
     setEditingAta(ata);
-    // Ao editar, a reunião já está associada à ata, não precisamos de selectedMeetingForAta
-    setSelectedMeetingForAta(null); 
+    setSelectedMeetingForAta(null);
     setIsAtaFormOpen(true);
   };
 
@@ -428,7 +412,6 @@ const CommitteeDetails = () => {
     }
   };
 
-  // Mutations for Enquetes
   const createEnqueteMutation = useMutation({
     mutationFn: (values: EnqueteSubmitValues) => {
       if (!user?.id || !id) {
@@ -448,7 +431,7 @@ const CommitteeDetails = () => {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["enquetes", id] }); // Invalidate specific committee polls
+      queryClient.invalidateQueries({ queryKey: ["enquetes", id] });
       setIsEnqueteFormOpen(false);
       showSuccess("Enquete criada com sucesso!");
     },
@@ -472,7 +455,7 @@ const CommitteeDetails = () => {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["enquetes", id] }); // Invalidate specific committee polls
+      queryClient.invalidateQueries({ queryKey: ["enquetes", id] });
       setIsEnqueteFormOpen(false);
       setEditingEnquete(null);
       showSuccess("Enquete atualizada com sucesso!");
@@ -490,7 +473,7 @@ const CommitteeDetails = () => {
       return deleteEnquete(enqueteId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["enquetes", id] }); // Invalidate specific committee polls
+      queryClient.invalidateQueries({ queryKey: ["enquetes", id] });
       setIsEnqueteDeleteDialogOpen(false);
       setEnqueteToDelete(null);
       showSuccess("Enquete excluída com sucesso!");
@@ -529,7 +512,6 @@ const CommitteeDetails = () => {
     }
   };
 
-  // NEW: Mutation for voting on a poll
   const voteOnEnqueteMutation = useMutation({
     mutationFn: ({ enqueteId, opcaoId }: { enqueteId: string; opcaoId: string }) => {
       if (!user?.id) {
@@ -540,10 +522,9 @@ const CommitteeDetails = () => {
       }
       return voteOnEnquete(enqueteId, opcaoId, user.id);
     },
-    onSuccess: (_, variables) => { // MODIFIED: Access variables from mutation
-      queryClient.invalidateQueries({ queryKey: ["enquetes", id] }); // Re-fetch polls to update vote counts
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["enquetes", id] });
       showSuccess("Voto registrado com sucesso!");
-      // MODIFIED: Update selectedVoteOptions for the specific poll
       setSelectedVoteOptions(prev => ({ ...prev, [variables.enqueteId]: variables.opcaoId }));
     },
     onError: (err) => {
@@ -579,7 +560,7 @@ const CommitteeDetails = () => {
     });
   };
 
-  const togglePollExpansion = (pollId: string) => { // NEW: Toggle for polls
+  const togglePollExpansion = (pollId: string) => {
     setExpandedPolls(prev => {
       const newSet = new Set(prev);
       if (newSet.has(pollId)) {
@@ -633,14 +614,11 @@ const CommitteeDetails = () => {
         </CardHeader>
         <CardContent>
           <div className="flex justify-end gap-2">
-            {/* Add buttons for editing committee details, managing members, etc. */}
-            {/* These will be added in future steps with proper permission checks */}
           </div>
         </CardContent>
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Membros do Comitê */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-xl font-semibold flex items-center">
@@ -663,7 +641,7 @@ const CommitteeDetails = () => {
                   <li key={member.user_id} className="flex items-center justify-between p-2 border rounded-md">
                     <div>
                       <p className="font-medium">{member.user_name}</p>
-                      <p className="text-sm text-muted-foreground">{member.user_area_name || 'N/A'}</p> {/* MODIFICADO: Exibindo o nome da área */}
+                      <p className="text-sm text-muted-foreground">{member.user_area_name || 'N/A'}</p>
                     </div>
                     <span className="text-sm font-semibold text-blue-600">{member.role}</span>
                   </li>
@@ -675,12 +653,10 @@ const CommitteeDetails = () => {
           </CardContent>
         </Card>
 
-        {/* Calendário de Reuniões */}
         {canViewReunioes && (
           <MeetingCalendar meetings={meetings} />
         )}
 
-        {/* Reuniões e Atas */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-xl font-semibold flex items-center">
@@ -742,7 +718,7 @@ const CommitteeDetails = () => {
                             {minutesMap.get(meeting.id)?.map(minutes => (
                               <li key={minutes.id} className="border rounded-md p-2">
                                 <div className="flex justify-between items-center">
-                                  <p className="font-medium">Ata de {format(new Date(minutes.created_at!), "PPP", { locale: ptBR })}</p>
+                                  <p className="font-medium">Ata de {minutes.data_reuniao ? format(parseISO(minutes.data_reuniao), "PPP", { locale: ptBR }) : format(new Date(minutes.created_at!), "PPP", { locale: ptBR })}</p>
                                   <div className="flex items-center gap-2">
                                     {canEditAtasReuniao && (
                                       <Button variant="ghost" size="icon" onClick={() => handleEditAtaClick(minutes)}>
@@ -868,7 +844,6 @@ const CommitteeDetails = () => {
           </CardContent>
         </Card>
 
-        {/* Enquetes */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-xl font-semibold flex items-center">
@@ -888,14 +863,13 @@ const CommitteeDetails = () => {
             ) : polls && polls.length > 0 ? (
               <div className="space-y-4">
                 {polls.map(poll => {
-                  // Corrected logic for isPollActive
                   const isPollActive = isWithinInterval(now, {
                     start: parseISO(poll.start_date),
                     end: parseISO(poll.end_date)
                   });
                   const hasVoted = !!poll.user_vote;
                   const canUserVote = canVoteEnquete && isPollActive && user?.id;
-                  const isCreatorOrAdmin = user?.id === poll.created_by || can('enquetes', 'edit'); // Simplified check for edit/delete
+                  const isCreatorOrAdmin = user?.id === poll.created_by || can('enquetes', 'edit');
 
                   return (
                     <div key={poll.id} className="border rounded-md p-3">
@@ -929,9 +903,7 @@ const CommitteeDetails = () => {
                             <>
                               <h4 className="font-medium mb-2">Opções da Enquete</h4>
                               <RadioGroup
-                                // MODIFIED: Update selectedVoteOptions for this specific poll
                                 onValueChange={(value) => setSelectedVoteOptions(prev => ({ ...prev, [poll.id]: value }))}
-                                // MODIFIED: Use selectedVoteOptions for the value
                                 value={selectedVoteOptions[poll.id] || ""}
                                 disabled={!canUserVote || voteOnEnqueteMutation.isPending}
                               >
@@ -939,8 +911,6 @@ const CommitteeDetails = () => {
                                   const percentage = poll.total_votes && poll.total_votes > 0
                                     ? Math.round((option.vote_count! / poll.total_votes) * 100)
                                     : 0;
-                                  // MODIFIED: The RadioGroup's value prop handles the checked state.
-                                  // No need for explicit 'checked' prop on RadioGroupItem.
                                   return (
                                     <div key={option.id} className="flex items-center space-x-2 mb-2">
                                       <RadioGroupItem
@@ -962,7 +932,6 @@ const CommitteeDetails = () => {
                                 <Button
                                   size="sm"
                                   className="mt-3"
-                                  // MODIFIED: Use selectedVoteOptions for the specific poll
                                   onClick={() => handleVote(poll.id, selectedVoteOptions[poll.id]!)}
                                   disabled={!selectedVoteOptions[poll.id] || voteOnEnqueteMutation.isPending}
                                 >
@@ -989,7 +958,6 @@ const CommitteeDetails = () => {
         </Card>
       </div>
 
-      {/* Committee Form (for managing members) */}
       {canManageComiteMembers && comite && (
         <CommitteeForm
           open={isCommitteeFormOpen}
@@ -1001,7 +969,6 @@ const CommitteeDetails = () => {
         />
       )}
 
-      {/* Reuniao Form */}
       {(canInsertReunioes || canEditReunioes) && (
         <ReuniaoForm
           open={isReuniaoFormOpen}
@@ -1012,7 +979,6 @@ const CommitteeDetails = () => {
         />
       )}
 
-      {/* Reuniao Delete Confirmation (for non-recurring meetings) */}
       {canDeleteReunioes && (
         <AlertDialog open={isReuniaoDeleteDialogOpen} onOpenChange={setIsReuniaoDeleteDialogOpen}>
           <AlertDialogContent>
@@ -1033,7 +999,6 @@ const CommitteeDetails = () => {
         </AlertDialog>
       )}
 
-      {/* NEW: Recurring Reuniao Delete Confirmation */}
       {canDeleteReunioes && (
         <AlertDialog open={isDeleteRecurringDialogOpen} onOpenChange={setIsDeleteRecurringDialogOpen}>
           <AlertDialogContent>
@@ -1075,7 +1040,6 @@ const CommitteeDetails = () => {
         </AlertDialog>
       )}
 
-      {/* AtaReuniao Form */}
       {(canInsertAtasReuniao || canEditAtasReuniao) && (
         <AtaReuniaoForm
           open={isAtaFormOpen}
@@ -1087,9 +1051,8 @@ const CommitteeDetails = () => {
         />
       )}
 
-      {/* AtaReuniao Delete Confirmation */}
       {canDeleteAtasReuniao && (
-        <AlertDialog open={isAtaDeleteDialogOpen} onOpenChange={setIsAtaDeleteDialogOpen}>
+        <AlertDialog open={isAtaDeleteDialogOpen} onOpenChange={setIsAataDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
@@ -1108,7 +1071,6 @@ const CommitteeDetails = () => {
         </AlertDialog>
       )}
 
-      {/* Enquete Form */}
       {(canInsertEnquetes || canEditEnquetes) && (
         <EnqueteForm
           open={isEnqueteFormOpen}
@@ -1119,7 +1081,6 @@ const CommitteeDetails = () => {
         />
       )}
 
-      {/* Enquete Delete Confirmation */}
       {canDeleteEnquetes && (
         <AlertDialog open={isEnqueteDeleteDialogOpen} onOpenChange={setIsEnqueteDeleteDialogOpen}>
           <AlertDialogContent>

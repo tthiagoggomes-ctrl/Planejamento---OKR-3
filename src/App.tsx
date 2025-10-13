@@ -16,9 +16,10 @@ import Comentarios from "./pages/Comentarios";
 import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import { SessionContextProvider } from "./components/auth/SessionContextProvider";
-import CommitteesDashboard from "@/pages/committees/CommitteesDashboard"; // NEW: Usando alias @/
-import CommitteesList from "@/pages/committees/CommitteesList"; // NEW: Usando alias @/
-import CommitteeDetails from "@/pages/committees/CommitteeDetails"; // NEW: Usando alias @/
+import CommitteesDashboard from "@/pages/committees/CommitteesDashboard";
+import CommitteesList from "@/pages/committees/CommitteesList";
+import CommitteeDetails from "@/pages/committees/CommitteeDetails";
+import MeetingMinutesList from "@/pages/committees/MeetingMinutesList"; // NEW: Import MeetingMinutesList
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="comites/dashboard" element={<CommitteesDashboard />} />
               <Route path="comites" element={<CommitteesList />} />
               <Route path="comites/:id" element={<CommitteeDetails />} />
+              <Route path="comites/atas" element={<MeetingMinutesList />} /> {/* NEW: Route for MeetingMinutesList */}
 
               {/* Telas de Cadastro (acesso geral) */}
               <Route path="areas" element={<Areas />} />

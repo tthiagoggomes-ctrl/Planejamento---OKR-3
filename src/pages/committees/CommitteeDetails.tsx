@@ -836,7 +836,8 @@ const CommitteeDetails = () => {
                                   const percentage = poll.total_votes && poll.total_votes > 0
                                     ? Math.round((option.vote_count! / poll.total_votes) * 100)
                                     : 0;
-                                  const isSelected = option.id === poll.user_vote?.opcao_id;
+                                  // CORRECTED: Check if this option is the currently selected one in the UI
+                                  const isSelected = option.id === selectedVoteOption; 
 
                                   return (
                                     <div key={option.id} className="flex items-center space-x-2 mb-2">
@@ -844,7 +845,7 @@ const CommitteeDetails = () => {
                                         value={option.id}
                                         id={`option-${option.id}`}
                                         checked={isSelected}
-                                        onClick={() => setSelectedVoteOption(option.id)}
+                                        // Removed redundant onClick, as onValueChange on RadioGroup handles it
                                       />
                                       <Label htmlFor={`option-${option.id}`} className="flex-1">
                                         <div className="flex justify-between text-sm">

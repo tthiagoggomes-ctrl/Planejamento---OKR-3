@@ -8,7 +8,7 @@ import { Loader2, GitCommit, Users, CalendarDays, MessageSquare, ListTodo, PlusC
 import { getComiteById, getComiteMembers, Comite, ComiteMember, updateComite } from "@/integrations/supabase/api/comites";
 import { getReunioesByComiteId, Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
 import { AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
-import { getAtividadesComite, AtividadeComite } from "@/integrations/supabase/api/atividades_comite"; // MODIFICADO: Usando a nova função getAtividadesComite
+// import { getAtividadesComite, AtividadeComite } from "@/integrations/supabase/api/atividades_comite"; // REMOVIDO
 import { getEnquetesByComiteId, Enquete, createEnquete, updateEnquete, deleteEnquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { Button } from "@/components/ui/button";
@@ -54,8 +54,8 @@ const CommitteeDetails = () => {
   const canInsertAtasReuniao = can('atas_reuniao', 'insert');
   const canEditAtasReuniao = can('atas_reuniao', 'edit');
   const canDeleteAtasReuniao = can('atas_reuniao', 'delete');
-  const canViewAtividadesComite = can('atividades_comite', 'view');
-  const canInsertAtividadesComite = can('atividades_comite', 'insert'); // Mantido para o formulário de ata, mas o botão de 'Nova Atividade' será removido
+  // const canViewAtividadesComite = can('atividades_comite', 'view'); // REMOVIDO
+  // const canInsertAtividadesComite = can('atividades_comite', 'insert'); // REMOVIDO
   const canViewEnquetes = can('enquetes', 'view');
   const canInsertEnquetes = can('enquetes', 'insert');
   const canEditEnquetes = can('enquetes', 'edit');
@@ -125,22 +125,22 @@ const CommitteeDetails = () => {
     enabled: !!meetings && canViewAtasReuniao && !permissionsLoading,
   });
 
-  const { data: activitiesMap, isLoading: isLoadingActivities } = useQuery<Map<string, AtividadeComite[]>, Error>({
-    queryKey: ["atividadesComiteByMinutes", minutesMap],
-    queryFn: async ({ queryKey }) => {
-      const currentMinutesMap = queryKey[1] as Map<string, AtaReuniao[]> | undefined;
-      if (!currentMinutesMap) return new Map();
-      const allMinutes = Array.from(currentMinutesMap.values()).flat();
-      const activitiesPromises = allMinutes.map(async (ata) => {
-        // MODIFICADO: Usando a nova função getAtividadesComite com filtro por ata_reuniao_id
-        const activities = await getAtividadesComite({ ata_reuniao_id: ata.id });
-        return [ata.id, activities || []] as [string, AtividadeComite[]];
-      });
-      const results = await Promise.all(activitiesPromises);
-      return new Map(results);
-    },
-    enabled: !!minutesMap && canViewAtividadesComite && !permissionsLoading,
-  });
+  // REMOVIDO: activitiesMap e isLoadingActivities
+  // const { data: activitiesMap, isLoading: isLoadingActivities } = useQuery<Map<string, AtividadeComite[]>, Error>({
+  //   queryKey: ["atividadesComiteByMinutes", minutesMap],
+  //   queryFn: async ({ queryKey }) => {
+  //     const currentMinutesMap = queryKey[1] as Map<string, AtaReuniao[]> | undefined;
+  //     if (!currentMinutesMap) return new Map();
+  //     const allMinutes = Array.from(currentMinutesMap.values()).flat();
+  //     const activitiesPromises = allMinutes.map(async (ata) => {
+  //       const activities = await getAtividadesComite({ ata_reuniao_id: ata.id });
+  //       return [ata.id, activities || []] as [string, AtividadeComite[]];
+  //     });
+  //     const results = await Promise.all(activitiesPromises);
+  //     return new Map(results);
+  //   },
+  //   enabled: !!minutesMap && canViewAtividadesComite && !permissionsLoading,
+  // });
 
   const { data: polls, isLoading: isLoadingPolls, error: errorPolls } = useQuery<Enquete[] | null, Error>({
     queryKey: ["enquetes", id, user?.id],
@@ -827,32 +827,17 @@ const CommitteeDetails = () => {
 
                                     <div className="flex justify-between items-center mb-2">
                                       <h5 className="font-medium flex items-center">
-                                        <ListTodo className="mr-2 h-4 w-4" /> Atividades ({activitiesMap?.get(minutes.id)?.length || 0})
+                                        <ListTodo className="mr-2 h-4 w-4" /> Atividades (0) {/* Hardcoded 0 as activities are removed */}
                                       </h5>
-                                      {/* MODIFICADO: Botão de 'Nova Atividade' removido daqui */}
-                                      <Link to={`/comites/atividades`} state={{ comiteId: id, ataId: minutes.id }}>
+                                      {/* MODIFICADO: Botão de 'Gerenciar Atividades' removido */}
+                                      {/* <Link to={`/comites/atividades`} state={{ comiteId: id, ataId: minutes.id }}>
                                         <Button size="sm" variant="outline">
                                           <ListTodo className="mr-2 h-4 w-4" /> Gerenciar Atividades
                                         </Button>
-                                      </Link>
+                                      </Link> */}
                                     </div>
-                                    {isLoadingActivities ? (
-                                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                                    ) : activitiesMap?.get(minutes.id)?.length > 0 ? (
-                                      <ul className="space-y-1 pl-4">
-                                        {activitiesMap.get(minutes.id)?.map(activity => (
-                                          <li key={activity.id} className="p-1 border-l-2 border-blue-500">
-                                            <p className="font-normal">{activity.titulo}</p>
-                                            <p className="text-xs text-muted-foreground">
-                                              Responsável: {activity.assignee_name || 'N/A'} | Status: {activity.status}
-                                              {activity.due_date && ` | Vencimento: ${format(parseISO(activity.due_date), "PPP", { locale: ptBR })}`}
-                                            </p>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    ) : (
-                                      <p className="text-gray-500 text-center py-2">Nenhuma atividade gerada.</p>
-                                    )}
+                                    {/* REMOVIDO: Bloco de listagem de atividades */}
+                                    <p className="text-gray-500 text-center py-2">Funcionalidade de atividades do comitê removida temporariamente.</p>
                                   </div>
                                 )}
                               </li>

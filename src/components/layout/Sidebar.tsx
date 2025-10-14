@@ -59,7 +59,7 @@ const committeesModuleItems = [
     icon: <CalendarDays className="h-4 w-4" />,
   },
   // {
-  //   name: "Atividades do Comitê", // NEW: Added Committee Activities List
+  //   name: "Atividades do Comitê", // Removido
   //   href: "/comites/atividades",
   //   icon: <ListTodo className="h-4 w-4" />,
   // },

@@ -128,7 +128,7 @@ const CommitteeDetails = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["enquetes", id, user?.id] }); // Invalidate specific poll query
       showSuccess("Voto registrado com sucesso!");
-      onVoteEnqueteSuccess(variables.enqueteId, variables.opcaoId);
+      handleVoteEnqueteSuccess(variables.enqueteId, variables.opcaoId); // Corrected function call
     },
     onError: (err) => {
       showError(`Erro ao registrar voto: ${err.message}`);
@@ -312,7 +312,7 @@ const CommitteeDetails = () => {
           onAddEnqueteClick={handleAddEnqueteClick}
           onEditEnqueteClick={handleEditEnqueteClick}
           onDeleteEnqueteClick={handleDeleteEnqueteClick}
-          onVoteEnquete={voteOnEnqueteMutation.mutate} // Pass the mutation function directly
+          onVoteEnquete={(enqueteId, opcaoId) => voteOnEnqueteMutation.mutate({ enqueteId, opcaoId })} // Corrected argument passing
           expandedPolls={expandedPolls}
           togglePollExpansion={(pollId) => setExpandedPolls(prev => {
             const newSet = new Set(prev);

@@ -105,7 +105,7 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
 
   const selectedComiteId = form.watch('comite_id');
   const selectedReuniaoId = form.watch('reuniao_id');
-  const selectedAtaReuniaoId = form.watch('ata_reuniao_id');
+  // const selectedAtaReuniaoId = form.watch('ata_reuniao_id'); // This is not used directly for fetching, but for form state
 
   const { data: comites, isLoading: isLoadingComites } = useQuery<Comite[] | null, Error>({
     queryKey: ["comites"],

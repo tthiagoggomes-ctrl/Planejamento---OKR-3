@@ -13,6 +13,7 @@ export interface UserProfile {
   area_name?: string; // Added to the interface
   permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario'; // Updated permission types
   status: 'active' | 'blocked';
+  cargo_funcao?: string | null; // NOVO: Adicionado cargo_funcao
   created_at?: string;
   updated_at?: string;
 }
@@ -86,12 +87,13 @@ export const createUser = async (
   area_id: string | null,
   permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario', // Updated permission type
   selected_permissions: string[] = [], // New parameter for granular permissions
-  password?: string // Moved optional parameter to the end
+  password?: string, // Moved optional parameter to the end
+  cargo_funcao: string | null = null // NOVO: Adicionado cargo_funcao
 ): Promise<UserProfile | null> => {
   try {
     const { data, error } = await supabase.functions.invoke('create-user', {
       method: 'POST',
-      body: { email, password, first_name, last_name, area_id, permissao, selected_permissions },
+      body: { email, password, first_name, last_name, area_id, permissao, selected_permissions, cargo_funcao }, // NOVO: Passar cargo_funcao
     });
 
     if (error) {
@@ -117,12 +119,13 @@ export const updateUserProfile = async (
   permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario', // Updated permission type
   status: 'active' | 'blocked',
   selected_permissions: string[] = [], // New parameter for granular permissions
-  email: string // Added email as a parameter
+  email: string, // Added email as a parameter
+  cargo_funcao: string | null = null // NOVO: Adicionado cargo_funcao
 ): Promise<UserProfile | null> => {
   // First, update the user's profile in the 'usuarios' table
   const { data, error } = await supabase
     .from('usuarios')
-    .update({ first_name, last_name, area_id, permissao, status, updated_at: new Date().toISOString() })
+    .update({ first_name, last_name, area_id, permissao, status, cargo_funcao, updated_at: new Date().toISOString() }) // NOVO: Incluir cargo_funcao
     .eq('id', id)
     .select('*, area:areas(nome)'); // Removed .single()
 

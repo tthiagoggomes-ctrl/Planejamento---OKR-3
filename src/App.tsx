@@ -21,7 +21,9 @@ import CommitteesList from "@/pages/committees/CommitteesList";
 import CommitteeDetails from "@/pages/committees/CommitteeDetails";
 import MeetingMinutesList from "@/pages/committees/MeetingMinutesList";
 import AtaReuniaoDetails from "@/pages/committees/AtaReuniaoDetails";
-import PollsList from "@/pages/committees/PollsList"; // NOVO: Importar a nova página
+import PollsList from "@/pages/committees/PollsList";
+import CommitteePendencias from "@/pages/committees/CommitteePendencias";
+import CommitteeActivities from "@/pages/committees/CommitteeActivities"; // ATUALIZADO: Importar o componente renomeado
 
 const queryClient = new QueryClient();
 
@@ -48,8 +50,9 @@ const App = () => (
               <Route path="comites/:id" element={<CommitteeDetails />} />
               <Route path="comites/atas" element={<MeetingMinutesList />} />
               <Route path="comites/atas/:id" element={<AtaReuniaoDetails />} />
-              <Route path="comites/enquetes" element={<PollsList />} /> {/* NOVO: Rota para listagem de enquetes */}
-              {/* <Route path="comites/atividades" element={<CommitteeActivitiesNew />} /> */}
+              <Route path="comites/enquetes" element={<PollsList />} />
+              <Route path="comites/pendencias" element={<CommitteePendencias />} />
+              <Route path="comites/atividades" element={<CommitteeActivities />} /> {/* NOVO: Rota para atividades gerais do comitê */}
 
               {/* Telas de Cadastro (acesso geral) */}
               <Route path="areas" element={<Areas />} />

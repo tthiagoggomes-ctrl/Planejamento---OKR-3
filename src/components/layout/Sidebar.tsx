@@ -63,6 +63,11 @@ const committeesModuleItems = [
     href: "/comites/enquetes",
     icon: <MessageSquare className="h-4 w-4" />,
   },
+  {
+    name: "Pendências", // NOVO: Item de menu para Pendências
+    href: "/comites/pendencias",
+    icon: <ListTodo className="h-4 w-4" />,
+  },
 ];
 
 const cadastroItems = [

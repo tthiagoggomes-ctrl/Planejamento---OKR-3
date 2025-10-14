@@ -46,7 +46,7 @@ import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useLocation } from "react-router-dom";
 import { useSession } from "@/components/auth/SessionContextProvider";
 
-const CommitteeActivitiesNew = () => {
+const CommitteePendencias = () => {
   const queryClient = useQueryClient();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
   const location = useLocation();
@@ -287,7 +287,7 @@ const CommitteeActivitiesNew = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-2xl font-bold flex items-center">
-              <ListTodo className="mr-2 h-6 w-6" /> Gestão de Atividades do Comitê
+              <ListTodo className="mr-2 h-6 w-6" /> Gestão de Pendências do Comitê
             </CardTitle>
             <div className="flex items-center gap-2">
               <ToggleGroup type="single" value={viewMode} onValueChange={(value: 'list' | 'kanban' | 'gantt') => value && setViewMode(value)}>
@@ -303,7 +303,7 @@ const CommitteeActivitiesNew = () => {
               </ToggleGroup>
               {canInsertAtividadesComite && (
                 <Button onClick={() => { setEditingAtividade(null); setIsFormOpen(true); }}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> Nova Atividade
+                  <PlusCircle className="mr-2 h-4 w-4" /> Nova Pendência
                 </Button>
               )}
             </div>
@@ -313,7 +313,7 @@ const CommitteeActivitiesNew = () => {
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar atividades..."
+                  placeholder="Buscar pendências..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8"
@@ -451,7 +451,7 @@ const CommitteeActivitiesNew = () => {
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-gray-600">Nenhuma atividade do comitê cadastrada ainda ou correspondente aos filtros.</p>
+                <p className="text-gray-600">Nenhuma pendência do comitê cadastrada ainda ou correspondente aos filtros.</p>
               )
             ) : viewMode === 'kanban' ? (
               <KanbanBoard<AtividadeComite>
@@ -500,7 +500,7 @@ const CommitteeActivitiesNew = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
               <AlertDialogDescription>
-                Esta ação não pode ser desfeita. Isso excluirá permanentemente a atividade do comitê selecionada.
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente a pendência do comitê selecionada.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -517,4 +517,4 @@ const CommitteeActivitiesNew = () => {
   );
 };
 
-export default CommitteeActivitiesNew;
+export default CommitteePendencias;

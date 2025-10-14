@@ -384,7 +384,19 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                     name={`members.${index}.user_id`}
                     render={({ field: memberField }) => (
                       <FormItem className="flex-1">
-                        <Select onValueChange={memberField.onChange} value={memberField.value || ""}>
+                        <Select
+                          onValueChange={(value) => {
+                            memberField.onChange(value);
+                            // NOVO: Preencher cargo_funcao automaticamente
+                            const selectedUser = users?.find(u => u.id === value);
+                            if (selectedUser) {
+                              form.setValue(`members.${index}.cargo_funcao`, selectedUser.cargo_funcao || "");
+                            } else {
+                              form.setValue(`members.${index}.cargo_funcao`, "");
+                            }
+                          }}
+                          value={memberField.value || ""}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione um membro" />

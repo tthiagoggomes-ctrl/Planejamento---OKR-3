@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { getComites, createComite, updateComite, deleteComite, Comite, getComiteMembers, ComiteMember } from "@/integrations/supabase/api/comites";
 import { showSuccess, showError } from "@/utils/toast";
-import { useUserPermissions } from '@/hooks/use-user-permissions';
+import { useUserPermissions } from '@/hooks/use-user-permissions'; // <-- Correção aqui
 import { Link } from "react-router-dom";
 import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm";
 
@@ -52,13 +52,7 @@ const CommitteesList = () => {
 
   const createComiteMutation = useMutation({
     mutationFn: (values: CommitteeFormValues) =>
-      createComite(
-        values.nome,
-        values.descricao,
-        values.status,
-        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[],
-        values.regras_comite // NOVO: Passar regras_comite
-      ),
+      createComite(values), // NOVO: Passa o objeto 'values' completo como payload
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comites"] });
       setIsFormOpen(false);
@@ -73,11 +67,7 @@ const CommitteesList = () => {
     mutationFn: ({ id, ...values }: CommitteeFormValues & { id: string }) =>
       updateComite(
         id,
-        values.nome,
-        values.descricao,
-        values.status,
-        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[],
-        values.regras_comite // NOVO: Passar regras_comite
+        values // NOVO: Passa o objeto 'values' completo como payload
       ),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["comites"] });

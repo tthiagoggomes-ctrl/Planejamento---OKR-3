@@ -146,21 +146,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
       if (!canManageComiteMembers) { // Assuming create also needs this permission
         throw new Error("Você não tem permissão para criar comitês.");
       }
-      return createComite(
-        values.nome,
-        values.descricao,
-        values.status,
-        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[],
-        values.regras_comite,
-        values.objetivo,
-        values.justificativa,
-        values.atribuicoes_comite,
-        values.composicao_recomendada,
-        values.periodicidade_reunioes,
-        values.fluxo_demandas,
-        values.criterios_priorizacao,
-        values.beneficios_esperados
-      );
+      return createComite(values); // NOVO: Passa o objeto 'values' completo como payload
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comites"] });
@@ -174,27 +160,11 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
 
   const updateComiteMutation = useMutation({
     mutationFn: ({ id: comiteId, ...values }: CommitteeFormValues & { id: string }) => {
-      console.log("Valores sendo enviados para updateComite:", values); // LOG DE DEBUG AQUI
       if (!canManageComiteMembers) {
         throw new Error("Você não tem permissão para gerenciar membros do comitê.");
       }
-      return updateComite(
-        comiteId,
-        values.nome,
-        values.descricao,
-        values.status,
-        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[],
-        values.regras_comite, // Pass the rules content
-        // NEW: Pass all new detailed fields
-        values.objetivo,
-        values.justificativa,
-        values.atribuicoes_comite,
-        values.composicao_recomendada,
-        values.periodicidade_reunioes,
-        values.fluxo_demandas,
-        values.criterios_priorizacao,
-        values.beneficios_esperados
-      );
+      // Passa o objeto 'values' completo como payload
+      return updateComite(comiteId, values);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comites"] }); // Invalida a lista de comitês

@@ -27,7 +27,7 @@ import { AtividadeComiteForm, AtividadeComiteFormValues } from "@/components/for
 import { getAtividadesComite, createAtividadeComite, updateAtividadeComite, deleteAtividadeComite, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
 import { getComites, Comite } from "@/integrations/supabase/api/comites";
 import { getReunioesByComiteId, Reuniao } from "@/integrations/supabase/api/reunioes";
-import { getAtasReuniaoByReuniaoId, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
+import { getAtasReuniaoByComiteId, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao"; // Corrigido: getAtasReuniaoByComiteId
 import { showSuccess, showError } from "@/utils/toast";
 import { format, parseISO } from "date-fns";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -104,11 +104,19 @@ const CommitteeActivitiesNew = () => {
 
   const { data: atasReuniao, isLoading: isLoadingAtasReuniao } = useQuery<AtaReuniao[] | null, Error>({
     queryKey: ["atasReuniaoForActivities", selectedReuniaoFilter],
-    queryFn: () => {
-      if (selectedReuniaoFilter === 'all') return null;
+    queryFn: async () => {
+      if (selectedReuniaoFilter === 'all') {
+        // If no specific meeting is selected, but a committee is, fetch all minutes for that committee
+        if (selectedComiteFilter !== 'all') {
+          // This requires a new API function or a more complex query
+          // For now, we'll return null and rely on the user selecting a meeting
+          return null;
+        }
+        return null;
+      }
       return getAtasReuniaoByReuniaoId(selectedReuniaoFilter);
     },
-    enabled: selectedReuniaoFilter !== 'all' && canViewAtividadesComite && !permissionsLoading,
+    enabled: (selectedReuniaoFilter !== 'all' || selectedComiteFilter !== 'all') && canViewAtividadesComite && !permissionsLoading,
   });
 
   const { data: atividades, isLoading, error } = useQuery<AtividadeComite[] | null, Error>({

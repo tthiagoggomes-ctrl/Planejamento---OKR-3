@@ -44,6 +44,29 @@ export const getAtasReuniaoByReuniaoId = async (reuniao_id: string): Promise<Ata
   }));
 };
 
+// NEW: Function to get meeting minutes by committee ID
+export const getAtasReuniaoByComiteId = async (comite_id: string): Promise<AtaReuniao[] | null> => {
+  const { data, error } = await supabase
+    .from('atas_reuniao')
+    .select(`
+      *,
+      created_by_user:usuarios(first_name, last_name),
+      reuniao:reunioes(comite_id)
+    `)
+    .eq('reuniao.comite_id', comite_id) // Filter by nested committee_id
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching meeting minutes by committee ID:', error.message);
+    showError('Erro ao carregar atas de reunião por comitê.');
+    return null;
+  }
+  return data.map(ata => ({
+    ...ata,
+    created_by_name: (ata as any).created_by_user ? `${(ata as any).created_by_user.first_name} ${(ata as any).created_by_user.last_name}` : 'N/A',
+  }));
+};
+
 export const createAtaReuniao = async (
   reuniao_id: string,
   conteudo: string,

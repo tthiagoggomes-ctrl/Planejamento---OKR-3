@@ -58,11 +58,11 @@ const committeesModuleItems = [
     href: "/comites/atas",
     icon: <CalendarDays className="h-4 w-4" />,
   },
-  // {
-  //   name: "Atividades do Comitê", // NEW: Added Committee Activities List
-  //   href: "/comites/atividades",
-  //   icon: <ListTodo className="h-4 w-4" />,
-  // },
+  {
+    name: "Atividades do Comitê", // NEW: Added Committee Activities List
+    href: "/comites/atividades",
+    icon: <ListTodo className="h-4 w-4" />,
+  },
   // {
   //   name: "Reuniões",
   //   href: "/comites/reunioes",

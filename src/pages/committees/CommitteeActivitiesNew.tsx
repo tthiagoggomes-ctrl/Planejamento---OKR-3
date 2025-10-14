@@ -480,39 +480,39 @@ const CommitteeActivitiesNew = () => {
             )}
           </CardContent>
         </Card>
-
-        {(canInsertAtividadesComite || canEditAtividadesComite) && (
-          <AtividadeComiteForm
-            open={isFormOpen}
-            onOpenChange={setIsFormOpen}
-            onSubmit={handleCreateOrUpdateAtividade}
-            initialData={editingAtividade}
-            isLoading={createAtividadeMutation.isPending || updateAtividadeMutation.isPending}
-            preselectedComiteId={selectedComiteFilter !== 'all' ? selectedComiteFilter : null}
-            preselectedAtaReuniaoId={selectedAtaReuniaoFilter !== 'all' ? selectedAtaReuniaoFilter : null}
-          />
-        )}
-
-        {canDeleteAtividadesComite && (
-          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta ação não pode ser desfeita. Isso excluirá permanentemente a atividade do comitê selecionada.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmDelete} disabled={deleteAtividadeMutation.isPending}>
-                  {deleteAtividadeMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {deleteAtividadeMutation.isPending ? "Excluindo..." : "Excluir"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
       </div>
+
+      {(canInsertAtividadesComite || canEditAtividadesComite) && (
+        <AtividadeComiteForm
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSubmit={handleCreateOrUpdateAtividade}
+          initialData={editingAtividade}
+          isLoading={createAtividadeMutation.isPending || updateAtividadeMutation.isPending}
+          preselectedComiteId={selectedComiteFilter !== 'all' ? selectedComiteFilter : null}
+          preselectedAtaReuniaoId={selectedAtaReuniaoFilter !== 'all' ? selectedAtaReuniaoFilter : null}
+        />
+      )}
+
+      {canDeleteAtividadesComite && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente a atividade do comitê selecionada.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} disabled={deleteAtividadeMutation.isPending}>
+                {deleteAtividadeMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {deleteAtividadeMutation.isPending ? "Excluindo..." : "Excluir"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </React.Fragment>
   );
 };

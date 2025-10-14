@@ -282,7 +282,7 @@ const CommitteeActivitiesNew = () => {
   }
 
   return (
-    <React.Fragment>
+    <>
       <div className="container mx-auto py-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -513,7 +513,7 @@ const CommitteeActivitiesNew = () => {
           </AlertDialogContent>
         </AlertDialog>
       )}
-    </React.Fragment>
+    </>
   );
 };
 

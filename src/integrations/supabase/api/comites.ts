@@ -174,6 +174,9 @@ export const updateComite = async (
     .select()
     .single();
 
+  console.log('[API updateComite] Supabase response - Data:', comiteData); // NOVO LOG
+  console.log('[API updateComite] Supabase response - Error:', comiteError); // NOVO LOG
+
   if (comiteError) {
     console.error('Error updating comite:', comiteError.message);
     showError(`Erro ao atualizar comitê: ${comiteError.message}`);
@@ -196,9 +199,12 @@ export const updateComite = async (
   const newMemberIds = new Set(members.map(m => m.user_id));
 
   const membersToAdd = members.filter(m => !currentMemberIds.has(m.user_id));
-  const membersToUpdate = members.filter(m => currentMemberIds.has(m.user_id) &&
-    currentMembers.find(cm => cm.user_id === m.user_id)?.role !== m.role
-  );
+  const membersToUpdate = currentMembers.filter(m => newMemberIds.has(m.user_id) &&
+    members.find(nm => nm.user_id === m.user_id)?.role !== m.role
+  ).map(m => ({
+    user_id: m.user_id,
+    role: members.find(nm => nm.user_id === m.user_id)?.role || m.role // Get the new role
+  }));
   const membersToRemove = currentMembers.filter(m => !newMemberIds.has(m.user_id));
 
   // Add new members

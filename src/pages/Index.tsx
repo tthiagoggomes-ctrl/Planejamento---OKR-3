@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getObjetivos, getObjetivosSummary, Objetivo, ObjetivoSummary } from "@/integrations/supabase/api/objetivos";
 import { getAllKeyResults, getKeyResultsSummary, KeyResult, KeyResultSummary, calculateKeyResultProgress } from "@/integrations/supabase/api/key_results";
 import { getAtividadesSummary, AtividadeSummary } from "@/integrations/supabase/api/atividades";
-import { Loader2, Target, ListTodo, CheckCircle, Hourglass, XCircle, Flag, TrendingUp, AlertTriangle, Clock, CircleDot, StopCircle } from "lucide-react";
+import { Loader2, Target, ListTodo, CheckCircle, Hourglass, XCircle, Flag, TrendingUp, AlertTriangle, Clock, CircleDot, StopCircle, LayoutDashboard } from "lucide-react";
 import StatusDistributionChart from "@/components/charts/StatusDistributionChart";
 import { Progress } from "@/components/ui/progress";
 import AreaProgressList from '@/components/dashboard/AreaProgressList';
@@ -136,7 +136,9 @@ const Index = () => {
     <div className="container mx-auto py-6">
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Dashboard OKR</CardTitle>
+          <CardTitle className="text-2xl font-bold flex items-center">
+            <LayoutDashboard className="mr-2 h-6 w-6 text-fade-red" /> Dashboard OKR
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-gray-600 mb-4">

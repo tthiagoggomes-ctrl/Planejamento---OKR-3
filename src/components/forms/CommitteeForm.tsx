@@ -155,6 +155,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
   }, [initialData, initialMembers, form, user]);
 
   const handleSubmit = (values: CommitteeFormValues) => {
+    console.log("[CommitteeForm] Valores do formulário antes de enviar:", values); // NOVO LOG AQUI
     onSubmit(values);
     if (!initialData) {
       const defaultMembers = user?.id ? [{ user_id: user.id, role: "presidente" as const }] : [];

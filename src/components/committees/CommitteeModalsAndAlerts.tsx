@@ -24,7 +24,7 @@ import { AtaReuniaoForm, AtaReuniaoSubmitValues } from "@/components/forms/AtaRe
 import { EnqueteForm, EnqueteSubmitValues } from "@/components/forms/EnqueteForm";
 
 // API functions
-import { Comite, ComiteMember, updateComite, deleteComite } from "@/integrations/supabase/api/comites";
+import { Comite, ComiteMember, updateComite, deleteComite, createComite } from "@/integrations/supabase/api/comites"; // Import createComite
 import { Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
 import { AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { Enquete, createEnquete, updateEnquete, deleteEnquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes";
@@ -151,7 +151,9 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
         values.nome,
         values.descricao,
         values.status,
-        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[]
+        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[],
+        values.documentFile, // Pass the new document file
+        values.document_url // Pass the existing document URL for replacement logic
       );
     },
     onSuccess: () => {

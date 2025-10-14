@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Comite, ComiteMember } from "@/integrations/supabase/api/comites";
 import { UserProfile, getUsers } from "@/integrations/supabase/api/users";
-import { Loader2, PlusCircle, XCircle } from "lucide-react";
+import { Loader2, PlusCircle, XCircle, FileText } from "lucide-react"; // Import FileText icon
 import { useQuery } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
 import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
@@ -52,6 +52,10 @@ const formSchema = z.object({
     message: "Selecione um status válido.",
   }),
   members: z.array(memberSchema).min(0, "O comitê deve ter pelo menos um membro.").optional(),
+  documentFile: z.any() // For file input, validation will be manual or in onSubmit
+    .refine((file) => !file || file instanceof File, "O documento deve ser um arquivo.")
+    .nullable(),
+  document_url: z.string().nullable().optional(), // To display existing document
 });
 
 export type CommitteeFormValues = z.infer<typeof formSchema>;
@@ -81,6 +85,8 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
       descricao: initialData?.descricao || "",
       status: initialData?.status || "active",
       members: initialMembers?.map(m => ({ user_id: m.user_id, role: m.role })) || [],
+      documentFile: null,
+      document_url: initialData?.document_url || null,
     },
   });
 
@@ -94,6 +100,9 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
     queryFn: () => getUsers(),
   });
 
+  const selectedDocumentFile = form.watch('documentFile');
+  const existingDocumentUrl = form.watch('document_url');
+
   React.useEffect(() => {
     if (initialData) {
       form.reset({
@@ -101,6 +110,8 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
         descricao: initialData.descricao,
         status: initialData.status,
         members: initialMembers?.map(m => ({ user_id: m.user_id, role: m.role })) || [],
+        documentFile: null, // Always reset file input
+        document_url: initialData.document_url || null,
       });
     } else {
       // For new committees, automatically add the current user as a 'presidente'
@@ -110,6 +121,8 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
         descricao: "",
         status: "active",
         members: defaultMembers,
+        documentFile: null,
+        document_url: null,
       });
     }
   }, [initialData, initialMembers, form, user]); // Add user to dependencies
@@ -123,6 +136,8 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
         descricao: "",
         status: "active",
         members: defaultMembers,
+        documentFile: null,
+        document_url: null,
       });
     }
   };
@@ -158,7 +173,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                 <FormItem>
                   <FormLabel>Nome do Comitê</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Comitê de Gestão de Sistemas" {...field} disabled={!!initialData} />
+                    <Input placeholder="Ex: Comitê de Gestão de Sistemas" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -171,7 +186,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                 <FormItem>
                   <FormLabel>Descrição (Opcional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Detalhes sobre o comitê" {...field} value={field.value || ""} disabled={!!initialData} />
+                    <Textarea placeholder="Detalhes sobre o comitê" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -183,7 +198,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!!initialData}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o status" />
@@ -201,6 +216,49 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                 </FormItem>
               )}
             />
+
+            <Separator className="my-4" />
+            <h3 className="text-lg font-semibold mb-3">Documento Oficial (PDF)</h3>
+            <FormField
+              control={form.control}
+              name="documentFile"
+              render={({ field: { value, onChange, ...fieldProps } }) => (
+                <FormItem>
+                  <FormLabel>Anexar Documento</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...fieldProps}
+                      type="file"
+                      accept=".pdf"
+                      onChange={(event) => {
+                        onChange(event.target.files && event.target.files[0]);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {(existingDocumentUrl && !selectedDocumentFile) && (
+              <div className="flex items-center justify-between p-2 border rounded-md bg-gray-50 dark:bg-gray-700">
+                <a href={existingDocumentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
+                  <FileText className="h-4 w-4" />
+                  Visualizar Documento Atual
+                </a>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => form.setValue('document_url', null, { shouldDirty: true })}
+                >
+                  <XCircle className="h-4 w-4 text-red-500" />
+                  <span className="sr-only">Remover Documento</span>
+                </Button>
+              </div>
+            )}
+            {selectedDocumentFile && (
+              <p className="text-sm text-muted-foreground">Novo arquivo selecionado: {selectedDocumentFile.name}</p>
+            )}
 
             <Separator className="my-4" />
             <h3 className="text-lg font-semibold mb-3">Membros do Comitê</h3>

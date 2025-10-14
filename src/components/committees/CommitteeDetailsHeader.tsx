@@ -2,8 +2,9 @@
 
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { GitCommit } from "lucide-react";
+import { GitCommit, FileText } from "lucide-react"; // Import FileText icon
 import { Comite } from "@/integrations/supabase/api/comites";
+import { Button } from "@/components/ui/button"; // Import Button
 
 interface CommitteeDetailsHeaderProps {
   comite: Comite;
@@ -26,8 +27,15 @@ export const CommitteeDetailsHeader: React.FC<CommitteeDetailsHeaderProps> = ({ 
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex justify-end gap-2">
-        </div>
+        {comite.document_url && (
+          <div className="flex justify-end">
+            <a href={comite.document_url} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" /> Visualizar Documento Oficial
+              </Button>
+            </a>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

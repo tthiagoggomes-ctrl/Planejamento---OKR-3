@@ -56,11 +56,13 @@ const CommitteesList = () => {
         values.nome,
         values.descricao,
         values.status,
-        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[]
+        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[],
+        values.documentFile // Pass the document file
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comites"] });
       setIsFormOpen(false);
+      showSuccess("Comitê criado com sucesso!");
     },
     onError: (err) => {
       showError(`Erro ao criar comitê: ${err.message}`);
@@ -74,7 +76,9 @@ const CommitteesList = () => {
         values.nome,
         values.descricao,
         values.status,
-        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[]
+        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[],
+        values.documentFile, // Pass the new document file
+        values.document_url // Pass the existing document URL for replacement logic
       ),
     onSuccess: (data, variables) => { // Adicionado 'variables' aqui
       queryClient.invalidateQueries({ queryKey: ["comites"] });
@@ -82,6 +86,7 @@ const CommitteesList = () => {
       setIsFormOpen(false);
       setEditingComite(null);
       setEditingComiteMembers(null);
+      showSuccess("Comitê atualizado com sucesso!");
     },
     onError: (err) => {
       showError(`Erro ao atualizar comitê: ${err.message}`);
@@ -94,6 +99,7 @@ const CommitteesList = () => {
       queryClient.invalidateQueries({ queryKey: ["comites"] });
       setIsDeleteDialogOpen(false);
       setComiteToDelete(null);
+      showSuccess("Comitê excluído com sucesso!");
     },
     onError: (err) => {
       showError(`Erro ao excluir comitê: ${err.message}`);

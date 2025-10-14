@@ -461,7 +461,7 @@ const CommitteeActivitiesManagement = () => {
                 <p className="text-gray-600">Nenhuma atividade do comitê cadastrada ainda ou correspondente aos filtros.</p>
               )
             ) : viewMode === 'kanban' ? (
-              <KanbanBoard<AtividadeComite>
+              <KanbanBoard
                 atividades={filteredAtividades}
                 onStatusChange={handleStatusChangeFromKanban}
                 onEdit={handleEditClick}
@@ -471,7 +471,7 @@ const CommitteeActivitiesManagement = () => {
                 canChangeActivityStatus={canChangeActivityStatusComite}
               />
             ) : ( // Gantt view
-              <GanttChart<AtividadeComite>
+              <GanttChart
                 atividades={filteredAtividades.map(a => ({ // Map to generic Atividade type for GanttChart
                   ...a,
                   key_result_title: a.reuniao_titulo, // Use meeting title as KR title for Gantt

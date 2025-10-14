@@ -56,7 +56,6 @@ export const userFormSchema = z.object({
   status: z.enum(["active", "blocked"], {
     message: "Selecione um status válido.",
   }),
-  cargo_funcao: z.string().nullable(), // NOVO: Adicionado cargo_funcao
   selected_permissions: z.array(z.string()).optional(), // New field for granular permissions
 });
 
@@ -87,14 +86,13 @@ export const UserForm: React.FC<UserFormProps> = ({
       area_id: initialData?.area_id || null,
       permissao: initialData?.permissao || "usuario", // Default to 'usuario'
       status: initialData?.status || "active",
-      cargo_funcao: initialData?.cargo_funcao || "", // NOVO: Definir default
       selected_permissions: [],
     },
   });
 
   const { data: areas, isLoading: isLoadingAreas } = useQuery<Area[] | null, Error>({
     queryKey: ["areas"],
-    queryFn: () => getAreas(), // Wrap in arrow function to match QueryFunction signature
+    queryFn: () => getAreas(), // Wrap in arrow function
   });
 
   const { data: allPermissions, isLoading: isLoadingPermissions } = useQuery<Permission[], Error>({
@@ -138,7 +136,6 @@ export const UserForm: React.FC<UserFormProps> = ({
         area_id: initialData.area_id,
         permissao: initialData.permissao,
         status: initialData.status,
-        cargo_funcao: initialData.cargo_funcao, // NOVO: Resetar cargo_funcao
         selected_permissions: currentUserPermissions || [],
       });
     } else {
@@ -150,7 +147,6 @@ export const UserForm: React.FC<UserFormProps> = ({
         area_id: null,
         permissao: "usuario", // Default to 'usuario' for new users
         status: "active",
-        cargo_funcao: "", // NOVO: Resetar cargo_funcao
         selected_permissions: [],
       });
     }
@@ -167,7 +163,6 @@ export const UserForm: React.FC<UserFormProps> = ({
         area_id: null,
         permissao: "usuario",
         status: "active",
-        cargo_funcao: "", // NOVO: Resetar cargo_funcao
         selected_permissions: [],
       });
     }
@@ -293,19 +288,6 @@ export const UserForm: React.FC<UserFormProps> = ({
                       )}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="cargo_funcao" // NOVO: Campo Cargo/Função
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cargo/Função</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Gerente de Projetos" {...field} value={field.value || ""} />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

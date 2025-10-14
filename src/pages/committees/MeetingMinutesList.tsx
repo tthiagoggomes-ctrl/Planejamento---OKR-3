@@ -266,11 +266,13 @@ const MeetingMinutesList = () => {
                     <TableCell>{ata.data_reuniao ? format(parseISO(ata.data_reuniao), "PPP", { locale: ptBR }) : 'N/A'}</TableCell>
                     <TableCell>{ata.created_by_name}</TableCell>
                     <TableCell className="text-right">
-                      <Link to={`/comites/atas/${ata.id}`}> {/* NOVO: Link para a nova página de detalhes da ata */}
-                        <Button variant="ghost" size="sm">
-                          Ver Detalhes
-                        </Button>
-                      </Link>
+                      {ata.comite_id && ( // Renderizar o botão apenas se houver comite_id
+                        <Link to={`/comites/${ata.comite_id}`} state={{ ataId: ata.id }}>
+                          <Button variant="ghost" size="sm">
+                            Ver Detalhes
+                          </Button>
+                        </Link>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

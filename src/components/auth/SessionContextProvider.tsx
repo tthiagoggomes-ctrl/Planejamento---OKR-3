@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from "@/components/ui/sonner";
 import { showSuccess, showError } from '@/utils/toast';
+import { Loader2 } from "lucide-react"; // For loading indicator
 
 interface SessionContextType {
   session: Session | null;

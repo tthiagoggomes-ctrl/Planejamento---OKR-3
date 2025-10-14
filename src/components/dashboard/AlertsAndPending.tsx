@@ -3,38 +3,39 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, AlertTriangle, Target, TrendingUp, Building, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, AlertTriangle, Target, Clock, XCircle, TrendingUp, Building, ChevronDown, ChevronUp } from 'lucide-react';
 import { getAllKeyResults, KeyResult, calculateKeyResultProgress } from '@/integrations/supabase/api/key_results';
 import { getObjetivos, Objetivo } from '@/integrations/supabase/api/objetivos';
 import { getAtividades, Atividade } from '@/integrations/supabase/api/atividades';
 import { getAreas, Area } from '@/integrations/supabase/api/areas';
 import { showError } from '@/utils/toast';
-import { subDays } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { formatDistanceToNow, subDays, isPast as dateFnsIsPast } from 'date-fns'; // Renomear isPast para evitar conflito
+import { ptBR } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { Button } from '@/components/ui/button'; // Import Button
 
 const AlertsAndPending: React.FC = () => {
-  const navigate = useNavigate();
-  const [showAllKRsAtRisk, setShowAllKRsAtRisk] = React.useState(false);
+  const navigate = useNavigate(); // Initialize useNavigate
+  const [showAllKRsAtRisk, setShowAllKRsAtRisk] = React.useState(false); // Novo estado para controlar a expansão
 
-  const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[], Error>({
+  const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[] | null, Error>({
     queryKey: ["allKeyResults"],
-    queryFn: async () => (await getAllKeyResults()) || [],
+    queryFn: () => getAllKeyResults(), // Wrap in arrow function
   });
 
-  const { data: objetivos, isLoading: isLoadingObjetivos, error: errorObjetivos } = useQuery<Objetivo[], Error>({
+  const { data: objetivos, isLoading: isLoadingObjetivos, error: errorObjetivos } = useQuery<Objetivo[] | null, Error>({
     queryKey: ["objetivos"],
-    queryFn: async () => (await getObjetivos()) || [],
+    queryFn: () => getObjetivos(),
   });
 
-  const { data: atividades, isLoading: isLoadingAtividades, error: errorAtividades } = useQuery<Atividade[], Error>({
+  const { data: atividades, isLoading: isLoadingAtividades, error: errorAtividades } = useQuery<Atividade[] | null, Error>({
     queryKey: ["allActivities"],
-    queryFn: async () => (await getAtividades()) || [],
+    queryFn: () => getAtividades(),
   });
 
-  const { data: areas, isLoading: isLoadingAreas, error: errorAreas } = useQuery<Area[], Error>({
+  const { data: areas, isLoading: isLoadingAreas, error: errorAreas } = useQuery<Area[] | null, Error>({
     queryKey: ["areas"],
-    queryFn: async () => (await getAreas()) || [],
+    queryFn: () => getAreas(), // Wrap in arrow function
   });
 
   const krsAtRiskOrOffTrack = React.useMemo(() => {
@@ -45,7 +46,7 @@ const AlertsAndPending: React.FC = () => {
     if (!objetivos || !keyResults) return [];
     return objetivos.filter(obj => {
       const krsForObjective = keyResults.filter(kr => kr.objetivo_id === obj.id);
-      if (krsForObjective.length === 0) return false;
+      if (krsForObjective.length === 0) return false; // Consider objectives without KRs as not having progress
       const totalProgress = krsForObjective.reduce((sum, kr) => sum + calculateKeyResultProgress(kr), 0);
       const averageProgress = totalProgress / krsForObjective.length;
       return averageProgress < 30;
@@ -63,37 +64,28 @@ const AlertsAndPending: React.FC = () => {
 
       // Check objectives for this area
       objetivos.filter(obj => obj.area_id === area.id).forEach(obj => {
-        if (obj.updated_at) {
-          const objUpdateDate = new Date(obj.updated_at);
-          if (latestUpdate === null || objUpdateDate > latestUpdate) {
-            latestUpdate = objUpdateDate;
-          }
+        if (obj.updated_at && new Date(obj.updated_at) > (latestUpdate || new Date(0))) {
+          latestUpdate = new Date(obj.updated_at);
         }
       });
 
       // Check key results for objectives in this area
       const krsInArea = keyResults.filter(kr => objetivos.some(obj => obj.id === kr.objetivo_id && obj.area_id === area.id));
       krsInArea.forEach(kr => {
-        if (kr.updated_at) {
-          const krUpdateDate = new Date(kr.updated_at);
-          if (latestUpdate === null || krUpdateDate > latestUpdate) {
-            latestUpdate = krUpdateDate;
-          }
+        if (kr.updated_at && new Date(kr.updated_at) > (latestUpdate || new Date(0))) {
+          latestUpdate = new Date(kr.updated_at);
         }
       });
 
       // Check activities for key results in this area
       const activitiesInArea = atividades.filter(ativ => krsInArea.some(kr => kr.id === ativ.key_result_id));
       activitiesInArea.forEach(ativ => {
-        if (ativ.updated_at) {
-          const ativUpdateDate = new Date(ativ.updated_at);
-          if (latestUpdate === null || ativUpdateDate > latestUpdate) {
-            latestUpdate = ativUpdateDate;
-          }
+        if (ativ.updated_at && new Date(ativ.updated_at) > (latestUpdate || new Date(0))) {
+          latestUpdate = new Date(ativ.updated_at);
         }
       });
 
-      if (latestUpdate === null || latestUpdate < sevenDaysAgo) {
+      if (!latestUpdate || latestUpdate < sevenDaysAgo) {
         areasWithNoRecentUpdate.push(area);
       }
     });
@@ -129,7 +121,7 @@ const AlertsAndPending: React.FC = () => {
     );
   }
 
-  if (errorAreas || errorObjetivos || errorKeyResults || errorAtividades) {
+  if (errorKeyResults || errorObjetivos || errorAtividades || errorAreas) {
     showError("Erro ao carregar alertas e pendências.");
     return (
       <Card className="h-full">

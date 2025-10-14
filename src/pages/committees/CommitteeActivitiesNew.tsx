@@ -46,7 +46,7 @@ import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useLocation } from "react-router-dom";
 import { useSession } from "@/components/auth/SessionContextProvider";
 
-const CommitteeActivitiesManagement = () => {
+const CommitteeActivitiesNew = () => {
   const queryClient = useQueryClient();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
   const location = useLocation();
@@ -95,29 +95,29 @@ const CommitteeActivitiesManagement = () => {
 
   const { data: reunioes, isLoading: isLoadingReunioes } = useQuery<Reuniao[] | null, Error>({
     queryKey: ["reunioesForActivities", selectedComiteFilter],
-    queryFn: async () => {
-      if (selectedComiteFilter === 'all') return []; // Return empty array instead of null
-      return (await getReunioes({ comite_id: selectedComiteFilter })) || [];
+    queryFn: () => {
+      if (selectedComiteFilter === 'all') return null;
+      return getReunioes({ comite_id: selectedComiteFilter });
     },
     enabled: selectedComiteFilter !== 'all' && canViewAtividadesComite && !permissionsLoading,
   });
 
   const { data: atasReuniao, isLoading: isLoadingAtasReuniao } = useQuery<AtaReuniao[] | null, Error>({
     queryKey: ["atasReuniaoForActivities", selectedReuniaoFilter],
-    queryFn: async () => {
-      if (selectedReuniaoFilter === 'all') return []; // Return empty array instead of null
-      return (await getAtasReuniaoByReuniaoId(selectedReuniaoFilter)) || [];
+    queryFn: () => {
+      if (selectedReuniaoFilter === 'all') return null;
+      return getAtasReuniaoByReuniaoId(selectedReuniaoFilter);
     },
     enabled: selectedReuniaoFilter !== 'all' && canViewAtividadesComite && !permissionsLoading,
   });
 
   const { data: atividades, isLoading, error } = useQuery<AtividadeComite[] | null, Error>({
     queryKey: ["atividadesComite", selectedComiteFilter, selectedAtaReuniaoFilter, debouncedSearchQuery],
-    queryFn: async () => (await getAtividadesComite({
+    queryFn: () => getAtividadesComite({
       comite_id: selectedComiteFilter,
       ata_reuniao_id: selectedAtaReuniaoFilter,
       search: debouncedSearchQuery,
-    })) || [], // Ensure it always returns an array
+    }),
     enabled: canViewAtividadesComite && !permissionsLoading,
   });
 
@@ -153,18 +153,11 @@ const CommitteeActivitiesManagement = () => {
   });
 
   const updateAtividadeMutation = useMutation({
-    mutationFn: (values: AtividadeComiteFormValues & { id: string }) => {
+    mutationFn: ({ id, ...values }: AtividadeComiteFormValues & { id: string }) => {
       if (!canEditAtividadesComite) throw new Error("Você não tem permissão para editar atividades do comitê.");
-      // Fetch the current activity to get its ata_reuniao_id if not provided in values
-      const currentActivity = atividades?.find(a => a.id === values.id);
-      const ataReuniaoId = values.ata_reuniao_id || currentActivity?.ata_reuniao_id;
-      if (!ataReuniaoId) {
-        throw new Error("ID da Ata de Reunião não disponível para atualização da atividade.");
-      }
-
       return updateAtividadeComite(
-        values.id,
-        ataReuniaoId, // Pass ata_reuniao_id for RLS policy
+        id,
+        values.ata_reuniao_id,
         values.titulo,
         values.descricao,
         formatDueDateForApi(values.due_date),
@@ -232,7 +225,7 @@ const CommitteeActivitiesManagement = () => {
     if (atividadeToUpdate) {
       updateAtividadeMutation.mutate({
         id: atividadeToUpdate.id,
-        ata_reuniao_id: atividadeToUpdate.ata_reuniao_id, // Ensure ata_reuniao_id is passed
+        ata_reuniao_id: atividadeToUpdate.ata_reuniao_id,
         titulo: atividadeToUpdate.titulo,
         descricao: atividadeToUpdate.descricao,
         due_date: atividadeToUpdate.due_date ? parseISO(atividadeToUpdate.due_date) : null,
@@ -461,7 +454,7 @@ const CommitteeActivitiesManagement = () => {
                 <p className="text-gray-600">Nenhuma atividade do comitê cadastrada ainda ou correspondente aos filtros.</p>
               )
             ) : viewMode === 'kanban' ? (
-              <KanbanBoard
+              <KanbanBoard<AtividadeComite>
                 atividades={filteredAtividades}
                 onStatusChange={handleStatusChangeFromKanban}
                 onEdit={handleEditClick}
@@ -471,7 +464,7 @@ const CommitteeActivitiesManagement = () => {
                 canChangeActivityStatus={canChangeActivityStatusComite}
               />
             ) : ( // Gantt view
-              <GanttChart
+              <GanttChart<AtividadeComite>
                 atividades={filteredAtividades.map(a => ({ // Map to generic Atividade type for GanttChart
                   ...a,
                   key_result_title: a.reuniao_titulo, // Use meeting title as KR title for Gantt
@@ -524,4 +517,4 @@ const CommitteeActivitiesManagement = () => {
   );
 };
 
-export default CommitteeActivitiesManagement;
+export default CommitteeActivitiesNew;

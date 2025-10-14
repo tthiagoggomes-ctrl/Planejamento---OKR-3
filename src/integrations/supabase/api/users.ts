@@ -1,8 +1,8 @@
 import { supabase } from '../client';
 // Removed direct import of supabaseAdmin for client-side security
 import { showSuccess, showError } from '@/utils/toast';
-// Removed unused import: import { User } from '@supabase/supabase-js';
-// Removed unused import: import { Permission } from '@/hooks/use-user-permissions';
+import { User } from '@supabase/supabase-js';
+import { Permission } from '@/hooks/use-user-permissions'; // Import Permission interface
 
 export interface UserProfile {
   id: string;
@@ -13,7 +13,6 @@ export interface UserProfile {
   area_name?: string; // Added to the interface
   permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario'; // Updated permission types
   status: 'active' | 'blocked';
-  cargo_funcao?: string | null; // NOVO: Adicionado cargo_funcao
   created_at?: string;
   updated_at?: string;
 }
@@ -87,13 +86,12 @@ export const createUser = async (
   area_id: string | null,
   permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario', // Updated permission type
   selected_permissions: string[] = [], // New parameter for granular permissions
-  password?: string, // Moved optional parameter to the end
-  cargo_funcao: string | null = null // NOVO: Adicionado cargo_funcao
+  password?: string // Moved optional parameter to the end
 ): Promise<UserProfile | null> => {
   try {
     const { data, error } = await supabase.functions.invoke('create-user', {
       method: 'POST',
-      body: { email, password, first_name, last_name, area_id, permissao, selected_permissions, cargo_funcao }, // NOVO: Passar cargo_funcao
+      body: { email, password, first_name, last_name, area_id, permissao, selected_permissions },
     });
 
     if (error) {
@@ -119,13 +117,12 @@ export const updateUserProfile = async (
   permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario', // Updated permission type
   status: 'active' | 'blocked',
   selected_permissions: string[] = [], // New parameter for granular permissions
-  email: string, // Added email as a parameter
-  cargo_funcao: string | null = null // NOVO: Adicionado cargo_funcao
+  email: string // Added email as a parameter
 ): Promise<UserProfile | null> => {
   // First, update the user's profile in the 'usuarios' table
   const { data, error } = await supabase
     .from('usuarios')
-    .update({ first_name, last_name, area_id, permissao, status, cargo_funcao, updated_at: new Date().toISOString() }) // NOVO: Incluir cargo_funcao
+    .update({ first_name, last_name, area_id, permissao, status, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select('*, area:areas(nome)'); // Removed .single()
 
@@ -247,7 +244,7 @@ export const blockUser = async (id: string): Promise<UserProfile | null> => {
 
   if (error) {
     console.error('Error blocking user:', error.message);
-    showError(`Erro ao bloquear usuário: ${error.message}`);
+    showError(`Erro ao bloquear usuário: ${error.message}`); // Corrigido: err.message para error.message
     return null;
   }
   // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.
@@ -266,7 +263,7 @@ export const unblockUser = async (id: string): Promise<UserProfile | null> => {
 
   if (error) {
     console.error('Error unblocking user:', error.message);
-    showError(`Erro ao desbloquear usuário: ${error.message}`);
+    showError(`Erro ao desbloquear usuário: ${error.message}`); // Corrigido: err.message para error.message
     return null;
   }
   // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.

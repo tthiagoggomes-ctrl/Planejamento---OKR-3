@@ -15,7 +15,7 @@ const RecentActivitiesList: React.FC = () => {
 
   const { data: atividades, isLoading, error } = useQuery<Atividade[], Error>({
     queryKey: ["recentActivities"],
-    queryFn: async () => (await getAtividades(5)) || [], // Ensure it always returns an array
+    queryFn: () => getAtividades(5), // Fetch last 5 activities
   });
 
   const getStatusBadgeClass = (status: Atividade['status']) => {
@@ -86,7 +86,7 @@ const RecentActivitiesList: React.FC = () => {
       </CardHeader>
       <CardContent className="space-y-3">
         {atividades && atividades.length > 0 ? (
-          atividades.map((atividade: Atividade) => ( // Explicitly type 'atividade'
+          atividades.map((atividade) => (
             <div
               key={atividade.id}
               className="flex items-center justify-between border-b pb-2 last:border-b-0 last:pb-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded-md transition-colors"

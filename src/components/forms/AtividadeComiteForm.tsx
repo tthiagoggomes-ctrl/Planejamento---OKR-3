@@ -47,10 +47,10 @@ import { supabase } from '@/integrations/supabase/client'; // NOVO: Importar sup
 interface AtaWithReuniaoAndComiteData {
   id: string;
   reuniao_id: string;
-  reuniao: { // <--- Alterado de volta para objeto único, pois single() retorna um objeto
+  reuniao: Array<{ // <--- Alterado para Array
     id: string;
     comite_id: string;
-  } | null; // 'reuniao' pode ser null se a relação não for encontrada
+  }> | null; // 'reuniao' pode ser null se a relação não for encontrada
 }
 
 const formSchema = z.object({
@@ -109,50 +109,50 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
 
   const { data: comites, isLoading: isLoadingComites } = useQuery<Comite[] | null, Error>({
     queryKey: ["comites"],
-    queryFn: async () => (await getComites()) || [],
+    queryFn: () => getComites(),
   });
 
   const { data: reunioes, isLoading: isLoadingReunioes } = useQuery<Reuniao[] | null, Error>({
     queryKey: ["reunioesForForm", selectedComiteId],
-    queryFn: async () => selectedComiteId ? (await getReunioes({ comite_id: selectedComiteId })) || [] : [],
+    queryFn: () => selectedComiteId ? getReunioes({ comite_id: selectedComiteId }) : Promise.resolve(null),
     enabled: !!selectedComiteId,
   });
 
   const { data: atasReuniao, isLoading: isLoadingAtasReuniao } = useQuery<AtaReuniao[] | null, Error>({
     queryKey: ["atasReuniaoForForm", selectedReuniaoId],
-    queryFn: async () => selectedReuniaoId ? (await getAtasReuniaoByReuniaoId(selectedReuniaoId)) || [] : [],
+    queryFn: () => selectedReuniaoId ? getAtasReuniaoByReuniaoId(selectedReuniaoId) : Promise.resolve(null),
     enabled: !!selectedReuniaoId,
   });
 
   const { data: users, isLoading: isLoadingUsers } = useQuery<UserProfile[] | null, Error>({
     queryKey: ["users"],
-    queryFn: async () => (await getUsers()) || [],
+    queryFn: () => getUsers(),
   });
 
   // Effect to set initial values for Comite and Reuniao if editing or preselectedAtaReuniaoId is present
   React.useEffect(() => {
     const setInitialDropdowns = async () => {
       if (initialData?.ata_reuniao_id) {
-        const { data: ata } = await supabase
+        const { data: ata, error: ataError } = await supabase
           .from('atas_reuniao')
           .select('id, reuniao_id, reuniao:reunioes(id, comite_id)')
           .eq('id', initialData.ata_reuniao_id)
           .single<AtaWithReuniaoAndComiteData>();
 
-        if (ata && ata.reuniao) { // Safely check if reuniao exists
-          form.setValue('comite_id', ata.reuniao.comite_id); // Corrected access
+        if (ata && ata.reuniao && ata.reuniao.length > 0) { // Corrected access
+          form.setValue('comite_id', ata.reuniao[0].comite_id); // Corrected access
           form.setValue('reuniao_id', ata.reuniao_id);
           form.setValue('ata_reuniao_id', initialData.ata_reuniao_id);
         }
       } else if (preselectedAtaReuniaoId) {
-        const { data: ata } = await supabase
+        const { data: ata, error: ataError } = await supabase
           .from('atas_reuniao')
           .select('id, reuniao_id, reuniao:reunioes(id, comite_id)')
           .eq('id', preselectedAtaReuniaoId)
           .single<AtaWithReuniaoAndComiteData>();
 
-        if (ata && ata.reuniao) { // Safely check if reuniao exists
-          form.setValue('comite_id', ata.reuniao.comite_id); // Corrected access
+        if (ata && ata.reuniao && ata.reuniao.length > 0) { // Corrected access
+          form.setValue('comite_id', ata.reuniao[0].comite_id); // Corrected access
           form.setValue('reuniao_id', ata.reuniao_id);
           form.setValue('ata_reuniao_id', preselectedAtaReuniaoId);
         }

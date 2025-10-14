@@ -7,7 +7,7 @@ export interface Comite {
   nome: string;
   descricao: string | null;
   status: 'active' | 'archived';
-  document_url?: string | null; // NOVO: Adicionado document_url
+  regras_comite?: string | null; // NOVO: Adicionado regras_comite
   created_at?: string;
   updated_at?: string;
 }
@@ -21,54 +21,7 @@ export interface ComiteMember {
   user_area_name?: string; // MODIFICADO: Substituído user_email por user_area_name
 }
 
-/**
- * Uploads a committee document to Supabase Storage.
- * @param file The file to upload.
- * @param comiteId The ID of the committee.
- * @param existingUrl Optional: The existing URL of the document to replace/delete.
- * @returns The public URL of the uploaded file, or null if an error occurred.
- */
-export const uploadCommitteeDocument = async (file: File, comiteId: string, existingUrl: string | null = null): Promise<string | null> => {
-  try {
-    // If there's an existing URL, try to delete the old file first
-    if (existingUrl) {
-      const oldFilePath = existingUrl.split('storage/v1/object/public/committee-documents/')[1];
-      if (oldFilePath) {
-        const { error: deleteError } = await supabase.storage.from('committee-documents').remove([oldFilePath]);
-        if (deleteError) {
-          console.warn('Warning: Could not delete old document from storage:', deleteError.message);
-          // Don't fail the entire upload if old file deletion fails
-        }
-      }
-    }
-
-    const filePath = `${comiteId}/${Date.now()}-${file.name}`;
-    const { data, error } = await supabase.storage
-      .from('committee-documents')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-    if (error) {
-      console.error('Error uploading committee document:', error.message);
-      showError(`Erro ao fazer upload do documento: ${error.message}`);
-      return null;
-    }
-
-    const { data: publicUrlData } = supabase.storage
-      .from('committee-documents')
-      .getPublicUrl(filePath);
-
-    return publicUrlData.publicUrl;
-
-  } catch (error: any) {
-    console.error('Unhandled error in uploadCommitteeDocument:', error.message);
-    showError(`Erro inesperado ao fazer upload do documento: ${error.message}`);
-    return null;
-  }
-};
-
+// A função uploadCommitteeDocument foi removida, pois não faremos mais upload de arquivos.
 
 export const getComites = async (): Promise<Comite[] | null> => {
   const { data, error } = await supabase
@@ -104,11 +57,11 @@ export const createComite = async (
   descricao: string | null,
   status: 'active' | 'archived' = 'active',
   members: { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[] = [],
-  documentFile: File | null = null // NOVO: Parâmetro para o arquivo
+  regras_comite: string | null = null // NOVO: Parâmetro para as regras
 ): Promise<Comite | null> => {
   const { data: comiteData, error: comiteError } = await supabase
     .from('comites')
-    .insert({ nome, descricao, status })
+    .insert({ nome, descricao, status, regras_comite }) // Incluído regras_comite
     .select()
     .single();
 
@@ -116,21 +69,6 @@ export const createComite = async (
     console.error('Error creating comite:', comiteError.message);
     showError(`Erro ao criar comitê: ${comiteError.message}`);
     return null;
-  }
-
-  let document_url: string | null = null;
-  if (comiteData && documentFile) {
-    document_url = await uploadCommitteeDocument(documentFile, comiteData.id);
-    if (document_url) {
-      const { error: updateError } = await supabase
-        .from('comites')
-        .update({ document_url })
-        .eq('id', comiteData.id);
-      if (updateError) {
-        console.error('Error updating committee with document URL:', updateError.message);
-        showError(`Erro ao salvar URL do documento: ${updateError.message}`);
-      }
-    }
   }
 
   if (comiteData && members.length > 0) {
@@ -153,7 +91,7 @@ export const createComite = async (
   }
 
   showSuccess('Comitê criado com sucesso!');
-  return { ...comiteData, document_url };
+  return { ...comiteData, regras_comite };
 };
 
 export const updateComite = async (
@@ -162,22 +100,11 @@ export const updateComite = async (
   descricao: string | null,
   status: 'active' | 'archived',
   members: { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[] = [],
-  documentFile: File | null = null, // NOVO: Parâmetro para o arquivo
-  existingDocumentUrl: string | null = null // NOVO: URL existente para substituição
+  regras_comite: string | null = null // NOVO: Parâmetro para as regras
 ): Promise<Comite | null> => {
-  let updatedDocumentUrl: string | null = existingDocumentUrl;
-
-  if (documentFile) {
-    updatedDocumentUrl = await uploadCommitteeDocument(documentFile, id, existingDocumentUrl);
-  } else if (existingDocumentUrl === null && documentFile === null) {
-    // If document was removed (existingDocumentUrl is null and no new file)
-    // We need to explicitly set document_url to null in DB
-    updatedDocumentUrl = null;
-  }
-
   const { data: comiteData, error: comiteError } = await supabase
     .from('comites')
-    .update({ nome, descricao, status, document_url: updatedDocumentUrl, updated_at: new Date().toISOString() })
+    .update({ nome, descricao, status, regras_comite, updated_at: new Date().toISOString() }) // Incluído regras_comite
     .eq('id', id)
     .select()
     .single();
@@ -254,25 +181,7 @@ export const updateComite = async (
 };
 
 export const deleteComite = async (id: string): Promise<boolean> => {
-  // Optionally, delete associated document from storage
-  const { data: comiteData, error: fetchError } = await supabase
-    .from('comites')
-    .select('document_url')
-    .eq('id', id)
-    .single();
-
-  if (fetchError) {
-    console.warn('Warning: Could not fetch committee document_url for deletion:', fetchError.message);
-  } else if (comiteData?.document_url) {
-    const filePath = comiteData.document_url.split('storage/v1/object/public/committee-documents/')[1];
-    if (filePath) {
-      const { error: deleteFileError } = await supabase.storage.from('committee-documents').remove([filePath]);
-      if (deleteFileError) {
-        console.warn('Warning: Could not delete committee document from storage:', deleteFileError.message);
-      }
-    }
-  }
-
+  // A lógica de exclusão de documento do storage foi removida.
   const { error } = await supabase.from('comites').delete().eq('id', id);
   if (error) {
     console.error('Error deleting comite:', error.message);

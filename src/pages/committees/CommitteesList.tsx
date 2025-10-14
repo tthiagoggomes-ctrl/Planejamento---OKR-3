@@ -27,7 +27,7 @@ import { getComites, createComite, updateComite, deleteComite, Comite, getComite
 import { showSuccess, showError } from "@/utils/toast";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { Link } from "react-router-dom";
-import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm"; // Importar o novo formulário
+import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm";
 
 const CommitteesList = () => {
   const queryClient = useQueryClient();
@@ -57,7 +57,7 @@ const CommitteesList = () => {
         values.descricao,
         values.status,
         (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[],
-        values.documentFile // Pass the document file
+        values.regras_comite // NOVO: Passar regras_comite
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comites"] });
@@ -77,12 +77,11 @@ const CommitteesList = () => {
         values.descricao,
         values.status,
         (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[],
-        values.documentFile, // Pass the new document file
-        values.document_url // Pass the existing document URL for replacement logic
+        values.regras_comite // NOVO: Passar regras_comite
       ),
-    onSuccess: (data, variables) => { // Adicionado 'variables' aqui
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["comites"] });
-      queryClient.invalidateQueries({ queryKey: ["comiteMembers", variables.id] }); // Usando variables.id
+      queryClient.invalidateQueries({ queryKey: ["comiteMembers", variables.id] });
       setIsFormOpen(false);
       setEditingComite(null);
       setEditingComiteMembers(null);
@@ -116,7 +115,6 @@ const CommitteesList = () => {
 
   const handleEditClick = async (comite: Comite) => {
     setEditingComite(comite);
-    // Fetch members for the committee being edited
     const members = await getComiteMembers(comite.id);
     setEditingComiteMembers(members);
     setIsFormOpen(true);

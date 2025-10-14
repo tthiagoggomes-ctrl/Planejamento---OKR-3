@@ -2,15 +2,15 @@
 
 import React from "react";
 import { useParams, useLocation } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Import useMutation and useQueryClient
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integrations/supabase/api/comites"; // Import ComiteMember
+import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integrations/supabase/api/comites";
 import { getReunioes, Reuniao } from "@/integrations/supabase/api/reunioes"; 
 import { AtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
-import { getEnquetes, Enquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes"; // Import voteOnEnquete
+import { getEnquetes, Enquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useSession } from "@/components/auth/SessionContextProvider";
-import { showSuccess, showError } from "@/utils/toast"; // Import toast functions
+import { showSuccess, showError } from "@/utils/toast";
 
 // Importar os novos componentes modulares
 import { CommitteeDetailsHeader } from "@/components/committees/CommitteeDetailsHeader";
@@ -18,13 +18,14 @@ import { CommitteeMembersSection } from "@/components/committees/CommitteeMember
 import { CommitteeMeetingsSection } from "@/components/committees/CommitteeMeetingsSection";
 import { CommitteePollsSection } from "@/components/committees/CommitteePollsSection";
 import { CommitteeModalsAndAlerts } from "@/components/committees/CommitteeModalsAndAlerts";
+import { CommitteeRulesDisplay } from "@/components/committees/CommitteeRulesDisplay"; // NOVO: Importar o componente
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
   const { user } = useSession();
   const location = useLocation();
-  const queryClient = useQueryClient(); // Initialize queryClient
+  const queryClient = useQueryClient();
 
   // Permissões
   const canViewComiteDetails = can('comites', 'view');
@@ -73,6 +74,8 @@ const CommitteeDetails = () => {
   const [isEnqueteDeleteDialogOpen, setIsEnqueteDeleteDialogOpen] = React.useState(false);
   const [enqueteToDelete, setEnqueteToDelete] = React.useState<string | null>(null);
   const [selectedVoteOptions, setSelectedVoteOptions] = React.useState<Record<string, string | null>>({}); 
+
+  const [isRulesDisplayOpen, setIsRulesDisplayOpen] = React.useState(false); // NOVO: Estado para o modal de regras
 
   // Queries
   const { data: comite, isLoading: isLoadingComite, error: errorComite } = useQuery<Comite | null, Error>({
@@ -128,7 +131,7 @@ const CommitteeDetails = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["enquetes", id, user?.id] }); // Invalidate specific poll query
       showSuccess("Voto registrado com sucesso!");
-      handleVoteEnqueteSuccess(variables.enqueteId, variables.opcaoId); // Corrected function call
+      handleVoteEnqueteSuccess(variables.enqueteId, variables.opcaoId);
     },
     onError: (err) => {
       showError(`Erro ao registrar voto: ${err.message}`);
@@ -201,7 +204,7 @@ const CommitteeDetails = () => {
   };
   const handleEditAtaClick = (ata: AtaReuniao) => {
     setEditingAta(ata);
-    setSelectedMeetingForAta(null); // Clear selected meeting as ata is being edited directly
+    setSelectedMeetingForAta(null);
     setIsAtaFormOpen(true);
   };
   const handleDeleteAtaClick = (ataId: string) => {
@@ -224,6 +227,10 @@ const CommitteeDetails = () => {
 
   const handleVoteEnqueteSuccess = (enqueteId: string, opcaoId: string) => {
     setSelectedVoteOptions(prev => ({ ...prev, [enqueteId]: opcaoId }));
+  };
+
+  const handleViewRulesClick = () => { // NOVO: Handler para abrir o modal de regras
+    setIsRulesDisplayOpen(true);
   };
 
   if (isLoadingComite || permissionsLoading) {
@@ -252,7 +259,7 @@ const CommitteeDetails = () => {
 
   return (
     <div className="container mx-auto py-6">
-      <CommitteeDetailsHeader comite={comite} />
+      <CommitteeDetailsHeader comite={comite} onViewRulesClick={handleViewRulesClick} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <CommitteeMembersSection
@@ -312,7 +319,7 @@ const CommitteeDetails = () => {
           onAddEnqueteClick={handleAddEnqueteClick}
           onEditEnqueteClick={handleEditEnqueteClick}
           onDeleteEnqueteClick={handleDeleteEnqueteClick}
-          onVoteEnquete={(enqueteId, opcaoId) => voteOnEnqueteMutation.mutate({ enqueteId, opcaoId })} // Corrected argument passing
+          onVoteEnquete={(enqueteId, opcaoId) => voteOnEnqueteMutation.mutate({ enqueteId, opcaoId })}
           expandedPolls={expandedPolls}
           togglePollExpansion={(pollId) => setExpandedPolls(prev => {
             const newSet = new Set(prev);
@@ -376,6 +383,14 @@ const CommitteeDetails = () => {
         enqueteToDelete={enqueteToDelete}
         setEnqueteToDelete={setEnqueteToDelete}
         onVoteEnqueteSuccess={handleVoteEnqueteSuccess}
+      />
+
+      {/* NOVO: Modal para exibir as regras do comitê */}
+      <CommitteeRulesDisplay
+        open={isRulesDisplayOpen}
+        onOpenChange={setIsRulesDisplayOpen}
+        comiteName={comite.nome}
+        rulesContent={comite.regras_comite}
       />
     </div>
   );

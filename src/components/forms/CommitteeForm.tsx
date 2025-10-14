@@ -31,10 +31,10 @@ import {
 } from "@/components/ui/select";
 import { Comite, ComiteMember } from "@/integrations/supabase/api/comites";
 import { UserProfile, getUsers } from "@/integrations/supabase/api/users";
-import { Loader2, PlusCircle, XCircle, FileText } from "lucide-react"; // Import FileText icon
+import { Loader2, PlusCircle, XCircle, FileText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
-import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
+import { useSession } from "@/components/auth/SessionContextProvider";
 
 const memberSchema = z.object({
   user_id: z.string().uuid({ message: "Selecione um usuário válido." }),
@@ -51,11 +51,8 @@ const formSchema = z.object({
   status: z.enum(['active', 'archived'], {
     message: "Selecione um status válido.",
   }),
+  regras_comite: z.string().nullable(), // NOVO: Campo para as regras do comitê
   members: z.array(memberSchema).min(0, "O comitê deve ter pelo menos um membro.").optional(),
-  documentFile: z.any() // For file input, validation will be manual or in onSubmit
-    .refine((file) => !file || file instanceof File, "O documento deve ser um arquivo.")
-    .nullable(),
-  document_url: z.string().nullable().optional(), // To display existing document
 });
 
 export type CommitteeFormValues = z.infer<typeof formSchema>;
@@ -77,16 +74,15 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
   initialMembers,
   isLoading,
 }) => {
-  const { user } = useSession(); // Get current user
+  const { user } = useSession();
   const form = useForm<CommitteeFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       nome: initialData?.nome || "",
       descricao: initialData?.descricao || "",
       status: initialData?.status || "active",
+      regras_comite: initialData?.regras_comite || "", // NOVO: Default value
       members: initialMembers?.map(m => ({ user_id: m.user_id, role: m.role })) || [],
-      documentFile: null,
-      document_url: initialData?.document_url || null,
     },
   });
 
@@ -100,44 +96,37 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
     queryFn: () => getUsers(),
   });
 
-  const selectedDocumentFile = form.watch('documentFile');
-  const existingDocumentUrl = form.watch('document_url');
-
   React.useEffect(() => {
     if (initialData) {
       form.reset({
         nome: initialData.nome,
         descricao: initialData.descricao,
         status: initialData.status,
+        regras_comite: initialData.regras_comite, // NOVO: Resetar regras
         members: initialMembers?.map(m => ({ user_id: m.user_id, role: m.role })) || [],
-        documentFile: null, // Always reset file input
-        document_url: initialData.document_url || null,
       });
     } else {
-      // For new committees, automatically add the current user as a 'presidente'
       const defaultMembers = user?.id ? [{ user_id: user.id, role: "presidente" as const }] : [];
       form.reset({
         nome: "",
         descricao: "",
         status: "active",
+        regras_comite: "", // NOVO: Resetar regras
         members: defaultMembers,
-        documentFile: null,
-        document_url: null,
       });
     }
-  }, [initialData, initialMembers, form, user]); // Add user to dependencies
+  }, [initialData, initialMembers, form, user]);
 
   const handleSubmit = (values: CommitteeFormValues) => {
     onSubmit(values);
-    if (!initialData) { // Only reset if creating a new committee
+    if (!initialData) {
       const defaultMembers = user?.id ? [{ user_id: user.id, role: "presidente" as const }] : [];
       form.reset({
         nome: "",
         descricao: "",
         status: "active",
+        regras_comite: "", // NOVO: Resetar regras
         members: defaultMembers,
-        documentFile: null,
-        document_url: null,
       });
     }
   };
@@ -153,7 +142,6 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
     { value: "secretario", label: "Secretário" },
   ];
 
-  // Filter out users already selected in the form, and the current user if they are already a default member
   const availableUsers = users?.filter(
     (u) => !fields.some((member) => member.user_id === u.id)
   );
@@ -218,47 +206,25 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
             />
 
             <Separator className="my-4" />
-            <h3 className="text-lg font-semibold mb-3">Documento Oficial (PDF)</h3>
+            <h3 className="text-lg font-semibold mb-3">Regras do Comitê</h3>
             <FormField
               control={form.control}
-              name="documentFile"
-              render={({ field: { value, onChange, ...fieldProps } }) => (
+              name="regras_comite"
+              render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Anexar Documento</FormLabel>
+                  <FormLabel>Regras e Atribuições (Opcional)</FormLabel>
                   <FormControl>
-                    <Input
-                      {...fieldProps}
-                      type="file"
-                      accept=".pdf"
-                      onChange={(event) => {
-                        onChange(event.target.files && event.target.files[0]);
-                      }}
+                    <Textarea
+                      placeholder="Descreva as regras, atribuições e funcionamento do comitê aqui..."
+                      className="min-h-[150px]"
+                      {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {(existingDocumentUrl && !selectedDocumentFile) && (
-              <div className="flex items-center justify-between p-2 border rounded-md bg-gray-50 dark:bg-gray-700">
-                <a href={existingDocumentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
-                  <FileText className="h-4 w-4" />
-                  Visualizar Documento Atual
-                </a>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => form.setValue('document_url', null, { shouldDirty: true })}
-                >
-                  <XCircle className="h-4 w-4 text-red-500" />
-                  <span className="sr-only">Remover Documento</span>
-                </Button>
-              </div>
-            )}
-            {selectedDocumentFile && (
-              <p className="text-sm text-muted-foreground">Novo arquivo selecionado: {selectedDocumentFile.name}</p>
-            )}
 
             <Separator className="my-4" />
             <h3 className="text-lg font-semibold mb-3">Membros do Comitê</h3>

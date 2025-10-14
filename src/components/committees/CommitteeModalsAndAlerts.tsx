@@ -152,8 +152,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
         values.descricao,
         values.status,
         (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[],
-        values.documentFile, // Pass the new document file
-        values.document_url // Pass the existing document URL for replacement logic
+        values.regras_comite // Pass the rules content
       );
     },
     onSuccess: () => {

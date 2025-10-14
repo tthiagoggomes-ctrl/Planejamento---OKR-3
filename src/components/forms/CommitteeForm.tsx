@@ -155,7 +155,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
   }, [initialData, initialMembers, form, user]);
 
   const handleSubmit = (values: CommitteeFormValues) => {
-    console.log("[CommitteeForm] Valores do formulário antes de enviar:", values); // NOVO LOG AQUI
+    console.log("[CommitteeForm] Valores do formulário antes de enviar:", values);
     onSubmit(values);
     if (!initialData) {
       const defaultMembers = user?.id ? [{ user_id: user.id, role: "presidente" as const }] : [];
@@ -314,7 +314,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                 <FormItem>
                   <FormLabel>Periodicidade das Reuniões</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Semanal, Quinzenal, Mensal" {...field} value={field.value || ""} />
+                    <Textarea placeholder="Ex: Semanal, Quinzenal, Mensal" className="min-h-[80px]" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -58,6 +58,11 @@ const committeesModuleItems = [
     href: "/comites/atas",
     icon: <CalendarDays className="h-4 w-4" />,
   },
+  {
+    name: "Enquetes", // NOVO: Adicionado item de menu para Enquetes
+    href: "/comites/enquetes",
+    icon: <MessageSquare className="h-4 w-4" />,
+  },
   // {
   //   name: "Atividades do Comitê", // Reativado
   //   href: "/comites/atividades",

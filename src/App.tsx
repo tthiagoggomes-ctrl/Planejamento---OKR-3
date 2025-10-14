@@ -20,8 +20,8 @@ import CommitteesDashboard from "@/pages/committees/CommitteesDashboard";
 import CommitteesList from "@/pages/committees/CommitteesList";
 import CommitteeDetails from "@/pages/committees/CommitteeDetails";
 import MeetingMinutesList from "@/pages/committees/MeetingMinutesList";
-import AtaReuniaoDetails from "@/pages/committees/AtaReuniaoDetails"; // NOVO: Importar a nova página
-// import CommitteeActivitiesNew from "@/pages/committees/CommitteeActivitiesNew"; // Desativado
+import AtaReuniaoDetails from "@/pages/committees/AtaReuniaoDetails";
+import PollsList from "@/pages/committees/PollsList"; // NOVO: Importar a nova página
 
 const queryClient = new QueryClient();
 
@@ -47,7 +47,8 @@ const App = () => (
               <Route path="comites" element={<CommitteesList />} />
               <Route path="comites/:id" element={<CommitteeDetails />} />
               <Route path="comites/atas" element={<MeetingMinutesList />} />
-              <Route path="comites/atas/:id" element={<AtaReuniaoDetails />} /> {/* NOVO: Rota para detalhes da ata */}
+              <Route path="comites/atas/:id" element={<AtaReuniaoDetails />} />
+              <Route path="comites/enquetes" element={<PollsList />} /> {/* NOVO: Rota para listagem de enquetes */}
               {/* <Route path="comites/atividades" element={<CommitteeActivitiesNew />} /> */}
 
               {/* Telas de Cadastro (acesso geral) */}

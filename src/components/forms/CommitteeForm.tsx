@@ -37,7 +37,7 @@ import { Separator } from "@/components/ui/separator";
 import { useSession } from "@/components/auth/SessionContextProvider";
 
 const memberSchema = z.object({
-  user_id: z.string().uuid({ message: "Selecione um usuário válido." }),
+  user_id: z.string().uuid({ message: "Selecione um usuário válido." }).nullable(), // Changed to nullable
   role: z.enum(['membro', 'presidente', 'secretario'], {
     message: "Selecione uma função válida.",
   }),
@@ -81,7 +81,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
       nome: initialData?.nome || "",
       descricao: initialData?.descricao || "",
       status: initialData?.status || "active",
-      regras_comite: initialData?.regras_comite || "", // NOVO: Default value
+      regras_comite: initialData?.regras_comite || "",
       members: initialMembers?.map(m => ({ user_id: m.user_id, role: m.role })) || [],
     },
   });
@@ -102,17 +102,19 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
         nome: initialData.nome,
         descricao: initialData.descricao,
         status: initialData.status,
-        regras_comite: initialData.regras_comite, // NOVO: Resetar regras
+        regras_comite: initialData.regras_comite,
         members: initialMembers?.map(m => ({ user_id: m.user_id, role: m.role })) || [],
       });
     } else {
       const defaultMembers = user?.id ? [{ user_id: user.id, role: "presidente" as const }] : [];
+      // Ensure user_id is null for new members if not pre-filled
+      const newCommitteeDefaultMembers = defaultMembers.map(m => ({ ...m, user_id: m.user_id || null }));
       form.reset({
         nome: "",
         descricao: "",
         status: "active",
-        regras_comite: "", // NOVO: Resetar regras
-        members: defaultMembers,
+        regras_comite: "",
+        members: newCommitteeDefaultMembers,
       });
     }
   }, [initialData, initialMembers, form, user]);
@@ -125,8 +127,8 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
         nome: "",
         descricao: "",
         status: "active",
-        regras_comite: "", // NOVO: Resetar regras
-        members: defaultMembers,
+        regras_comite: "",
+        members: defaultMembers.map(m => ({ ...m, user_id: m.user_id || null })), // Ensure null for new
       });
     }
   };
@@ -236,7 +238,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                     name={`members.${index}.user_id`}
                     render={({ field: memberField }) => (
                       <FormItem className="flex-1">
-                        <Select onValueChange={memberField.onChange} value={memberField.value}>
+                        <Select onValueChange={memberField.onChange} value={memberField.value || ""}> {/* Use || "" for Select value */}
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione um membro" />
@@ -246,15 +248,18 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                             {isLoadingUsers ? (
                               <SelectItem value="" disabled>Carregando usuários...</SelectItem>
                             ) : (
-                              users?.map((u) => (
-                                <SelectItem
-                                  key={u.id}
-                                  value={u.id}
-                                  disabled={fields.some((m, i) => i !== index && m.user_id === u.id)}
-                                >
-                                  {u.first_name} {u.last_name} ({u.email})
-                                </SelectItem>
-                              ))
+                              <>
+                                <SelectItem value="null">Selecione um usuário</SelectItem> {/* Added null option */}
+                                {users?.map((u) => (
+                                  <SelectItem
+                                    key={u.id}
+                                    value={u.id}
+                                    disabled={fields.some((m, i) => i !== index && m.user_id === u.id)}
+                                  >
+                                    {u.first_name} {u.last_name} ({u.email})
+                                  </SelectItem>
+                                ))}
+                              </>
                             )}
                           </SelectContent>
                         </Select>
@@ -299,7 +304,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => append({ user_id: "", role: "membro" })}
+                onClick={() => append({ user_id: null, role: "membro" })} {/* Changed to null */}
                 disabled={isLoadingUsers || (availableUsers && availableUsers.length === 0)}
                 className="w-full"
               >

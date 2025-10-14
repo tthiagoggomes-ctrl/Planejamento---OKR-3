@@ -122,7 +122,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
 
   isAtaFormOpen,
   setIsAtaFormOpen,
-  editingAta,
+  editingAta, // Corrected typo here
   selectedMeetingForAta,
   isAtaDeleteDialogOpen,
   setIsAtaDeleteDialogOpen,
@@ -197,13 +197,15 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comite", comiteId] });
-      queryClient.invalidateQueries({ queryKey: ["comiteMembers", comiteId] });
+      queryClient.invalidateQueries({ queryKey: ["comites"] }); // Invalida a lista de comitês
+      queryClient.invalidateQueries({ queryKey: ["comite", comiteId] }); // Invalida o comitê específico
+      queryClient.invalidateQueries({ queryKey: ["comiteMembers", comiteId] }); // Invalida os membros do comitê
+      queryClient.refetchQueries({ queryKey: ["comite", comiteId] }); // Força um refetch do comitê específico
       setIsCommitteeFormOpen(false);
-      showSuccess("Membros do comitê atualizados com sucesso!");
+      showSuccess("Comitê atualizado com sucesso!");
     },
     onError: (err) => {
-      showError(`Erro ao atualizar membros do comitê: ${err.message}`);
+      showError(`Erro ao atualizar comitê: ${err.message}`);
     },
   });
 

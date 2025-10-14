@@ -174,6 +174,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
 
   const updateComiteMutation = useMutation({
     mutationFn: ({ id: comiteId, ...values }: CommitteeFormValues & { id: string }) => {
+      console.log("Valores sendo enviados para updateComite:", values); // LOG DE DEBUG AQUI
       if (!canManageComiteMembers) {
         throw new Error("Você não tem permissão para gerenciar membros do comitê.");
       }

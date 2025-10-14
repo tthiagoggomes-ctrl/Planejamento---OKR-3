@@ -27,6 +27,21 @@ import {
   CollapsibleTrigger, // NOVO
 } from "@/components/ui/collapsible"; // NOVO
 import { Button } from "@/components/ui/button"; // Garantir que Button está importado
+import {
+  Table, // NOVO
+  TableBody, // NOVO
+  TableCell, // NOVO
+  TableHead, // NOVO
+  TableHeader, // NOVO
+  TableRow, // NOVO
+} from "@/components/ui/table"; // NOVO
+
+// NOVO: Interface para os membros da composição recomendada (para parsing)
+interface ComiteCompositionMember {
+  representante: string;
+  cargo_funcao: string;
+  papel_no_comite: string;
+}
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -242,6 +257,19 @@ const CommitteeDetails = () => {
     setIsRulesDisplayOpen(true);
   };
 
+  // NOVO: Função para parsear a string JSON da composição recomendada
+  const parsedComposicaoRecomendada: ComiteCompositionMember[] = React.useMemo(() => {
+    if (comite?.composicao_recomendada) {
+      try {
+        return JSON.parse(comite.composicao_recomendada) as ComiteCompositionMember[];
+      } catch (e) {
+        console.error("Erro ao parsear composicao_recomendada:", e);
+        return [];
+      }
+    }
+    return [];
+  }, [comite?.composicao_recomendada]);
+
   if (isLoadingComite || permissionsLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -311,16 +339,44 @@ const CommitteeDetails = () => {
                   <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.atribuicoes_comite}</pre>
                 </div>
               )}
-              {comite.composicao_recomendada && (
+              
+              {/* NOVO: Exibição da Composição Recomendada como tabela */}
+              {parsedComposicaoRecomendada.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Composição Recomendada</p>
-                  <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.composicao_recomendada}</pre>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Composição Recomendada</p>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Representante</TableHead>
+                        <TableHead>Cargo / Função</TableHead>
+                        <TableHead>Papel no Comitê</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {parsedComposicaoRecomendada.map((member, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{member.representante}</TableCell>
+                          <TableCell>{member.cargo_funcao}</TableCell>
+                          <TableCell>{member.papel_no_comite}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
+
+              {/* NOVO: Exibição do campo adicional da composição */}
+              {comite.composicao_recomendada_adicional && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Informações Adicionais sobre a Composição</p>
+                  <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.composicao_recomendada_adicional}</pre>
+                </div>
+              )}
+
               {comite.periodicidade_reunioes && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Periodicidade das Reuniões</p>
-                  <p className="text-base text-foreground">{comite.periodicidade_reunioes}</p>
+                  <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.periodicidade_reunioes}</pre>
                 </div>
               )}
               {comite.fluxo_demandas && (
@@ -341,7 +397,7 @@ const CommitteeDetails = () => {
                   <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.beneficios_esperados}</pre>
                 </div>
               )}
-              {(!comite.justificativa && !comite.atribuicoes_comite && !comite.composicao_recomendada &&
+              {(!comite.justificativa && !comite.atribuicoes_comite && parsedComposicaoRecomendada.length === 0 && !comite.composicao_recomendada_adicional &&
                 !comite.periodicidade_reunioes && !comite.fluxo_demandas && !comite.criterios_priorizacao && !comite.beneficios_esperados) && (
                 <p className="text-muted-foreground text-center py-4">Nenhuma informação detalhada adicional disponível para este comitê.</p>
               )}

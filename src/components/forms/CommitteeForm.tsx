@@ -36,6 +36,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
 import { useSession } from "@/components/auth/SessionContextProvider";
 
+// NOVO: Interface para os membros da composição recomendada
+interface ComiteCompositionMember {
+  representante: string;
+  cargo_funcao: string;
+  papel_no_comite: string;
+}
+
 const memberSchema = z.object({
   user_id: z.string().uuid({ message: "Selecione um usuário válido." }).nullable(),
   role: z.enum(['membro', 'presidente', 'secretario'], {
@@ -56,7 +63,14 @@ const formSchema = z.object({
   objetivo: z.string().nullable(),
   justificativa: z.string().nullable(),
   atribuicoes_comite: z.string().nullable(),
-  composicao_recomendada: z.string().nullable(),
+  // MODIFICADO: composicao_recomendada agora é um array de objetos
+  composicao_recomendada: z.array(z.object({
+    representante: z.string().min(1, "O nome do representante é obrigatório."),
+    cargo_funcao: z.string().min(1, "O cargo/função é obrigatório."),
+    papel_no_comite: z.string().min(1, "O papel no comitê é obrigatório."),
+  })).optional(),
+  // NOVO: Campo para texto adicional na composição
+  composicao_recomendada_adicional: z.string().nullable(),
   periodicidade_reunioes: z.string().nullable(),
   fluxo_demandas: z.string().nullable(),
   criterios_priorizacao: z.string().nullable(),
@@ -95,7 +109,9 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
       objetivo: initialData?.objetivo || "",
       justificativa: initialData?.justificativa || "",
       atribuicoes_comite: initialData?.atribuicoes_comite || "",
-      composicao_recomendada: initialData?.composicao_recomendada || "",
+      // MODIFICADO: Parsear string JSON para array de objetos
+      composicao_recomendada: initialData?.composicao_recomendada ? (JSON.parse(initialData.composicao_recomendada as string) as ComiteCompositionMember[]) : [],
+      composicao_recomendada_adicional: initialData?.composicao_recomendada_adicional || "", // NOVO
       periodicidade_reunioes: initialData?.periodicidade_reunioes || "",
       fluxo_demandas: initialData?.fluxo_demandas || "",
       criterios_priorizacao: initialData?.criterios_priorizacao || "",
@@ -104,9 +120,15 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields: memberFields, append: appendMember, remove: removeMember } = useFieldArray({
     control: form.control,
     name: "members",
+  });
+
+  // NOVO: useFieldArray para a composição recomendada
+  const { fields: compositionFields, append: appendComposition, remove: removeComposition } = useFieldArray({
+    control: form.control,
+    name: "composicao_recomendada",
   });
 
   const { data: users, isLoading: isLoadingUsers } = useQuery<UserProfile[] | null, Error>({
@@ -125,7 +147,9 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
         objetivo: initialData.objetivo,
         justificativa: initialData.justificativa,
         atribuicoes_comite: initialData.atribuicoes_comite,
-        composicao_recomendada: initialData.composicao_recomendada,
+        // MODIFICADO: Parsear string JSON para array de objetos
+        composicao_recomendada: initialData.composicao_recomendada ? (JSON.parse(initialData.composicao_recomendada as string) as ComiteCompositionMember[]) : [],
+        composicao_recomendada_adicional: initialData.composicao_recomendada_adicional, // NOVO
         periodicidade_reunioes: initialData.periodicidade_reunioes,
         fluxo_demandas: initialData.fluxo_demandas,
         criterios_priorizacao: initialData.criterios_priorizacao,
@@ -144,7 +168,8 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
         objetivo: "",
         justificativa: "",
         atribuicoes_comite: "",
-        composicao_recomendada: "",
+        composicao_recomendada: [], // NOVO: Resetar para array vazio
+        composicao_recomendada_adicional: "", // NOVO
         periodicidade_reunioes: "",
         fluxo_demandas: "",
         criterios_priorizacao: "",
@@ -168,7 +193,8 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
         objetivo: "",
         justificativa: "",
         atribuicoes_comite: "",
-        composicao_recomendada: "",
+        composicao_recomendada: [], // NOVO: Resetar para array vazio
+        composicao_recomendada_adicional: "", // NOVO
         periodicidade_reunioes: "",
         fluxo_demandas: "",
         criterios_priorizacao: "",
@@ -190,7 +216,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
   ];
 
   const availableUsers = users?.filter(
-    (u) => !fields.some((member) => member.user_id === u.id)
+    (u) => !memberFields.some((member) => member.user_id === u.id)
   );
 
   return (
@@ -294,19 +320,93 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                 </FormItem>
               )}
             />
+            
+            {/* MODIFICADO: Composição Recomendada como tabela dinâmica */}
+            <h4 className="font-semibold mt-4 mb-2">Composição Recomendada</h4>
+            <div className="space-y-3 border p-3 rounded-md">
+              {compositionFields.map((field, index) => (
+                <div key={field.id} className="flex flex-col gap-2 p-2 border rounded-md bg-gray-50 dark:bg-gray-700">
+                  <FormField
+                    control={form.control}
+                    name={`composicao_recomendada.${index}.representante`}
+                    render={({ field: subField }) => (
+                      <FormItem>
+                        <FormLabel>Representante</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nome do Representante" {...subField} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`composicao_recomendada.${index}.cargo_funcao`}
+                    render={({ field: subField }) => (
+                      <FormItem>
+                        <FormLabel>Cargo / Função</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Cargo ou Função" {...subField} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`composicao_recomendada.${index}.papel_no_comite`}
+                    render={({ field: subField }) => (
+                      <FormItem>
+                        <FormLabel>Papel no Comitê</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Papel no Comitê" {...subField} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeComposition(index)}
+                    className="self-end text-red-500 hover:text-red-700"
+                  >
+                    <XCircle className="h-4 w-4" />
+                    <span className="sr-only">Remover Membro da Composição</span>
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => appendComposition({ representante: "", cargo_funcao: "", papel_no_comite: "" })}
+                className="w-full"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Membro à Composição
+              </Button>
+            </div>
+
+            {/* NOVO: Campo para texto adicional na composição */}
             <FormField
               control={form.control}
-              name="composicao_recomendada"
+              name="composicao_recomendada_adicional"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Composição Recomendada (Nome, cargo/função, Papel no comitê)</FormLabel>
+                  <FormLabel>Informações Adicionais sobre a Composição (Opcional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Ex: João Silva, Gerente de TI, Presidente" className="min-h-[100px]" {...field} value={field.value || ""} />
+                    <Textarea
+                      placeholder="Adicione notas ou observações sobre a composição recomendada aqui..."
+                      className="min-h-[80px]"
+                      {...field}
+                      value={field.value || ""}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="periodicidade_reunioes"
@@ -394,7 +494,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
             <Separator className="my-4" />
             <h3 className="text-lg font-semibold mb-3">Membros do Comitê</h3>
             <div className="space-y-3">
-              {fields.map((field, index) => (
+              {memberFields.map((field, index) => (
                 <div key={field.id} className="flex items-center gap-2 p-2 border rounded-md">
                   <FormField
                     control={form.control}
@@ -417,7 +517,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                                   <SelectItem
                                     key={u.id}
                                     value={u.id}
-                                    disabled={fields.some((m, i) => i !== index && m.user_id === u.id)}
+                                    disabled={memberFields.some((m, i) => i !== index && m.user_id === u.id)}
                                   >
                                     {u.first_name} {u.last_name} ({u.email})
                                   </SelectItem>
@@ -457,7 +557,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={() => remove(index)}
+                    onClick={() => removeMember(index)}
                   >
                     <XCircle className="h-4 w-4 text-red-500" />
                     <span className="sr-only">Remover Membro</span>
@@ -467,7 +567,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => append({ user_id: null, role: "membro" })}
+                onClick={() => appendMember({ user_id: null, role: "membro" })}
                 disabled={isLoadingUsers || (availableUsers && availableUsers.length === 0)}
                 className="w-full"
               >

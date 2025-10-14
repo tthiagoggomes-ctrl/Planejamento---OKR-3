@@ -3,6 +3,13 @@ import { showError, showSuccess } from '@/utils/toast';
 import { UserProfile } from './users'; // Import UserProfile para tipagem
 import { CommitteeFormValues } from '@/components/forms/CommitteeForm'; // NOVO: Importar CommitteeFormValues
 
+// NOVO: Interface para os membros da composição recomendada (para tipagem da API)
+interface ComiteCompositionMember {
+  representante: string;
+  cargo_funcao: string;
+  papel_no_comite: string;
+}
+
 export interface Comite {
   id: string;
   nome: string;
@@ -13,7 +20,10 @@ export interface Comite {
   objetivo?: string | null;
   justificativa?: string | null;
   atribuicoes_comite?: string | null;
+  // MODIFICADO: composicao_recomendada agora é uma string JSON
   composicao_recomendada?: string | null;
+  // NOVO: Campo para texto adicional na composição
+  composicao_recomendada_adicional?: string | null;
   periodicidade_reunioes?: string | null;
   fluxo_demandas?: string | null;
   criterios_priorizacao?: string | null;
@@ -76,13 +86,17 @@ export const createComite = async (
     objetivo,
     justificativa,
     atribuicoes_comite,
-    composicao_recomendada,
+    composicao_recomendada, // Agora é um array de objetos
+    composicao_recomendada_adicional, // NOVO
     periodicidade_reunioes,
     fluxo_demandas,
     criterios_priorizacao,
     beneficios_esperados,
     members // Membros são tratados separadamente
   } = payload;
+
+  // Converter composicao_recomendada para string JSON antes de inserir
+  const composicaoRecomendadaJson = composicao_recomendada ? JSON.stringify(composicao_recomendada) : null;
 
   const { data: comiteData, error: comiteError } = await supabase
     .from('comites')
@@ -94,7 +108,8 @@ export const createComite = async (
       objetivo,
       justificativa,
       atribuicoes_comite,
-      composicao_recomendada,
+      composicao_recomendada: composicaoRecomendadaJson, // Inserir como string JSON
+      composicao_recomendada_adicional, // NOVO
       periodicidade_reunioes,
       fluxo_demandas,
       criterios_priorizacao,
@@ -135,7 +150,8 @@ export const createComite = async (
     objetivo,
     justificativa,
     atribuicoes_comite,
-    composicao_recomendada,
+    composicao_recomendada: composicaoRecomendadaJson, // Retornar como string JSON
+    composicao_recomendada_adicional, // NOVO
     periodicidade_reunioes,
     fluxo_demandas,
     criterios_priorizacao,
@@ -155,13 +171,17 @@ export const updateComite = async (
     objetivo,
     justificativa,
     atribuicoes_comite,
-    composicao_recomendada,
+    composicao_recomendada, // Agora é um array de objetos
+    composicao_recomendada_adicional, // NOVO
     periodicidade_reunioes,
     fluxo_demandas,
     criterios_priorizacao,
     beneficios_esperados,
     members // Membros são tratados separadamente, mas vêm no payload
   } = payload;
+
+  // Converter composicao_recomendada para string JSON antes de atualizar
+  const composicaoRecomendadaJson = composicao_recomendada ? JSON.stringify(composicao_recomendada) : null;
 
   const updateObject = {
     nome,
@@ -171,7 +191,8 @@ export const updateComite = async (
     objetivo,
     justificativa,
     atribuicoes_comite,
-    composicao_recomendada,
+    composicao_recomendada: composicaoRecomendadaJson, // Atualizar como string JSON
+    composicao_recomendada_adicional, // NOVO
     periodicidade_reunioes,
     fluxo_demandas,
     criterios_priorizacao,

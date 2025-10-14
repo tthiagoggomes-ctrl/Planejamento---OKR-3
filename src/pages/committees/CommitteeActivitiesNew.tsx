@@ -282,236 +282,238 @@ const CommitteeActivitiesNew = () => {
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-2xl font-bold flex items-center">
-            <ListTodo className="mr-2 h-6 w-6" /> Gestão de Atividades do Comitê
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <ToggleGroup type="single" value={viewMode} onValueChange={(value: 'list' | 'kanban' | 'gantt') => value && setViewMode(value)}>
-              <ToggleGroupItem value="list" aria-label="Visualização em Lista">
-                <List className="h-4 w-4 mr-2" /> Lista
-              </ToggleGroupItem>
-              <ToggleGroupItem value="kanban" aria-label="Visualização em Kanban">
-                <Kanban className="h-4 w-4 mr-2" /> Kanban
-              </ToggleGroupItem>
-              <ToggleGroupItem value="gantt" aria-label="Visualização em Gantt">
-                <GanttChartSquare className="h-4 w-4 mr-2" /> Gantt
-              </ToggleGroupItem>
-            </ToggleGroup>
-            {canInsertAtividadesComite && (
-              <Button onClick={() => { setEditingAtividade(null); setIsFormOpen(true); }}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Nova Atividade
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-center gap-4 mb-4">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar atividades..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
+    <React.Fragment>
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-2xl font-bold flex items-center">
+              <ListTodo className="mr-2 h-6 w-6" /> Gestão de Atividades do Comitê
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <ToggleGroup type="single" value={viewMode} onValueChange={(value: 'list' | 'kanban' | 'gantt') => value && setViewMode(value)}>
+                <ToggleGroupItem value="list" aria-label="Visualização em Lista">
+                  <List className="h-4 w-4 mr-2" /> Lista
+                </ToggleGroupItem>
+                <ToggleGroupItem value="kanban" aria-label="Visualização em Kanban">
+                  <Kanban className="h-4 w-4 mr-2" /> Kanban
+                </ToggleGroupItem>
+                <ToggleGroupItem value="gantt" aria-label="Visualização em Gantt">
+                  <GanttChartSquare className="h-4 w-4 mr-2" /> Gantt
+                </ToggleGroupItem>
+              </ToggleGroup>
+              {canInsertAtividadesComite && (
+                <Button onClick={() => { setEditingAtividade(null); setIsFormOpen(true); }}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Nova Atividade
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap items-center gap-4 mb-4">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar atividades..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+
+              <Select
+                value={selectedComiteFilter}
+                onValueChange={(value: string | 'all') => {
+                  setSelectedComiteFilter(value);
+                  setSelectedReuniaoFilter('all');
+                  setSelectedAtaReuniaoFilter('all');
+                }}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filtrar por Comitê" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Comitês</SelectItem>
+                  {comites?.map((comite) => (
+                    <SelectItem key={comite.id} value={comite.id}>{comite.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={selectedReuniaoFilter}
+                onValueChange={(value: string | 'all') => {
+                  setSelectedReuniaoFilter(value);
+                  setSelectedAtaReuniaoFilter('all');
+                }}
+                disabled={selectedComiteFilter === 'all' || isLoadingReunioes}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filtrar por Reunião" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Reuniões</SelectItem>
+                  {isLoadingReunioes ? (
+                    <SelectItem value="" disabled>Carregando reuniões...</SelectItem>
+                  ) : (
+                    reunioes?.map((reuniao) => (
+                      <SelectItem key={reuniao.id} value={reuniao.id}>
+                        {reuniao.titulo} ({format(parseISO(reuniao.data_reuniao), "PPP")})
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={selectedAtaReuniaoFilter}
+                onValueChange={(value: string | 'all') => setSelectedAtaReuniaoFilter(value)}
+                disabled={selectedReuniaoFilter === 'all' || isLoadingAtasReuniao}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filtrar por Ata" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Atas</SelectItem>
+                  {isLoadingAtasReuniao ? (
+                    <SelectItem value="" disabled>Carregando atas...</SelectItem>
+                  ) : (
+                    atasReuniao?.map((ata) => (
+                      <SelectItem key={ata.id} value={ata.id}>
+                        Ata de {ata.data_reuniao ? format(parseISO(ata.data_reuniao), "PPP") : format(parseISO(ata.created_at!), "PPP")}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
-            <Select
-              value={selectedComiteFilter}
-              onValueChange={(value: string | 'all') => {
-                setSelectedComiteFilter(value);
-                setSelectedReuniaoFilter('all');
-                setSelectedAtaReuniaoFilter('all');
-              }}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filtrar por Comitê" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Comitês</SelectItem>
-                {comites?.map((comite) => (
-                  <SelectItem key={comite.id} value={comite.id}>{comite.nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={selectedReuniaoFilter}
-              onValueChange={(value: string | 'all') => {
-                setSelectedReuniaoFilter(value);
-                setSelectedAtaReuniaoFilter('all');
-              }}
-              disabled={selectedComiteFilter === 'all' || isLoadingReunioes}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filtrar por Reunião" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as Reuniões</SelectItem>
-                {isLoadingReunioes ? (
-                  <SelectItem value="" disabled>Carregando reuniões...</SelectItem>
-                ) : (
-                  reunioes?.map((reuniao) => (
-                    <SelectItem key={reuniao.id} value={reuniao.id}>
-                      {reuniao.titulo} ({format(parseISO(reuniao.data_reuniao), "PPP")})
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={selectedAtaReuniaoFilter}
-              onValueChange={(value: string | 'all') => setSelectedAtaReuniaoFilter(value)}
-              disabled={selectedReuniaoFilter === 'all' || isLoadingAtasReuniao}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filtrar por Ata" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as Atas</SelectItem>
-                {isLoadingAtasReuniao ? (
-                  <SelectItem value="" disabled>Carregando atas...</SelectItem>
-                ) : (
-                  atasReuniao?.map((ata) => (
-                    <SelectItem key={ata.id} value={ata.id}>
-                      Ata de {ata.data_reuniao ? format(parseISO(ata.data_reuniao), "PPP") : format(parseISO(ata.created_at!), "PPP")}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {viewMode === 'list' ? (
-            filteredAtividades && filteredAtividades.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Comitê</TableHead>
-                    <TableHead>Reunião</TableHead>
-                    <TableHead>Ata de Reunião</TableHead>
-                    <TableHead>Responsável</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAtividades.map((atividade) => (
-                    <TableRow key={atividade.id}>
-                      <TableCell className="font-medium">{atividade.titulo}</TableCell>
-                      <TableCell>{atividade.comite_nome}</TableCell>
-                      <TableCell>{atividade.reuniao_titulo}</TableCell>
-                      <TableCell>
-                        {atividade.ata_reuniao_data_reuniao ? format(parseISO(atividade.ata_reuniao_data_reuniao), "PPP") : 'N/A'}
-                      </TableCell>
-                      <TableCell>{atividade.assignee_name}</TableCell>
-                      <TableCell>
-                        {atividade.due_date ? format(parseISO(atividade.due_date), "PPP") : "N/A"}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(atividade.status)}`}>
-                          {atividade.status === 'todo' && 'A Fazer'}
-                          {atividade.status === 'in_progress' && 'Em Progresso'}
-                          {atividade.status === 'done' && 'Concluído'}
-                          {atividade.status === 'stopped' && 'Parado'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {canEditAtividadesComite && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEditClick(atividade)}
-                            className="mr-2"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Editar</span>
-                          </Button>
-                        )}
-                        {canDeleteAtividadesComite && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteClick(atividade.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Excluir</span>
-                          </Button>
-                        )}
-                      </TableCell>
+            {viewMode === 'list' ? (
+              filteredAtividades && filteredAtividades.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Título</TableHead>
+                      <TableHead>Comitê</TableHead>
+                      <TableHead>Reunião</TableHead>
+                      <TableHead>Ata de Reunião</TableHead>
+                      <TableHead>Responsável</TableHead>
+                      <TableHead>Vencimento</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-gray-600">Nenhuma atividade do comitê cadastrada ainda ou correspondente aos filtros.</p>
-            )
-          ) : viewMode === 'kanban' ? (
-            <KanbanBoard<AtividadeComite>
-              atividades={filteredAtividades}
-              onStatusChange={handleStatusChangeFromKanban}
-              onEdit={handleEditClick}
-              onDelete={handleDeleteClick}
-              canEditAtividades={canEditAtividadesComite}
-              canDeleteAtividades={canDeleteAtividadesComite}
-              canChangeActivityStatus={canChangeActivityStatusComite}
-            />
-          ) : ( // Gantt view
-            <GanttChart<AtividadeComite>
-              atividades={filteredAtividades.map(a => ({ // Map to generic Atividade type for GanttChart
-                ...a,
-                key_result_title: a.reuniao_titulo, // Use meeting title as KR title for Gantt
-                key_result_objetivo_id: a.comite_id, // Use committee ID as objective ID for Gantt
-              }))}
-              groupByKr={ganttGroupByKr}
-              onGroupByKrChange={setGanttGroupByKr}
-              ganttSortBy={ganttSortBy}
-              onGanttSortByChange={setGanttSortBy}
-              ganttSortOrder={ganttSortOrder}
-              onGanttSortOrderChange={setGanttSortOrder}
-            />
-          )}
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAtividades.map((atividade) => (
+                      <TableRow key={atividade.id}>
+                        <TableCell className="font-medium">{atividade.titulo}</TableCell>
+                        <TableCell>{atividade.comite_nome}</TableCell>
+                        <TableCell>{atividade.reuniao_titulo}</TableCell>
+                        <TableCell>
+                          {atividade.ata_reuniao_data_reuniao ? format(parseISO(atividade.ata_reuniao_data_reuniao), "PPP") : 'N/A'}
+                        </TableCell>
+                        <TableCell>{atividade.assignee_name}</TableCell>
+                        <TableCell>
+                          {atividade.due_date ? format(parseISO(atividade.due_date), "PPP") : "N/A"}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(atividade.status)}`}>
+                            {atividade.status === 'todo' && 'A Fazer'}
+                            {atividade.status === 'in_progress' && 'Em Progresso'}
+                            {atividade.status === 'done' && 'Concluído'}
+                            {atividade.status === 'stopped' && 'Parado'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {canEditAtividadesComite && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditClick(atividade)}
+                              className="mr-2"
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span className="sr-only">Editar</span>
+                            </Button>
+                          )}
+                          {canDeleteAtividadesComite && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteClick(atividade.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Excluir</span>
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-gray-600">Nenhuma atividade do comitê cadastrada ainda ou correspondente aos filtros.</p>
+              )
+            ) : viewMode === 'kanban' ? (
+              <KanbanBoard<AtividadeComite>
+                atividades={filteredAtividades}
+                onStatusChange={handleStatusChangeFromKanban}
+                onEdit={handleEditClick}
+                onDelete={handleDeleteClick}
+                canEditAtividades={canEditAtividadesComite}
+                canDeleteAtividades={canDeleteAtividadesComite}
+                canChangeActivityStatus={canChangeActivityStatusComite}
+              />
+            ) : ( // Gantt view
+              <GanttChart<AtividadeComite>
+                atividades={filteredAtividades.map(a => ({ // Map to generic Atividade type for GanttChart
+                  ...a,
+                  key_result_title: a.reuniao_titulo, // Use meeting title as KR title for Gantt
+                  key_result_objetivo_id: a.comite_id, // Use committee ID as objective ID for Gantt
+                }))}
+                groupByKr={ganttGroupByKr}
+                onGroupByKrChange={setGanttGroupByKr}
+                ganttSortBy={ganttSortBy}
+                onGanttSortByChange={setGanttSortBy}
+                ganttSortOrder={ganttSortOrder}
+                onGanttSortOrderChange={setGanttSortOrder}
+              />
+            )}
+          </CardContent>
+        </Card>
 
-      {(canInsertAtividadesComite || canEditAtividadesComite) && (
-        <AtividadeComiteForm
-          open={isFormOpen}
-          onOpenChange={setIsFormOpen}
-          onSubmit={handleCreateOrUpdateAtividade}
-          initialData={editingAtividade}
-          isLoading={createAtividadeMutation.isPending || updateAtividadeMutation.isPending}
-          preselectedComiteId={selectedComiteFilter !== 'all' ? selectedComiteFilter : null}
-          preselectedAtaReuniaoId={selectedAtaReuniaoFilter !== 'all' ? selectedAtaReuniaoFilter : null}
-        />
-      )}
+        {(canInsertAtividadesComite || canEditAtividadesComite) && (
+          <AtividadeComiteForm
+            open={isFormOpen}
+            onOpenChange={setIsFormOpen}
+            onSubmit={handleCreateOrUpdateAtividade}
+            initialData={editingAtividade}
+            isLoading={createAtividadeMutation.isPending || updateAtividadeMutation.isPending}
+            preselectedComiteId={selectedComiteFilter !== 'all' ? selectedComiteFilter : null}
+            preselectedAtaReuniaoId={selectedAtaReuniaoFilter !== 'all' ? selectedAtaReuniaoFilter : null}
+          />
+        )}
 
-      {canDeleteAtividadesComite && (
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação não pode ser desfeita. Isso excluirá permanentemente a atividade do comitê selecionada.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete} disabled={deleteAtividadeMutation.isPending}>
-                {deleteAtividadeMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {deleteAtividadeMutation.isPending ? "Excluindo..." : "Excluir"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
-    </div>
+        {canDeleteAtividadesComite && (
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação não pode ser desfeita. Isso excluirá permanentemente a atividade do comitê selecionada.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDelete} disabled={deleteAtividadeMutation.isPending}>
+                  {deleteAtividadeMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {deleteAtividadeMutation.isPending ? "Excluindo..." : "Excluir"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
+    </React.Fragment>
   );
 };
 

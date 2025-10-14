@@ -3,11 +3,11 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CalendarDays, AlertTriangle, Clock, CheckCircle, TrendingUp, Eye, EyeOff } from 'lucide-react';
+import { Loader2, CalendarDays, AlertTriangle, Clock, TrendingUp, Eye, EyeOff } from 'lucide-react';
 import { getPeriodos, Periodo } from '@/integrations/supabase/api/periodos';
 import { getAllKeyResults, KeyResult } from '@/integrations/supabase/api/key_results';
 import { showError } from '@/utils/toast';
-import { format, isPast as dateFnsIsPast, isWithinInterval, parseISO } from 'date-fns';
+import { format, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { Switch } from '@/components/ui/switch';
@@ -19,12 +19,12 @@ interface KeyResultsByPeriodListProps {
 }
 
 const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
-  const { data: periods, isLoading: isLoadingPeriods, error: errorPeriods } = useQuery<Periodo[] | null, Error>({
+  const { data: periods, isLoading: isLoadingPeriods, error: errorPeriods } = useQuery<Periodo[], Error>({
     queryKey: ["allPeriods"],
     queryFn: () => getPeriodos(),
   });
 
-  const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[] | null, Error>({
+  const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[], Error>({
     queryKey: ["allKeyResults"],
     queryFn: () => getAllKeyResults(),
   });
@@ -54,7 +54,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
 
       const periodEndDate = parseISO(period.end_date);
       const periodStartDate = parseISO(period.start_date);
-      const isPeriodPast = dateFnsIsPast(periodEndDate); // Corrigido: Removido { refDate: now }
+      const isPeriodPast = periodEndDate < now;
       const isPeriodCurrent = isWithinInterval(now, { start: periodStartDate, end: periodEndDate });
 
       if (kr.status !== 'completed') {
@@ -83,8 +83,8 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
       if (aIsCurrent && !bIsCurrent) return -1;
       if (!aIsCurrent && bIsCurrent) return 1;
 
-      const aIsPast = dateFnsIsPast(aEndDate); // Corrigido: Removido { refDate: now }
-      const bIsPast = dateFnsIsPast(bEndDate); // Corrigido: Removido { refDate: now }
+      const aIsPast = aEndDate < now;
+      const bIsPast = bEndDate < now;
 
       if (aIsPast && !bIsPast) return -1;
       if (!aIsPast && bIsPast) return 1;
@@ -161,7 +161,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
           filteredGroups.map(({ period, overdueKRs, attentionKRs, otherKRs }) => {
             const periodEndDate = parseISO(period.end_date);
             const periodStartDate = parseISO(period.start_date);
-            const isPeriodPast = dateFnsIsPast(periodEndDate); // Corrigido: Removido { refDate: now }
+            const isPeriodPast = periodEndDate < now;
             const isPeriodCurrent = isWithinInterval(now, { start: periodStartDate, end: periodEndDate });
 
             const hasOverdue = overdueKRs.length > 0;

@@ -1,5 +1,5 @@
 import { supabase } from '../client';
-import { showError } from '@/utils/toast'; // Removido showSuccess
+import { showError } from '@/utils/toast';
 
 export interface Area {
   id: string;
@@ -13,10 +13,10 @@ interface GetAreasParams {
   sortOrder?: 'asc' | 'desc';
 }
 
-export const getAreas = async (params?: GetAreasParams): Promise<Area[] | null> => {
+export const getAreas = async (params?: GetAreasParams): Promise<Area[]> => {
   let query = supabase.from('areas').select('*');
 
-  const sortByColumn = params?.sortBy || 'nome'; // Default sort by 'nome'
+  const sortByColumn = params?.sortBy || 'nome';
   const sortAscending = params?.sortOrder === 'asc';
 
   query = query.order(sortByColumn, { ascending: sortAscending });
@@ -25,9 +25,9 @@ export const getAreas = async (params?: GetAreasParams): Promise<Area[] | null> 
   if (error) {
     console.error('Error fetching areas:', error.message);
     showError('Erro ao carregar áreas.');
-    return null;
+    throw error; // Throw error to be caught by react-query
   }
-  return data;
+  return data || []; // Ensure it always returns an array
 };
 
 export const createArea = async (nome: string): Promise<Area | null> => {

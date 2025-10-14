@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getComites, Comite } from '@/integrations/supabase/api/comites';
 import { getReunioes, Reuniao } from '@/integrations/supabase/api/reunioes';
 import { getEnquetes, Enquete } from '@/integrations/supabase/api/enquetes';
-import { getAtividadesComite, AtividadeComite } from '@/integrations/supabase/api/atividades_comite';
+// import { getAtividadesComite, AtividadeComite } from '@/integrations/supabase/api/atividades_comite'; // Comentado
 import { showError } from '@/utils/toast';
 import { isFuture, parseISO, isWithinInterval, addDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -22,7 +22,7 @@ const CommitteesDashboard = () => {
   const canViewComites = can('comites', 'view');
   const canViewReunioes = can('reunioes', 'view');
   const canViewEnquetes = can('enquetes', 'view');
-  const canViewAtividadesComite = can('atividades_comite', 'view');
+  // const canViewAtividadesComite = can('atividades_comite', 'view'); // Comentado
 
   const now = new Date();
 
@@ -47,12 +47,12 @@ const CommitteesDashboard = () => {
     enabled: canViewEnquetes && !permissionsLoading,
   });
 
-  // Fetch all committee activities
-  const { data: allCommitteeActivities, isLoading: isLoadingActivities, error: errorActivities } = useQuery<AtividadeComite[] | null, Error>({
-    queryKey: ["allCommitteeActivities"],
-    queryFn: () => getAtividadesComite({ comite_id: 'all' }), // Fetch all committee activities
-    enabled: canViewAtividadesComite && !permissionsLoading,
-  });
+  // Fetch all committee activities - COMENTADO
+  // const { data: allCommitteeActivities, isLoading: isLoadingActivities, error: errorActivities } = useQuery<AtividadeComite[] | null, Error>({
+  //   queryKey: ["allCommitteeActivities"],
+  //   queryFn: () => getAtividadesComite({ comite_id: 'all' }), // Fetch all committee activities
+  //   enabled: canViewAtividadesComite && !permissionsLoading,
+  // });
 
   // Process data for cards
   const committeeStats = React.useMemo(() => {
@@ -78,21 +78,22 @@ const CommitteesDashboard = () => {
       .slice(0, 5); // Show up to 5 active polls
   }, [allPolls, now]);
 
-  const pendingCommitteeActivities = React.useMemo(() => {
-    if (!allCommitteeActivities) return [];
-    return allCommitteeActivities
-      .filter(a => a.status === 'todo' || a.status === 'in_progress')
-      .sort((a, b) => {
-        const dateA = a.due_date ? parseISO(a.due_date) : new Date(8640000000000000); // Max date for null
-        const dateB = b.due_date ? parseISO(b.due_date) : new Date(8640000000000000);
-        return dateA.getTime() - dateB.getTime(); // Sort by due date ascending
-      })
-      .slice(0, 5); // Show up to 5 pending activities
-  }, [allCommitteeActivities]);
+  // Pending Committee Activities - COMENTADO
+  // const pendingCommitteeActivities = React.useMemo(() => {
+  //   if (!allCommitteeActivities) return [];
+  //   return allCommitteeActivities
+  //     .filter(a => a.status === 'todo' || a.status === 'in_progress')
+  //     .sort((a, b) => {
+  //       const dateA = a.due_date ? parseISO(a.due_date) : new Date(8640000000000000); // Max date for null
+  //       const dateB = b.due_date ? parseISO(b.due_date) : new Date(8640000000000000);
+  //       return dateA.getTime() - dateB.getTime(); // Sort by due date ascending
+  //     })
+  //     .slice(0, 5); // Show up to 5 pending activities
+  // }, [allCommitteeActivities]);
 
 
-  const isLoadingOverall = permissionsLoading || isLoadingComites || isLoadingMeetings || isLoadingPolls || isLoadingActivities;
-  const errorOverall = errorComites || errorMeetings || errorPolls || errorActivities;
+  const isLoadingOverall = permissionsLoading || isLoadingComites || isLoadingMeetings || isLoadingPolls; // isLoadingActivities removido
+  const errorOverall = errorComites || errorMeetings || errorPolls; // errorActivities removido
 
   if (isLoadingOverall) {
     return (
@@ -193,14 +194,14 @@ const CommitteesDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Atividades Pendentes do Comitê Card */}
+        {/* Atividades Pendentes do Comitê Card - COMENTADO */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Atividades Pendentes</CardTitle>
             <ListTodo className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingCommitteeActivities.length}</div>
+            {/* <div className="text-2xl font-bold">{pendingCommitteeActivities.length}</div>
             {pendingCommitteeActivities.length > 0 ? (
               <ul className="text-xs text-muted-foreground mt-2 space-y-1">
                 {pendingCommitteeActivities.map(activity => (
@@ -211,7 +212,9 @@ const CommitteesDashboard = () => {
               </ul>
             ) : (
               <p className="text-xs text-muted-foreground mt-2">Nenhuma atividade pendente.</p>
-            )}
+            )} */}
+            <div className="text-2xl font-bold">N/A</div>
+            <p className="text-xs text-muted-foreground mt-2">Funcionalidade desativada temporariamente.</p>
           </CardContent>
         </Card>
       </div>

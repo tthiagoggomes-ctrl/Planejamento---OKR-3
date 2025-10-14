@@ -153,29 +153,33 @@ export const updateComite = async (
   criterios_priorizacao: string | null = null,
   beneficios_esperados: string | null = null
 ): Promise<Comite | null> => {
+  const updateObject = {
+    nome,
+    descricao,
+    status,
+    regras_comite,
+    objetivo,
+    justificativa,
+    atribuicoes_comite,
+    composicao_recomendada,
+    periodicidade_reunioes,
+    fluxo_demandas,
+    criterios_priorizacao,
+    beneficios_esperados,
+    updated_at: new Date().toISOString()
+  };
+
+  console.log('[API updateComite] Objeto de atualização enviado para Supabase:', JSON.stringify(updateObject, null, 2)); // NOVO LOG AQUI
+
   const { data: comiteData, error: comiteError } = await supabase
     .from('comites')
-    .update({
-      nome,
-      descricao,
-      status,
-      regras_comite,
-      objetivo,
-      justificativa,
-      atribuicoes_comite,
-      composicao_recomendada,
-      periodicidade_reunioes,
-      fluxo_demandas,
-      criterios_priorizacao,
-      beneficios_esperados,
-      updated_at: new Date().toISOString()
-    }) // Incluído regras_comite e novos campos
+    .update(updateObject) // Usando o objeto de atualização
     .eq('id', id)
     .select()
     .single();
 
-  console.log('[API updateComite] Supabase response - Data:', comiteData); // NOVO LOG
-  console.log('[API updateComite] Supabase response - Error:', comiteError); // NOVO LOG
+  console.log('[API updateComite] Supabase response - Data:', JSON.stringify(comiteData, null, 2)); // LOG COMPLETO
+  console.log('[API updateComite] Supabase response - Error:', comiteError); // LOG COMPLETO
 
   if (comiteError) {
     console.error('Error updating comite:', comiteError.message);

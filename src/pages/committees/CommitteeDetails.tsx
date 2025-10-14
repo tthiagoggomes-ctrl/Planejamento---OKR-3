@@ -3,7 +3,7 @@
 import React from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, ChevronDown, ChevronUp } from "lucide-react"; // Importar ChevronDown e ChevronUp
+import { Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integrations/supabase/api/comites";
 import { getReunioes, Reuniao } from "@/integrations/supabase/api/reunioes"; 
 import { AtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
@@ -12,7 +12,6 @@ import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useSession } from "@/components/auth/SessionContextProvider";
 import { showSuccess, showError } from "@/utils/toast";
 
-// Importar os novos componentes modulares
 import { CommitteeDetailsHeader } from "@/components/committees/CommitteeDetailsHeader";
 import { CommitteeMembersSection } from "@/components/committees/CommitteeMembersSection";
 import { CommitteeMeetingsSection } from "@/components/committees/CommitteeMeetingsSection";
@@ -22,26 +21,19 @@ import { CommitteeRulesDisplay } from "@/components/committees/CommitteeRulesDis
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
-  Collapsible, // NOVO
-  CollapsibleContent, // NOVO
-  CollapsibleTrigger, // NOVO
-} from "@/components/ui/collapsible"; // NOVO
-import { Button } from "@/components/ui/button"; // Garantir que Button está importado
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
 import {
-  Table, // NOVO
-  TableBody, // NOVO
-  TableCell, // NOVO
-  TableHead, // NOVO
-  TableHeader, // NOVO
-  TableRow, // NOVO
-} from "@/components/ui/table"; // NOVO
-
-// NOVO: Interface para os membros da composição recomendada (para parsing)
-interface ComiteCompositionMember {
-  representante: string;
-  cargo_funcao: string;
-  papel_no_comite: string;
-}
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -50,7 +42,6 @@ const CommitteeDetails = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
 
-  // Permissões
   const canViewComiteDetails = can('comites', 'view');
   const canManageComiteMembers = can('comite_membros', 'manage');
   const canViewReunioes = can('reunioes', 'view');
@@ -69,13 +60,11 @@ const CommitteeDetails = () => {
   const canViewVotosEnquete = can('votos_enquete', 'view');
   const canVoteEnquete = can('votos_enquete', 'vote');
 
-  // Estados para expansão de seções
   const [expandedMeetings, setExpandedMeetings] = React.useState<Set<string>>(new Set());
   const [expandedMinutes, setExpandedMinutes] = React.useState<Set<string>>(new Set());
   const [expandedPolls, setExpandedPolls] = React.useState<Set<string>>(new Set());
-  const [isDetailsExpanded, setIsDetailsExpanded] = React.useState(false); // NOVO: Estado para detalhes
+  const [isDetailsExpanded, setIsDetailsExpanded] = React.useState(false);
 
-  // Estados para modais e dados de edição/exclusão
   const [isCommitteeFormOpen, setIsCommitteeFormOpen] = React.useState(false);
   const [editingComite, setEditingComite] = React.useState<Comite | null>(null);
 
@@ -101,7 +90,6 @@ const CommitteeDetails = () => {
 
   const [isRulesDisplayOpen, setIsRulesDisplayOpen] = React.useState(false);
 
-  // Queries
   const { data: comite, isLoading: isLoadingComite, error: errorComite } = useQuery<Comite | null, Error>({
     queryKey: ["comite", id],
     queryFn: () => getComiteById(id!),
@@ -141,7 +129,6 @@ const CommitteeDetails = () => {
     enabled: !!id && canViewEnquetes && !permissionsLoading,
   });
 
-  // Mutation for voting on polls
   const voteOnEnqueteMutation = useMutation({
     mutationFn: ({ enqueteId, opcaoId }: { enqueteId: string; opcaoId: string }) => {
       if (!user?.id) {
@@ -153,7 +140,7 @@ const CommitteeDetails = () => {
       return voteOnEnquete(enqueteId, opcaoId, user.id);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["enquetes", id, user?.id] }); // Invalidate specific poll query
+      queryClient.invalidateQueries({ queryKey: ["enquetes", id, user?.id] });
       showSuccess("Voto registrado com sucesso!");
       handleVoteEnqueteSuccess(variables.enqueteId, variables.opcaoId);
     },
@@ -162,7 +149,6 @@ const CommitteeDetails = () => {
     },
   });
 
-  // Effects para inicialização de estados
   React.useEffect(() => {
     if (comite) {
       setEditingComite(comite);
@@ -200,7 +186,6 @@ const CommitteeDetails = () => {
     }
   }, [location.state, meetings, minutesMap]);
 
-  // Handlers para abrir modais e definir dados de edição/exclusão
   const handleManageMembersClick = () => setIsCommitteeFormOpen(true);
 
   const handleAddReuniaoClick = () => {
@@ -257,19 +242,6 @@ const CommitteeDetails = () => {
     setIsRulesDisplayOpen(true);
   };
 
-  // NOVO: Função para parsear a string JSON da composição recomendada
-  const parsedComposicaoRecomendada: ComiteCompositionMember[] = React.useMemo(() => {
-    if (comite?.composicao_recomendada) {
-      try {
-        return JSON.parse(comite.composicao_recomendada) as ComiteCompositionMember[];
-      } catch (e) {
-        console.error("Erro ao parsear composicao_recomendada:", e);
-        return [];
-      }
-    }
-    return [];
-  }, [comite?.composicao_recomendada]);
-
   if (isLoadingComite || permissionsLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -298,7 +270,6 @@ const CommitteeDetails = () => {
     <div className="container mx-auto py-6">
       <CommitteeDetailsHeader comite={comite} onViewRulesClick={handleViewRulesClick} />
 
-      {/* NEW: Detailed Information Section */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-2xl font-bold">Informações Detalhadas</CardTitle>
@@ -311,7 +282,6 @@ const CommitteeDetails = () => {
             </div>
           )}
 
-          {/* Collapsible section for the rest of the details */}
           <Collapsible open={isDetailsExpanded} onOpenChange={setIsDetailsExpanded}>
             <CollapsibleTrigger asChild>
               <Button variant="link" className="p-0 h-auto text-sm">
@@ -340,38 +310,8 @@ const CommitteeDetails = () => {
                 </div>
               )}
               
-              {/* NOVO: Exibição da Composição Recomendada como tabela */}
-              {parsedComposicaoRecomendada.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Composição Recomendada</p>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Representante</TableHead>
-                        <TableHead>Cargo / Função</TableHead>
-                        <TableHead>Papel no Comitê</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {parsedComposicaoRecomendada.map((member, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{member.representante}</TableCell>
-                          <TableCell>{member.cargo_funcao}</TableCell>
-                          <TableCell>{member.papel_no_comite}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-
-              {/* NOVO: Exibição do campo adicional da composição */}
-              {comite.composicao_recomendada_adicional && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Informações Adicionais sobre a Composição</p>
-                  <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.composicao_recomendada_adicional}</pre>
-                </div>
-              )}
+              {/* REMOVIDO: Exibição da Composição Recomendada como tabela */}
+              {/* REMOVIDO: Exibição do campo adicional da composição */}
 
               {comite.periodicidade_reunioes && (
                 <div>
@@ -397,7 +337,7 @@ const CommitteeDetails = () => {
                   <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.beneficios_esperados}</pre>
                 </div>
               )}
-              {(!comite.justificativa && !comite.atribuicoes_comite && parsedComposicaoRecomendada.length === 0 && !comite.composicao_recomendada_adicional &&
+              {(!comite.justificativa && !comite.atribuicoes_comite &&
                 !comite.periodicidade_reunioes && !comite.fluxo_demandas && !comite.criterios_priorizacao && !comite.beneficios_esperados) && (
                 <p className="text-muted-foreground text-center py-4">Nenhuma informação detalhada adicional disponível para este comitê.</p>
               )}
@@ -530,7 +470,6 @@ const CommitteeDetails = () => {
         onVoteEnqueteSuccess={handleVoteEnqueteSuccess}
       />
 
-      {/* NOVO: Modal para exibir as regras do comitê */}
       <CommitteeRulesDisplay
         open={isRulesDisplayOpen}
         onOpenChange={setIsRulesDisplayOpen}

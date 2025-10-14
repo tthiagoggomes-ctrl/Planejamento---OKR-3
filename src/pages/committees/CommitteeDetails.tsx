@@ -2,14 +2,15 @@
 
 import React from "react";
 import { useParams, useLocation } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Import useMutation and useQueryClient
 import { Loader2 } from "lucide-react";
-import { getComiteById, getComiteMembers, Comite } from "@/integrations/supabase/api/comites";
+import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integrations/supabase/api/comites"; // Import ComiteMember
 import { getReunioesByComiteId, Reuniao } from "@/integrations/supabase/api/reunioes";
 import { AtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
-import { getEnquetesByComiteId, Enquete } from "@/integrations/supabase/api/enquetes";
+import { getEnquetesByComiteId, Enquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes"; // Import voteOnEnquete
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useSession } from "@/components/auth/SessionContextProvider";
+import { showSuccess, showError } from "@/utils/toast"; // Import toast functions
 
 // Importar os novos componentes modulares
 import { CommitteeDetailsHeader } from "@/components/committees/CommitteeDetailsHeader";
@@ -23,6 +24,7 @@ const CommitteeDetails = () => {
   const { can, isLoading: permissionsLoading } = useUserPermissions();
   const { user } = useSession();
   const location = useLocation();
+  const queryClient = useQueryClient(); // Initialize queryClient
 
   // Permissões
   const canViewComiteDetails = can('comites', 'view');
@@ -110,6 +112,27 @@ const CommitteeDetails = () => {
     queryKey: ["enquetes", id, user?.id],
     queryFn: ({ queryKey }) => getEnquetesByComiteId(queryKey[1] as string, queryKey[2] as string | undefined),
     enabled: !!id && canViewEnquetes && !permissionsLoading,
+  });
+
+  // Mutation for voting on polls
+  const voteOnEnqueteMutation = useMutation({
+    mutationFn: ({ enqueteId, opcaoId }: { enqueteId: string; opcaoId: string }) => {
+      if (!user?.id) {
+        throw new Error("User not authenticated.");
+      }
+      if (!canVoteEnquete) {
+        throw new Error("Você não tem permissão para votar em enquetes.");
+      }
+      return voteOnEnquete(enqueteId, opcaoId, user.id);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["enquetes", id, user?.id] }); // Invalidate specific poll query
+      showSuccess("Voto registrado com sucesso!");
+      onVoteEnqueteSuccess(variables.enqueteId, variables.opcaoId);
+    },
+    onError: (err) => {
+      showError(`Erro ao registrar voto: ${err.message}`);
+    },
   });
 
   // Effects para inicialização de estados
@@ -263,9 +286,17 @@ const CommitteeDetails = () => {
           onEditAtaClick={handleEditAtaClick}
           onDeleteAtaClick={handleDeleteAtaClick}
           expandedMeetings={expandedMeetings}
-          toggleMeetingExpansion={toggleMeetingExpansion}
+          toggleMeetingExpansion={(meetingId) => setExpandedMeetings(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(meetingId)) { newSet.delete(meetingId); } else { newSet.add(meetingId); }
+            return newSet;
+          })}
           expandedMinutes={expandedMinutes}
-          toggleMinutesExpansion={toggleMinutesExpansion}
+          toggleMinutesExpansion={(minutesId) => setExpandedMinutes(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(minutesId)) { newSet.delete(minutesId); } else { newSet.add(minutesId); }
+            return newSet;
+          })}
         />
 
         <CommitteePollsSection
@@ -283,7 +314,11 @@ const CommitteeDetails = () => {
           onDeleteEnqueteClick={handleDeleteEnqueteClick}
           onVoteEnquete={voteOnEnqueteMutation.mutate} // Pass the mutation function directly
           expandedPolls={expandedPolls}
-          togglePollExpansion={togglePollExpansion}
+          togglePollExpansion={(pollId) => setExpandedPolls(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(pollId)) { newSet.delete(pollId); } else { newSet.add(pollId); }
+            return newSet;
+          })}
           selectedVoteOptions={selectedVoteOptions}
           setSelectedVoteOptions={setSelectedVoteOptions}
           isVotingPending={voteOnEnqueteMutation.isPending}
@@ -297,7 +332,7 @@ const CommitteeDetails = () => {
         canInsertReunioes={canInsertReunioes}
         canEditReunioes={canEditReunioes}
         canDeleteReunioes={canDeleteReunioes}
-        canInsertAtasReuniao={canInsertAtasReasdfuniao}
+        canInsertAtasReuniao={canInsertAtasReuniao}
         canEditAtasReuniao={canEditAtasReuniao}
         canDeleteAtasReuniao={canDeleteAtasReuniao}
         canInsertEnquetes={canInsertEnquetes}

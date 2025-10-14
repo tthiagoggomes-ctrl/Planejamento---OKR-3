@@ -43,6 +43,16 @@ import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from '@/integrations/supabase/client'; // NOVO: Importar supabase
 
+// Adicione esta interface em algum lugar no topo do arquivo, por exemplo, antes de formSchema
+interface AtaWithReuniaoAndComiteData {
+  id: string;
+  reuniao_id: string;
+  reuniao: Array<{ // <--- Alterado para Array
+    id: string;
+    comite_id: string;
+  }> | null; // 'reuniao' pode ser null se a relação não for encontrada
+}
+
 const formSchema = z.object({
   titulo: z.string().min(5, {
     message: "O título da atividade deve ter pelo menos 5 caracteres.",
@@ -127,10 +137,10 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
           .from('atas_reuniao')
           .select('id, reuniao_id, reuniao:reunioes(id, comite_id)')
           .eq('id', initialData.ata_reuniao_id)
-          .single();
+          .single<AtaWithReuniaoAndComiteData>();
 
-        if (ata && ata.reuniao) {
-          form.setValue('comite_id', ata.reuniao.comite_id);
+        if (ata && ata.reuniao && ata.reuniao.length > 0) { // Corrected access
+          form.setValue('comite_id', ata.reuniao[0].comite_id); // Corrected access
           form.setValue('reuniao_id', ata.reuniao_id);
           form.setValue('ata_reuniao_id', initialData.ata_reuniao_id);
         }
@@ -139,10 +149,10 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
           .from('atas_reuniao')
           .select('id, reuniao_id, reuniao:reunioes(id, comite_id)')
           .eq('id', preselectedAtaReuniaoId)
-          .single();
+          .single<AtaWithReuniaoAndComiteData>();
 
-        if (ata && ata.reuniao) {
-          form.setValue('comite_id', ata.reuniao.comite_id);
+        if (ata && ata.reuniao && ata.reuniao.length > 0) { // Corrected access
+          form.setValue('comite_id', ata.reuniao[0].comite_id); // Corrected access
           form.setValue('reuniao_id', ata.reuniao_id);
           form.setValue('ata_reuniao_id', preselectedAtaReuniaoId);
         }

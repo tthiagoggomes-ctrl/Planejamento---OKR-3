@@ -5,9 +5,9 @@ import { useParams, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Import useMutation and useQueryClient
 import { Loader2 } from "lucide-react";
 import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integrations/supabase/api/comites"; // Import ComiteMember
-import { getReunioesByComiteId, Reuniao } from "@/integrations/supabase/api/reunioes";
+import { getReunioes, Reuniao } from "@/integrations/supabase/api/reunioes"; 
 import { AtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
-import { getEnquetesByComiteId, Enquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes"; // Import voteOnEnquete
+import { getEnquetes, Enquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes"; // Import voteOnEnquete
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useSession } from "@/components/auth/SessionContextProvider";
 import { showSuccess, showError } from "@/utils/toast"; // Import toast functions
@@ -89,7 +89,7 @@ const CommitteeDetails = () => {
 
   const { data: meetings, isLoading: isLoadingMeetings, error: errorMeetings } = useQuery<Reuniao[] | null, Error>({
     queryKey: ["reunioes", id],
-    queryFn: () => getReunioesByComiteId(id!),
+    queryFn: () => getReunioes({ comite_id: id! }),
     enabled: !!id && canViewReunioes && !permissionsLoading,
   });
 
@@ -110,7 +110,7 @@ const CommitteeDetails = () => {
 
   const { data: polls, isLoading: isLoadingPolls, error: errorPolls } = useQuery<Enquete[] | null, Error>({
     queryKey: ["enquetes", id, user?.id],
-    queryFn: ({ queryKey }) => getEnquetesByComiteId(queryKey[1] as string, queryKey[2] as string | undefined),
+    queryFn: ({ queryKey }) => getEnquetes({ comite_id: queryKey[1] as string, currentUserId: queryKey[2] as string | undefined }),
     enabled: !!id && canViewEnquetes && !permissionsLoading,
   });
 

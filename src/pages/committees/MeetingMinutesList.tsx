@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
-import { getReunioesByComiteId, Reuniao } from "@/integrations/supabase/api/reunioes";
+import { getReunioes, Reuniao } from "@/integrations/supabase/api/reunioes";
 import { getComites, Comite } from "@/integrations/supabase/api/comites";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { format, parseISO } from "date-fns";
@@ -56,7 +56,7 @@ const MeetingMinutesList = () => {
     queryKey: ["allMeetings"],
     queryFn: async () => {
       if (!comites) return [];
-      const meetingsPromises = comites.map(comite => getReunioesByComiteId(comite.id));
+      const meetingsPromises = comites.map(comite => getReunioes({ comite_id: comite.id }));
       const results = await Promise.all(meetingsPromises);
       return results.flat().filter(Boolean) as Reuniao[];
     },

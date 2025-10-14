@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
 import { getComites, Comite } from "@/integrations/supabase/api/comites";
-import { getReunioesByComiteId, Reuniao } from "@/integrations/supabase/api/reunioes";
+import { getReunioes, Reuniao } from "@/integrations/supabase/api/reunioes";
 import { getAtasReuniaoByReuniaoId, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { UserProfile, getUsers } from "@/integrations/supabase/api/users";
 import { Loader2 } from "lucide-react";
@@ -114,7 +114,7 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
 
   const { data: reunioes, isLoading: isLoadingReunioes } = useQuery<Reuniao[] | null, Error>({
     queryKey: ["reunioesForForm", selectedComiteId],
-    queryFn: () => selectedComiteId ? getReunioesByComiteId(selectedComiteId) : Promise.resolve(null),
+    queryFn: () => selectedComiteId ? getReunioes({ comite_id: selectedComiteId }) : Promise.resolve(null),
     enabled: !!selectedComiteId,
   });
 

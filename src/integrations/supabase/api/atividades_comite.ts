@@ -14,7 +14,7 @@ export interface AtividadeComite {
   updated_at?: string;
   // Campos unidos para exibição
   reuniao_titulo?: string;
-  comite_nome?: string;
+  comite_nome?: string; // NOVO: Adicionado comite_name à interface
   comite_id?: string; // NOVO: Adicionado comite_id à interface
   ata_reuniao_data_reuniao?: string; // Data da ata de reunião
   assignee_name?: string; // Nome do responsável

@@ -1,16 +1,100 @@
-/// <reference types="react" />
 "use client";
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, GitCommit, LayoutDashboard } from "lucide-react";
+import { Loader2, GitCommit, LayoutDashboard, CalendarDays, MessageSquare, ListTodo, Users } from "lucide-react";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
+import { useQuery } from '@tanstack/react-query';
+import { getComites, Comite } from '@/integrations/supabase/api/comites';
+import { getReunioes, Reuniao } from '@/integrations/supabase/api/reunioes';
+import { getEnquetes, Enquete } from '@/integrations/supabase/api/enquetes';
+import { getAtividadesComite, AtividadeComite } from '@/integrations/supabase/api/atividades_comite';
+import { showError } from '@/utils/toast';
+import { isFuture, parseISO, isWithinInterval, addDays, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { useSession } from '@/components/auth/SessionContextProvider';
 
 const CommitteesDashboard = () => {
   const { can, isLoading: permissionsLoading } = useUserPermissions();
-  const canViewCommitteesDashboard = can('dashboard', 'committees_view'); // Assuming a specific dashboard permission for committees
+  const { user } = useSession();
 
-  if (permissionsLoading) {
+  const canViewCommitteesDashboard = can('dashboard', 'committees_view');
+  const canViewComites = can('comites', 'view');
+  const canViewReunioes = can('reunioes', 'view');
+  const canViewEnquetes = can('enquetes', 'view');
+  const canViewAtividadesComite = can('atividades_comite', 'view');
+
+  const now = new Date();
+
+  // Fetch all committees
+  const { data: comites, isLoading: isLoadingComites, error: errorComites } = useQuery<Comite[] | null, Error>({
+    queryKey: ["comites"],
+    queryFn: getComites,
+    enabled: canViewComites && !permissionsLoading,
+  });
+
+  // Fetch all meetings
+  const { data: allMeetings, isLoading: isLoadingMeetings, error: errorMeetings } = useQuery<Reuniao[] | null, Error>({
+    queryKey: ["allMeetings"],
+    queryFn: () => getReunioes(), // Fetch all meetings
+    enabled: canViewReunioes && !permissionsLoading,
+  });
+
+  // Fetch all polls
+  const { data: allPolls, isLoading: isLoadingPolls, error: errorPolls } = useQuery<Enquete[] | null, Error>({
+    queryKey: ["allPolls"],
+    queryFn: () => getEnquetes({ currentUserId: user?.id }), // Fetch all polls
+    enabled: canViewEnquetes && !permissionsLoading,
+  });
+
+  // Fetch all committee activities
+  const { data: allCommitteeActivities, isLoading: isLoadingActivities, error: errorActivities } = useQuery<AtividadeComite[] | null, Error>({
+    queryKey: ["allCommitteeActivities"],
+    queryFn: () => getAtividadesComite({ comite_id: 'all' }), // Fetch all committee activities
+    enabled: canViewAtividadesComite && !permissionsLoading,
+  });
+
+  // Process data for cards
+  const committeeStats = React.useMemo(() => {
+    const total = comites?.length || 0;
+    const active = comites?.filter(c => c.status === 'active').length || 0;
+    const archived = total - active;
+    return { total, active, archived };
+  }, [comites]);
+
+  const upcomingMeetings = React.useMemo(() => {
+    if (!allMeetings) return [];
+    const sevenDaysFromNow = addDays(now, 7);
+    return allMeetings
+      .filter(m => isFuture(parseISO(m.data_reuniao)) && isWithinInterval(parseISO(m.data_reuniao), { start: now, end: sevenDaysFromNow }))
+      .sort((a, b) => parseISO(a.data_reuniao).getTime() - parseISO(b.data_reuniao).getTime())
+      .slice(0, 5); // Show up to 5 upcoming meetings
+  }, [allMeetings, now]);
+
+  const activePolls = React.useMemo(() => {
+    if (!allPolls) return [];
+    return allPolls
+      .filter(p => isWithinInterval(now, { start: parseISO(p.start_date), end: parseISO(p.end_date) }))
+      .slice(0, 5); // Show up to 5 active polls
+  }, [allPolls, now]);
+
+  const pendingCommitteeActivities = React.useMemo(() => {
+    if (!allCommitteeActivities) return [];
+    return allCommitteeActivities
+      .filter(a => a.status === 'todo' || a.status === 'in_progress')
+      .sort((a, b) => {
+        const dateA = a.due_date ? parseISO(a.due_date) : new Date(8640000000000000); // Max date for null
+        const dateB = b.due_date ? parseISO(b.due_date) : new Date(8640000000000000);
+        return dateA.getTime() - dateB.getTime(); // Sort by due date ascending
+      })
+      .slice(0, 5); // Show up to 5 pending activities
+  }, [allCommitteeActivities]);
+
+
+  const isLoadingOverall = permissionsLoading || isLoadingComites || isLoadingMeetings || isLoadingPolls || isLoadingActivities;
+  const errorOverall = errorComites || errorMeetings || errorPolls || errorActivities;
+
+  if (isLoadingOverall) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -26,6 +110,15 @@ const CommitteesDashboard = () => {
     );
   }
 
+  if (errorOverall) {
+    showError("Erro ao carregar dados do dashboard de comitês.");
+    return (
+      <div className="text-center text-red-500">
+        Erro ao carregar dados.
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-6">
       <Card className="mb-6">
@@ -36,38 +129,89 @@ const CommitteesDashboard = () => {
         </CardHeader>
         <CardContent>
           <p className="text-gray-600 mb-4">
-            Bem-vindo ao dashboard do módulo de Comitês. Aqui você poderá ver um resumo das atividades e status dos seus comitês.
-          </p>
-          <p className="text-gray-500">
-            Funcionalidades como resumo de reuniões, atividades pendentes e resultados de enquetes serão implementadas aqui.
+            Bem-vindo ao dashboard do módulo de Comitês. Aqui você pode ver um resumo das informações mais importantes dos seus comitês.
           </p>
         </CardContent>
       </Card>
 
-      {/* Placeholder for future dashboard widgets */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Comitês Ativos Card */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Comitês Ativos</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Comitês</CardTitle>
+            <GitCommit className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-gray-500">Em desenvolvimento...</p>
+            <div className="text-2xl font-bold">{committeeStats.total}</div>
+            <p className="text-xs text-muted-foreground">
+              {committeeStats.active} Ativos, {committeeStats.archived} Arquivados
+            </p>
           </CardContent>
         </Card>
+
+        {/* Próximas Reuniões Card */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Próximas Reuniões</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Próximas Reuniões</CardTitle>
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-gray-500">Em desenvolvimento...</p>
+            <div className="text-2xl font-bold">{upcomingMeetings.length}</div>
+            {upcomingMeetings.length > 0 ? (
+              <ul className="text-xs text-muted-foreground mt-2 space-y-1">
+                {upcomingMeetings.map(meeting => (
+                  <li key={meeting.id} className="truncate">
+                    {format(parseISO(meeting.data_reuniao), 'dd/MM HH:mm', { locale: ptBR })} - {meeting.titulo} ({meeting.comite_name})
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-2">Nenhuma reunião futura.</p>
+            )}
           </CardContent>
         </Card>
+
+        {/* Enquetes Ativas Card */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Enquetes Ativas</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Enquetes Ativas</CardTitle>
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-gray-500">Em desenvolvimento...</p>
+            <div className="text-2xl font-bold">{activePolls.length}</div>
+            {activePolls.length > 0 ? (
+              <ul className="text-xs text-muted-foreground mt-2 space-y-1">
+                {activePolls.map(poll => (
+                  <li key={poll.id} className="truncate">
+                    {poll.titulo} ({poll.comite_name})
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-2">Nenhuma enquete ativa.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Atividades Pendentes do Comitê Card */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Atividades Pendentes</CardTitle>
+            <ListTodo className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingCommitteeActivities.length}</div>
+            {pendingCommitteeActivities.length > 0 ? (
+              <ul className="text-xs text-muted-foreground mt-2 space-y-1">
+                {pendingCommitteeActivities.map(activity => (
+                  <li key={activity.id} className="truncate">
+                    {activity.titulo} ({activity.comite_nome}) - {activity.assignee_name}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-2">Nenhuma atividade pendente.</p>
+            )}
           </CardContent>
         </Card>
       </div>

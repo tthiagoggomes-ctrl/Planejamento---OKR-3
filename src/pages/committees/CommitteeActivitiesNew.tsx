@@ -26,7 +26,7 @@ import {
 import { AtividadeComiteForm, AtividadeComiteFormValues } from "@/components/forms/AtividadeComiteForm";
 import { getAtividadesComite, createAtividadeComite, updateAtividadeComite, deleteAtividadeComite, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
 import { getComites, Comite } from "@/integrations/supabase/api/comites";
-import { getReunioesByComiteId, Reuniao } from "@/integrations/supabase/api/reunioes";
+import { getReunioes, Reuniao } from "@/integrations/supabase/api/reunioes";
 import { getAtasReuniaoByReuniaoId, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { showSuccess, showError } from "@/utils/toast";
 import { format, parseISO } from "date-fns";
@@ -97,7 +97,7 @@ const CommitteeActivitiesNew = () => {
     queryKey: ["reunioesForActivities", selectedComiteFilter],
     queryFn: () => {
       if (selectedComiteFilter === 'all') return null;
-      return getReunioesByComiteId(selectedComiteFilter);
+      return getReunioes({ comite_id: selectedComiteFilter });
     },
     enabled: selectedComiteFilter !== 'all' && canViewAtividadesComite && !permissionsLoading,
   });

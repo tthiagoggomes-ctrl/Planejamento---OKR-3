@@ -54,8 +54,8 @@ const CommitteeDetails = () => {
   const canInsertAtasReuniao = can('atas_reuniao', 'insert');
   const canEditAtasReuniao = can('atas_reuniao', 'edit');
   const canDeleteAtasReuniao = can('atas_reuniao', 'delete');
-  // const canViewAtividadesComite = can('atividades_comite', 'view'); // REMOVIDO
-  // const canInsertAtividadesComite = can('atividades_comite', 'insert'); // REMOVIDO
+  const canViewAtividadesComite = can('atividades_comite', 'view'); // Reativado
+  const canInsertAtividadesComite = can('atividades_comite', 'insert'); // Reativado
   const canViewEnquetes = can('enquetes', 'view');
   const canInsertEnquetes = can('enquetes', 'insert');
   const canEditEnquetes = can('enquetes', 'edit');
@@ -827,17 +827,16 @@ const CommitteeDetails = () => {
 
                                     <div className="flex justify-between items-center mb-2">
                                       <h5 className="font-medium flex items-center">
-                                        <ListTodo className="mr-2 h-4 w-4" /> Atividades (0) {/* Hardcoded 0 as activities are removed */}
+                                        <ListTodo className="mr-2 h-4 w-4" /> Atividades do Comitê
                                       </h5>
-                                      {/* MODIFICADO: Botão de 'Gerenciar Atividades' removido */}
-                                      {/* <Link to={`/comites/atividades`} state={{ comiteId: id, ataId: minutes.id }}>
-                                        <Button size="sm" variant="outline">
-                                          <ListTodo className="mr-2 h-4 w-4" /> Gerenciar Atividades
-                                        </Button>
-                                      </Link> */}
+                                      {canViewAtividadesComite && (
+                                        <Link to={`/comites/atividades`} state={{ comiteId: id, ataId: minutes.id }}>
+                                          <Button size="sm" variant="outline">
+                                            <ListTodo className="mr-2 h-4 w-4" /> Gerenciar Atividades
+                                          </Button>
+                                        </Link>
+                                      )}
                                     </div>
-                                    {/* REMOVIDO: Bloco de listagem de atividades */}
-                                    <p className="text-gray-500 text-center py-2">Funcionalidade de atividades do comitê removida temporariamente.</p>
                                   </div>
                                 )}
                               </li>

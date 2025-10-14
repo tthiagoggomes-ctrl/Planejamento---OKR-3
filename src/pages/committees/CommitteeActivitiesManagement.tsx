@@ -46,7 +46,7 @@ import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useLocation } from "react-router-dom";
 import { useSession } from "@/components/auth/SessionContextProvider";
 
-const CommitteeActivitiesNew = () => {
+const CommitteeActivitiesManagement = () => {
   const queryClient = useQueryClient();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
   const location = useLocation();
@@ -95,29 +95,29 @@ const CommitteeActivitiesNew = () => {
 
   const { data: reunioes, isLoading: isLoadingReunioes } = useQuery<Reuniao[] | null, Error>({
     queryKey: ["reunioesForActivities", selectedComiteFilter],
-    queryFn: () => {
-      if (selectedComiteFilter === 'all') return null;
-      return getReunioes({ comite_id: selectedComiteFilter });
+    queryFn: async () => {
+      if (selectedComiteFilter === 'all') return []; // Return empty array instead of null
+      return (await getReunioes({ comite_id: selectedComiteFilter })) || [];
     },
     enabled: selectedComiteFilter !== 'all' && canViewAtividadesComite && !permissionsLoading,
   });
 
   const { data: atasReuniao, isLoading: isLoadingAtasReuniao } = useQuery<AtaReuniao[] | null, Error>({
     queryKey: ["atasReuniaoForActivities", selectedReuniaoFilter],
-    queryFn: () => {
-      if (selectedReuniaoFilter === 'all') return null;
-      return getAtasReuniaoByReuniaoId(selectedReuniaoFilter);
+    queryFn: async () => {
+      if (selectedReuniaoFilter === 'all') return []; // Return empty array instead of null
+      return (await getAtasReuniaoByReuniaoId(selectedReuniaoFilter)) || [];
     },
     enabled: selectedReuniaoFilter !== 'all' && canViewAtividadesComite && !permissionsLoading,
   });
 
   const { data: atividades, isLoading, error } = useQuery<AtividadeComite[] | null, Error>({
     queryKey: ["atividadesComite", selectedComiteFilter, selectedAtaReuniaoFilter, debouncedSearchQuery],
-    queryFn: () => getAtividadesComite({
+    queryFn: async () => (await getAtividadesComite({
       comite_id: selectedComiteFilter,
       ata_reuniao_id: selectedAtaReuniaoFilter,
       search: debouncedSearchQuery,
-    }),
+    })) || [], // Ensure it always returns an array
     enabled: canViewAtividadesComite && !permissionsLoading,
   });
 
@@ -153,11 +153,18 @@ const CommitteeActivitiesNew = () => {
   });
 
   const updateAtividadeMutation = useMutation({
-    mutationFn: ({ id, ...values }: AtividadeComiteFormValues & { id: string }) => {
+    mutationFn: (values: AtividadeComiteFormValues & { id: string }) => {
       if (!canEditAtividadesComite) throw new Error("Você não tem permissão para editar atividades do comitê.");
+      // Fetch the current activity to get its ata_reuniao_id if not provided in values
+      const currentActivity = atividades?.find(a => a.id === values.id);
+      const ataReuniaoId = values.ata_reuniao_id || currentActivity?.ata_reuniao_id;
+      if (!ataReuniaoId) {
+        throw new Error("ID da Ata de Reunião não disponível para atualização da atividade.");
+      }
+
       return updateAtividadeComite(
-        id,
-        values.ata_reuniao_id,
+        values.id,
+        ataReuniaoId, // Pass ata_reuniao_id for RLS policy
         values.titulo,
         values.descricao,
         formatDueDateForApi(values.due_date),
@@ -225,7 +232,7 @@ const CommitteeActivitiesNew = () => {
     if (atividadeToUpdate) {
       updateAtividadeMutation.mutate({
         id: atividadeToUpdate.id,
-        ata_reuniao_id: atividadeToUpdate.ata_reuniao_id,
+        ata_reuniao_id: atividadeToUpdate.ata_reuniao_id, // Ensure ata_reuniao_id is passed
         titulo: atividadeToUpdate.titulo,
         descricao: atividadeToUpdate.descricao,
         due_date: atividadeToUpdate.due_date ? parseISO(atividadeToUpdate.due_date) : null,
@@ -517,4 +524,4 @@ const CommitteeActivitiesNew = () => {
   );
 };
 
-export default CommitteeActivitiesNew;
+export default CommitteeActivitiesManagement;

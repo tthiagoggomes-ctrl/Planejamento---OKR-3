@@ -109,31 +109,31 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
 
   const { data: comites, isLoading: isLoadingComites } = useQuery<Comite[] | null, Error>({
     queryKey: ["comites"],
-    queryFn: () => getComites(),
+    queryFn: async () => (await getComites()) || [],
   });
 
   const { data: reunioes, isLoading: isLoadingReunioes } = useQuery<Reuniao[] | null, Error>({
     queryKey: ["reunioesForForm", selectedComiteId],
-    queryFn: () => selectedComiteId ? getReunioes({ comite_id: selectedComiteId }) : Promise.resolve(null),
+    queryFn: async () => selectedComiteId ? (await getReunioes({ comite_id: selectedComiteId })) || [] : [],
     enabled: !!selectedComiteId,
   });
 
   const { data: atasReuniao, isLoading: isLoadingAtasReuniao } = useQuery<AtaReuniao[] | null, Error>({
     queryKey: ["atasReuniaoForForm", selectedReuniaoId],
-    queryFn: () => selectedReuniaoId ? getAtasReuniaoByReuniaoId(selectedReuniaoId) : Promise.resolve(null),
+    queryFn: async () => selectedReuniaoId ? (await getAtasReuniaoByReuniaoId(selectedReuniaoId)) || [] : [],
     enabled: !!selectedReuniaoId,
   });
 
   const { data: users, isLoading: isLoadingUsers } = useQuery<UserProfile[] | null, Error>({
     queryKey: ["users"],
-    queryFn: () => getUsers(),
+    queryFn: async () => (await getUsers()) || [],
   });
 
   // Effect to set initial values for Comite and Reuniao if editing or preselectedAtaReuniaoId is present
   React.useEffect(() => {
     const setInitialDropdowns = async () => {
       if (initialData?.ata_reuniao_id) {
-        const { data: ata, error: ataError } = await supabase
+        const { data: ata } = await supabase
           .from('atas_reuniao')
           .select('id, reuniao_id, reuniao:reunioes(id, comite_id)')
           .eq('id', initialData.ata_reuniao_id)
@@ -145,7 +145,7 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
           form.setValue('ata_reuniao_id', initialData.ata_reuniao_id);
         }
       } else if (preselectedAtaReuniaoId) {
-        const { data: ata, error: ataError } = await supabase
+        const { data: ata } = await supabase
           .from('atas_reuniao')
           .select('id, reuniao_id, reuniao:reunioes(id, comite_id)')
           .eq('id', preselectedAtaReuniaoId)

@@ -59,25 +59,15 @@ const committeesModuleItems = [
     icon: <CalendarDays className="h-4 w-4" />,
   },
   {
-    name: "Enquetes", // NOVO: Adicionado item de menu para Enquetes
+    name: "Enquetes",
     href: "/comites/enquetes",
     icon: <MessageSquare className="h-4 w-4" />,
   },
-  // {
-  //   name: "Atividades do Comitê", // Reativado
-  //   href: "/comites/atividades",
-  //   icon: <ListTodo className="h-4 w-4" />,
-  // },
-  // {
-  //   name: "Reuniões",
-  //   href: "/comites/reunioes",
-  //   icon: <CalendarDays className="h-4 w-4" />,
-  // },
-  // {
-  //   name: "Enquetes",
-  //   href: "/comites/enquetes",
-  //   icon: <MessageSquare className="h-4 w-4" />,
-  // },
+  {
+    name: "Atividades do Comitê", // NOVO: Adicionado item de menu para Atividades do Comitê
+    href: "/comites/atividades",
+    icon: <ListTodo className="h-4 w-4" />,
+  },
 ];
 
 const cadastroItems = [

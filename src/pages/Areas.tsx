@@ -26,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
+import { useUserPermissions } from '@/hooks/use-user-permissions';
 
 const Areas = () => {
   const queryClient = useQueryClient();
@@ -47,8 +47,8 @@ const Areas = () => {
 
   const { data: areas, isLoading, error } = useQuery<Area[], Error>({
     queryKey: ["areas", { sortBy, sortOrder }],
-    queryFn: () => getAreas({ sortBy, sortOrder }),
-    enabled: canViewAreas && !permissionsLoading, // Habilitar query apenas se tiver permissão
+    queryFn: async () => (await getAreas({ sortBy, sortOrder })) || [], // Ensure it always returns an array
+    enabled: canViewAreas && !permissionsLoading,
   });
 
   const createAreaMutation = useMutation({
@@ -178,7 +178,7 @@ const Areas = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {areas.map((area) => (
+                {areas.map((area: Area) => (
                   <TableRow key={area.id}>
                     <TableCell className="font-medium">{area.nome}</TableCell>
                     <TableCell className="text-right">

@@ -1,5 +1,6 @@
 import { supabase } from '../client';
-import { showError } from '@/utils/toast'; // Removido showSuccess
+import { showError } from '@/utils/toast';
+import { Atividade } from './atividades'; // Import Atividade
 
 export interface KeyResult {
   id: string;
@@ -166,6 +167,7 @@ export const createKeyResult = async (
     valor_meta,
     valor_atual: initialProgress,
     atividades: [],
+    status: 'off_track', // Explicitly add a default status
   } as KeyResult); // Cast with all required properties
 
   const { data, error } = await supabase

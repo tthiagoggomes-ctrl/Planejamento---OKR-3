@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Periodo, PeriodoStatus } from "@/integrations/supabase/api/periodos";
+import { Periodo } from "@/integrations/supabase/api/periodos"; // Removido PeriodoStatus
 import { Loader2, CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -412,7 +412,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                   <FormItem className="hidden">
                     <FormLabel>Parent ID</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} value={field.value || ""} /> {/* Ensure value is string */}
                     </FormControl>
                     <FormMessage />
                   </FormItem>

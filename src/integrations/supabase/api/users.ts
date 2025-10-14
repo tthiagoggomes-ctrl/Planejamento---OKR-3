@@ -1,8 +1,8 @@
 import { supabase } from '../client';
 // Removed direct import of supabaseAdmin for client-side security
 import { showSuccess, showError } from '@/utils/toast';
-import { User } from '@supabase/supabase-js';
-import { Permission } from '@/hooks/use-user-permissions'; // Import Permission interface
+// Removed unused import: import { User } from '@supabase/supabase-js';
+// Removed unused import: import { Permission } from '@/hooks/use-user-permissions';
 
 export interface UserProfile {
   id: string;
@@ -247,7 +247,7 @@ export const blockUser = async (id: string): Promise<UserProfile | null> => {
 
   if (error) {
     console.error('Error blocking user:', error.message);
-    showError(`Erro ao bloquear usuário: ${error.message}`); // Corrigido: err.message para error.message
+    showError(`Erro ao bloquear usuário: ${error.message}`);
     return null;
   }
   // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.
@@ -266,7 +266,7 @@ export const unblockUser = async (id: string): Promise<UserProfile | null> => {
 
   if (error) {
     console.error('Error unblocking user:', error.message);
-    showError(`Erro ao desbloquear usuário: ${error.message}`); // Corrigido: err.message para error.message
+    showError(`Erro ao desbloquear usuário: ${error.message}`);
     return null;
   }
   // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.

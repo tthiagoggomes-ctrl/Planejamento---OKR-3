@@ -3,7 +3,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CalendarDays, AlertTriangle, Clock, CheckCircle, TrendingUp, Eye, EyeOff } from 'lucide-react';
+import { Loader2, CalendarDays, AlertTriangle, Clock, TrendingUp, Eye, EyeOff } from 'lucide-react'; // Removido CheckCircle
 import { getPeriodos, Periodo } from '@/integrations/supabase/api/periodos';
 import { getAllKeyResults, KeyResult } from '@/integrations/supabase/api/key_results';
 import { showError } from '@/utils/toast';
@@ -19,14 +19,14 @@ interface KeyResultsByPeriodListProps {
 }
 
 const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
-  const { data: periods, isLoading: isLoadingPeriods, error: errorPeriods } = useQuery<Periodo[] | null, Error>({
+  const { data: periods, isLoading: isLoadingPeriods, error: errorPeriods } = useQuery<Periodo[], Error>({
     queryKey: ["allPeriods"],
-    queryFn: () => getPeriodos(),
+    queryFn: async () => (await getPeriodos()) || [], // Ensure it always returns an array
   });
 
-  const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[] | null, Error>({
+  const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[], Error>({
     queryKey: ["allKeyResults"],
-    queryFn: () => getAllKeyResults(),
+    queryFn: async () => (await getAllKeyResults()) || [], // Ensure it always returns an array
   });
 
   const now = new Date();
@@ -54,7 +54,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
 
       const periodEndDate = parseISO(period.end_date);
       const periodStartDate = parseISO(period.start_date);
-      const isPeriodPast = dateFnsIsPast(periodEndDate); // Corrigido: Removido { refDate: now }
+      const isPeriodPast = dateFnsIsPast(periodEndDate);
       const isPeriodCurrent = isWithinInterval(now, { start: periodStartDate, end: periodEndDate });
 
       if (kr.status !== 'completed') {
@@ -83,8 +83,8 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
       if (aIsCurrent && !bIsCurrent) return -1;
       if (!aIsCurrent && bIsCurrent) return 1;
 
-      const aIsPast = dateFnsIsPast(aEndDate); // Corrigido: Removido { refDate: now }
-      const bIsPast = dateFnsIsPast(bEndDate); // Corrigido: Removido { refDate: now }
+      const aIsPast = dateFnsIsPast(aEndDate);
+      const bIsPast = dateFnsIsPast(bEndDate);
 
       if (aIsPast && !bIsPast) return -1;
       if (!aIsPast && bIsPast) return 1;
@@ -161,7 +161,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
           filteredGroups.map(({ period, overdueKRs, attentionKRs, otherKRs }) => {
             const periodEndDate = parseISO(period.end_date);
             const periodStartDate = parseISO(period.start_date);
-            const isPeriodPast = dateFnsIsPast(periodEndDate); // Corrigido: Removido { refDate: now }
+            const isPeriodPast = dateFnsIsPast(periodEndDate);
             const isPeriodCurrent = isWithinInterval(now, { start: periodStartDate, end: periodEndDate });
 
             const hasOverdue = overdueKRs.length > 0;
@@ -186,7 +186,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
                       <Clock className="h-4 w-4" /> Atrasados ({overdueKRs.length})
                     </h4>
                     <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                      {overdueKRs.map(kr => (
+                      {overdueKRs.map((kr: KeyResult) => (
                         <li key={kr.id} className="cursor-pointer hover:text-blue-600 hover:underline">
                           <Link to={`/objetivos`} state={{ keyResultId: kr.id }}>
                             <div className="flex items-center justify-between">
@@ -207,7 +207,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
                       <AlertTriangle className="h-4 w-4" /> Atenção ({attentionKRs.length})
                     </h4>
                     <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                      {attentionKRs.map(kr => (
+                      {attentionKRs.map((kr: KeyResult) => (
                         <li key={kr.id} className="cursor-pointer hover:text-blue-600 hover:underline">
                           <Link to={`/objetivos`} state={{ keyResultId: kr.id }}>
                             <div className="flex items-center justify-between">
@@ -228,7 +228,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
                       <TrendingUp className="h-4 w-4" /> Outros KRs ({otherKRs.length})
                     </h4>
                     <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-                      {otherKRs.map(kr => (
+                      {otherKRs.map((kr: KeyResult) => (
                         <li key={kr.id} className="cursor-pointer hover:text-blue-600 hover:underline">
                           <Link to={`/objetivos`} state={{ keyResultId: kr.id }}>
                             <div className="flex items-center justify-between">

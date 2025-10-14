@@ -3,7 +3,7 @@
 import React from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp } from "lucide-react"; // Importar ChevronDown e ChevronUp
 import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integrations/supabase/api/comites";
 import { getReunioes, Reuniao } from "@/integrations/supabase/api/reunioes"; 
 import { AtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
@@ -18,9 +18,15 @@ import { CommitteeMembersSection } from "@/components/committees/CommitteeMember
 import { CommitteeMeetingsSection } from "@/components/committees/CommitteeMeetingsSection";
 import { CommitteePollsSection } from "@/components/committees/CommitteePollsSection";
 import { CommitteeModalsAndAlerts } from "@/components/committees/CommitteeModalsAndAlerts";
-import { CommitteeRulesDisplay } from "@/components/committees/CommitteeRulesDisplay"; // NOVO: Importar o componente
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // Importar Card
-import { Separator } from "@/components/ui/separator"; // Importar Separator
+import { CommitteeRulesDisplay } from "@/components/committees/CommitteeRulesDisplay";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  Collapsible, // NOVO
+  CollapsibleContent, // NOVO
+  CollapsibleTrigger, // NOVO
+} from "@/components/ui/collapsible"; // NOVO
+import { Button } from "@/components/ui/button"; // Garantir que Button está importado
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -52,6 +58,7 @@ const CommitteeDetails = () => {
   const [expandedMeetings, setExpandedMeetings] = React.useState<Set<string>>(new Set());
   const [expandedMinutes, setExpandedMinutes] = React.useState<Set<string>>(new Set());
   const [expandedPolls, setExpandedPolls] = React.useState<Set<string>>(new Set());
+  const [isDetailsExpanded, setIsDetailsExpanded] = React.useState(false); // NOVO: Estado para detalhes
 
   // Estados para modais e dados de edição/exclusão
   const [isCommitteeFormOpen, setIsCommitteeFormOpen] = React.useState(false);
@@ -77,7 +84,7 @@ const CommitteeDetails = () => {
   const [enqueteToDelete, setEnqueteToDelete] = React.useState<string | null>(null);
   const [selectedVoteOptions, setSelectedVoteOptions] = React.useState<Record<string, string | null>>({}); 
 
-  const [isRulesDisplayOpen, setIsRulesDisplayOpen] = React.useState(false); // NOVO: Estado para o modal de regras
+  const [isRulesDisplayOpen, setIsRulesDisplayOpen] = React.useState(false);
 
   // Queries
   const { data: comite, isLoading: isLoadingComite, error: errorComite } = useQuery<Comite | null, Error>({
@@ -231,7 +238,7 @@ const CommitteeDetails = () => {
     setSelectedVoteOptions(prev => ({ ...prev, [enqueteId]: opcaoId }));
   };
 
-  const handleViewRulesClick = () => { // NOVO: Handler para abrir o modal de regras
+  const handleViewRulesClick = () => {
     setIsRulesDisplayOpen(true);
   };
 
@@ -275,52 +282,71 @@ const CommitteeDetails = () => {
               <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.objetivo}</pre>
             </div>
           )}
-          {comite.justificativa && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Justificativa</p>
-              <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.justificativa}</pre>
-            </div>
-          )}
-          {comite.atribuicoes_comite && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Atribuições do Comitê</p>
-              <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.atribuicoes_comite}</pre>
-            </div>
-          )}
-          {comite.composicao_recomendada && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Composição Recomendada</p>
-              <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.composicao_recomendada}</pre>
-            </div>
-          )}
-          {comite.periodicidade_reunioes && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Periodicidade das Reuniões</p>
-              <p className="text-base text-foreground">{comite.periodicidade_reunioes}</p>
-            </div>
-          )}
-          {comite.fluxo_demandas && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Fluxo de Demandas</p>
-              <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.fluxo_demandas}</pre>
-            </div>
-          )}
-          {comite.criterios_priorizacao && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Critérios de Priorização</p>
-              <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.criterios_priorizacao}</pre>
-            </div>
-          )}
-          {comite.beneficios_esperados && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Benefícios Esperados</p>
-              <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.beneficios_esperados}</pre>
-            </div>
-          )}
-          {(!comite.objetivo && !comite.justificativa && !comite.atribuicoes_comite && !comite.composicao_recomendada &&
-            !comite.periodicidade_reunioes && !comite.fluxo_demandas && !comite.criterios_priorizacao && !comite.beneficios_esperados) && (
-            <p className="text-muted-foreground text-center py-4">Nenhuma informação detalhada disponível para este comitê.</p>
-          )}
+
+          {/* Collapsible section for the rest of the details */}
+          <Collapsible open={isDetailsExpanded} onOpenChange={setIsDetailsExpanded}>
+            <CollapsibleTrigger asChild>
+              <Button variant="link" className="p-0 h-auto text-sm">
+                {isDetailsExpanded ? (
+                  <>
+                    <ChevronUp className="mr-1 h-4 w-4" /> Ocultar Detalhes
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="mr-1 h-4 w-4" /> Ver Mais Detalhes
+                  </>
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 mt-4">
+              {comite.justificativa && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Justificativa</p>
+                  <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.justificativa}</pre>
+                </div>
+              )}
+              {comite.atribuicoes_comite && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Atribuições do Comitê</p>
+                  <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.atribuicoes_comite}</pre>
+                </div>
+              )}
+              {comite.composicao_recomendada && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Composição Recomendada</p>
+                  <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.composicao_recomendada}</pre>
+                </div>
+              )}
+              {comite.periodicidade_reunioes && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Periodicidade das Reuniões</p>
+                  <p className="text-base text-foreground">{comite.periodicidade_reunioes}</p>
+                </div>
+              )}
+              {comite.fluxo_demandas && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Fluxo de Demandas</p>
+                  <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.fluxo_demandas}</pre>
+                </div>
+              )}
+              {comite.criterios_priorizacao && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Critérios de Priorização</p>
+                  <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.criterios_priorizacao}</pre>
+                </div>
+              )}
+              {comite.beneficios_esperados && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Benefícios Esperados</p>
+                  <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.beneficios_esperados}</pre>
+                </div>
+              )}
+              {(!comite.justificativa && !comite.atribuicoes_comite && !comite.composicao_recomendada &&
+                !comite.periodicidade_reunioes && !comite.fluxo_demandas && !comite.criterios_priorizacao && !comite.beneficios_esperados) && (
+                <p className="text-muted-foreground text-center py-4">Nenhuma informação detalhada adicional disponível para este comitê.</p>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
 

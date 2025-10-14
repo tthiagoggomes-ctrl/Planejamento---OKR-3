@@ -8,6 +8,15 @@ export interface Comite {
   descricao: string | null;
   status: 'active' | 'archived';
   regras_comite?: string | null; // NOVO: Adicionado regras_comite
+  // NOVOS CAMPOS DETALHADOS
+  objetivo?: string | null;
+  justificativa?: string | null;
+  atribuicoes_comite?: string | null;
+  composicao_recomendada?: string | null;
+  periodicidade_reunioes?: string | null;
+  fluxo_demandas?: string | null;
+  criterios_priorizacao?: string | null;
+  beneficios_esperados?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -57,11 +66,33 @@ export const createComite = async (
   descricao: string | null,
   status: 'active' | 'archived' = 'active',
   members: { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[] = [],
-  regras_comite: string | null = null // NOVO: Parâmetro para as regras
+  regras_comite: string | null = null, // NOVO: Parâmetro para as regras
+  // NOVOS PARÂMETROS DETALHADOS
+  objetivo: string | null = null,
+  justificativa: string | null = null,
+  atribuicoes_comite: string | null = null,
+  composicao_recomendada: string | null = null,
+  periodicidade_reunioes: string | null = null,
+  fluxo_demandas: string | null = null,
+  criterios_priorizacao: string | null = null,
+  beneficios_esperados: string | null = null
 ): Promise<Comite | null> => {
   const { data: comiteData, error: comiteError } = await supabase
     .from('comites')
-    .insert({ nome, descricao, status, regras_comite }) // Incluído regras_comite
+    .insert({
+      nome,
+      descricao,
+      status,
+      regras_comite,
+      objetivo,
+      justificativa,
+      atribuicoes_comite,
+      composicao_recomendada,
+      periodicidade_reunioes,
+      fluxo_demandas,
+      criterios_priorizacao,
+      beneficios_esperados
+    }) // Incluído regras_comite e novos campos
     .select()
     .single();
 
@@ -91,7 +122,18 @@ export const createComite = async (
   }
 
   showSuccess('Comitê criado com sucesso!');
-  return { ...comiteData, regras_comite };
+  return {
+    ...comiteData,
+    regras_comite,
+    objetivo,
+    justificativa,
+    atribuicoes_comite,
+    composicao_recomendada,
+    periodicidade_reunioes,
+    fluxo_demandas,
+    criterios_priorizacao,
+    beneficios_esperados
+  };
 };
 
 export const updateComite = async (
@@ -100,11 +142,34 @@ export const updateComite = async (
   descricao: string | null,
   status: 'active' | 'archived',
   members: { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[] = [],
-  regras_comite: string | null = null // NOVO: Parâmetro para as regras
+  regras_comite: string | null = null, // NOVO: Parâmetro para as regras
+  // NOVOS PARÂMETROS DETALHADOS
+  objetivo: string | null = null,
+  justificativa: string | null = null,
+  atribuicoes_comite: string | null = null,
+  composicao_recomendada: string | null = null,
+  periodicidade_reunioes: string | null = null,
+  fluxo_demandas: string | null = null,
+  criterios_priorizacao: string | null = null,
+  beneficios_esperados: string | null = null
 ): Promise<Comite | null> => {
   const { data: comiteData, error: comiteError } = await supabase
     .from('comites')
-    .update({ nome, descricao, status, regras_comite, updated_at: new Date().toISOString() }) // Incluído regras_comite
+    .update({
+      nome,
+      descricao,
+      status,
+      regras_comite,
+      objetivo,
+      justificativa,
+      atribuicoes_comite,
+      composicao_recomendada,
+      periodicidade_reunioes,
+      fluxo_demandas,
+      criterios_priorizacao,
+      beneficios_esperados,
+      updated_at: new Date().toISOString()
+    }) // Incluído regras_comite e novos campos
     .eq('id', id)
     .select()
     .single();

@@ -19,6 +19,8 @@ import { CommitteeMeetingsSection } from "@/components/committees/CommitteeMeeti
 import { CommitteePollsSection } from "@/components/committees/CommitteePollsSection";
 import { CommitteeModalsAndAlerts } from "@/components/committees/CommitteeModalsAndAlerts";
 import { CommitteeRulesDisplay } from "@/components/committees/CommitteeRulesDisplay"; // NOVO: Importar o componente
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // Importar Card
+import { Separator } from "@/components/ui/separator"; // Importar Separator
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -260,6 +262,67 @@ const CommitteeDetails = () => {
   return (
     <div className="container mx-auto py-6">
       <CommitteeDetailsHeader comite={comite} onViewRulesClick={handleViewRulesClick} />
+
+      {/* NEW: Detailed Information Section */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold">Informações Detalhadas</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {comite.objetivo && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Objetivo</p>
+              <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.objetivo}</pre>
+            </div>
+          )}
+          {comite.justificativa && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Justificativa</p>
+              <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.justificativa}</pre>
+            </div>
+          )}
+          {comite.atribuicoes_comite && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Atribuições do Comitê</p>
+              <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.atribuicoes_comite}</pre>
+            </div>
+          )}
+          {comite.composicao_recomendada && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Composição Recomendada</p>
+              <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.composicao_recomendada}</pre>
+            </div>
+          )}
+          {comite.periodicidade_reunioes && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Periodicidade das Reuniões</p>
+              <p className="text-base text-foreground">{comite.periodicidade_reunioes}</p>
+            </div>
+          )}
+          {comite.fluxo_demandas && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Fluxo de Demandas</p>
+              <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.fluxo_demandas}</pre>
+            </div>
+          )}
+          {comite.criterios_priorizacao && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Critérios de Priorização</p>
+              <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.criterios_priorizacao}</pre>
+            </div>
+          )}
+          {comite.beneficios_esperados && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Benefícios Esperados</p>
+              <pre className="whitespace-pre-wrap font-sans text-base text-foreground">{comite.beneficios_esperados}</pre>
+            </div>
+          )}
+          {(!comite.objetivo && !comite.justificativa && !comite.atribuicoes_comite && !comite.composicao_recomendada &&
+            !comite.periodicidade_reunioes && !comite.fluxo_demandas && !comite.criterios_priorizacao && !comite.beneficios_esperados) && (
+            <p className="text-muted-foreground text-center py-4">Nenhuma informação detalhada disponível para este comitê.</p>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <CommitteeMembersSection

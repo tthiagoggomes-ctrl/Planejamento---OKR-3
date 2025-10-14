@@ -1,5 +1,5 @@
 import { supabase } from '../client';
-import { showSuccess, showError } from '@/utils/toast';
+import { showError } from '@/utils/toast'; // Removido showSuccess
 
 export interface Area {
   id: string;

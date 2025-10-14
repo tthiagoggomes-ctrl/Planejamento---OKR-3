@@ -1,5 +1,5 @@
 import { supabase } from '../client';
-import { showError, showSuccess } from '@/utils/toast';
+import { showError } from '@/utils/toast'; // Removido showSuccess
 import { getYear, format, getMonth } from 'date-fns'; // Importar funções de data, incluindo getMonth
 import { ptBR } from 'date-fns/locale'; // Corrigido: Importar ptBR diretamente
 

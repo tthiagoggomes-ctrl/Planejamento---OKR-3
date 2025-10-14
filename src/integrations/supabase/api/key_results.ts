@@ -1,6 +1,5 @@
 import { supabase } from '../client';
-import { showError } from '@/utils/toast';
-import { Atividade } from './atividades'; // Import Atividade interface
+import { showError } from '@/utils/toast'; // Removido showSuccess
 
 export interface KeyResult {
   id: string;
@@ -155,7 +154,19 @@ export const createKeyResult = async (
 ): Promise<KeyResult | null> => {
   // Initial status and valor_atual when no activities exist
   const initialProgress = 0;
-  const initialStatus = determineKeyResultStatus({ valor_inicial, valor_meta, valor_atual: initialProgress, atividades: [] } as KeyResult);
+  const initialStatus = determineKeyResultStatus({
+    id: 'temp-id', // Placeholder
+    objetivo_id: objetivo_id, // Use actual value
+    user_id: user_id, // Use actual value
+    titulo: titulo, // Use actual value
+    tipo: tipo, // Use actual value
+    unidade: unidade, // Use actual value
+    periodo: periodo, // Use actual value
+    valor_inicial,
+    valor_meta,
+    valor_atual: initialProgress,
+    atividades: [],
+  } as KeyResult); // Cast with all required properties
 
   const { data, error } = await supabase
     .from('key_results')

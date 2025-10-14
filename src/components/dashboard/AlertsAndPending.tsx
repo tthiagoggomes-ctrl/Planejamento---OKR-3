@@ -3,14 +3,13 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, AlertTriangle, Target, Clock, XCircle, TrendingUp, Building, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, AlertTriangle, Target, TrendingUp, Building, ChevronDown, ChevronUp } from 'lucide-react'; // Removido Clock, XCircle
 import { getAllKeyResults, KeyResult, calculateKeyResultProgress } from '@/integrations/supabase/api/key_results';
 import { getObjetivos, Objetivo } from '@/integrations/supabase/api/objetivos';
 import { getAtividades, Atividade } from '@/integrations/supabase/api/atividades';
 import { getAreas, Area } from '@/integrations/supabase/api/areas';
 import { showError } from '@/utils/toast';
-import { formatDistanceToNow, subDays, isPast as dateFnsIsPast } from 'date-fns'; // Renomear isPast para evitar conflito
-import { ptBR } from 'date-fns/locale';
+import { subDays } from 'date-fns'; // Removido formatDistanceToNow, isPast, ptBR
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import { Button } from '@/components/ui/button'; // Import Button
 
@@ -18,24 +17,24 @@ const AlertsAndPending: React.FC = () => {
   const navigate = useNavigate(); // Initialize useNavigate
   const [showAllKRsAtRisk, setShowAllKRsAtRisk] = React.useState(false); // Novo estado para controlar a expansão
 
-  const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[] | null, Error>({
+  const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[], Error>({
     queryKey: ["allKeyResults"],
-    queryFn: () => getAllKeyResults(), // Wrap in arrow function
+    queryFn: async () => (await getAllKeyResults()) || [], // Ensure it always returns an array
   });
 
-  const { data: objetivos, isLoading: isLoadingObjetivos, error: errorObjetivos } = useQuery<Objetivo[] | null, Error>({
+  const { data: objetivos, isLoading: isLoadingObjetivos, error: errorObjetivos } = useQuery<Objetivo[], Error>({
     queryKey: ["objetivos"],
-    queryFn: () => getObjetivos(),
+    queryFn: async () => (await getObjetivos()) || [], // Ensure it always returns an array
   });
 
-  const { data: atividades, isLoading: isLoadingAtividades, error: errorAtividades } = useQuery<Atividade[] | null, Error>({
+  const { data: atividades, isLoading: isLoadingAtividades, error: errorAtividades } = useQuery<Atividade[], Error>({
     queryKey: ["allActivities"],
-    queryFn: () => getAtividades(),
+    queryFn: async () => (await getAtividades()) || [], // Ensure it always returns an array
   });
 
-  const { data: areas, isLoading: isLoadingAreas, error: errorAreas } = useQuery<Area[] | null, Error>({
+  const { data: areas, isLoading: isLoadingAreas, error: errorAreas } = useQuery<Area[], Error>({
     queryKey: ["areas"],
-    queryFn: () => getAreas(), // Wrap in arrow function
+    queryFn: async () => (await getAreas()) || [], // Ensure it always returns an array
   });
 
   const krsAtRiskOrOffTrack = React.useMemo(() => {
@@ -85,7 +84,7 @@ const AlertsAndPending: React.FC = () => {
         }
       });
 
-      if (!latestUpdate || latestUpdate < sevenDaysAgo) {
+      if (latestUpdate === null || latestUpdate < sevenDaysAgo) { // Added null check
         areasWithNoRecentUpdate.push(area);
       }
     });
@@ -121,7 +120,7 @@ const AlertsAndPending: React.FC = () => {
     );
   }
 
-  if (errorKeyResults || errorObjetivos || errorAtividades || errorAreas) {
+  if (errorAreas || errorObjetivos || errorKeyResults || errorAtividades) {
     showError("Erro ao carregar alertas e pendências.");
     return (
       <Card className="h-full">

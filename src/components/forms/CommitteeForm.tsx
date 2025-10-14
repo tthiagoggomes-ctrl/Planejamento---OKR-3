@@ -192,7 +192,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o status" />
-                      </SelectTrigger>
+                    </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {statusOptions.map((status) => (
@@ -304,7 +304,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => append({ user_id: null, role: "membro" })} {/* Changed to null */}
+                onClick={() => append({ user_id: null, role: "membro" })} // Changed to null
                 disabled={isLoadingUsers || (availableUsers && availableUsers.length === 0)}
                 className="w-full"
               >

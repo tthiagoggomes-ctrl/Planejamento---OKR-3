@@ -141,6 +141,37 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
   const queryClient = useQueryClient();
 
   // --- Committee Mutations ---
+  const createComiteMutation = useMutation({
+    mutationFn: (values: CommitteeFormValues) => {
+      if (!canManageComiteMembers) { // Assuming create also needs this permission
+        throw new Error("Você não tem permissão para criar comitês.");
+      }
+      return createComite(
+        values.nome,
+        values.descricao,
+        values.status,
+        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[],
+        values.regras_comite,
+        values.objetivo,
+        values.justificativa,
+        values.atribuicoes_comite,
+        values.composicao_recomendada,
+        values.periodicidade_reunioes,
+        values.fluxo_demandas,
+        values.criterios_priorizacao,
+        values.beneficios_esperados
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["comites"] });
+      setIsCommitteeFormOpen(false);
+      showSuccess("Comitê criado com sucesso!");
+    },
+    onError: (err) => {
+      showError(`Erro ao criar comitê: ${err.message}`);
+    },
+  });
+
   const updateComiteMutation = useMutation({
     mutationFn: ({ id: comiteId, ...values }: CommitteeFormValues & { id: string }) => {
       if (!canManageComiteMembers) {
@@ -152,7 +183,16 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
         values.descricao,
         values.status,
         (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[],
-        values.regras_comite // Pass the rules content
+        values.regras_comite, // Pass the rules content
+        // NEW: Pass all new detailed fields
+        values.objetivo,
+        values.justificativa,
+        values.atribuicoes_comite,
+        values.composicao_recomendada,
+        values.periodicidade_reunioes,
+        values.fluxo_demandas,
+        values.criterios_priorizacao,
+        values.beneficios_esperados
       );
     },
     onSuccess: () => {
@@ -166,9 +206,11 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
     },
   });
 
-  const handleUpdateComiteMembers = (values: CommitteeFormValues) => {
+  const handleCreateOrUpdateComiteMembers = (values: CommitteeFormValues) => {
     if (editingComite) {
       updateComiteMutation.mutate({ id: editingComite.id, ...values });
+    } else {
+      createComiteMutation.mutate(values);
     }
   };
 
@@ -459,7 +501,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
       return voteOnEnquete(enqueteId, opcaoId, userSessionId);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["enquetes", comiteId] });
+      queryClient.invalidateQueries({ queryKey: ["enquetes", comiteId] }); // Invalidate specific poll query
       showSuccess("Voto registrado com sucesso!");
       onVoteEnqueteSuccess(variables.enqueteId, variables.opcaoId);
     },
@@ -471,14 +513,15 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
   return (
     <>
       {/* Committee Form (for managing members) */}
-      {canManageComiteMembers && editingComite && (
+      {/* This form is used for both creating a new committee and updating an existing one (including members and detailed info) */}
+      {(canManageComiteMembers || (editingComite && editingComite.id)) && ( // Show if managing members or editing an existing committee
         <CommitteeForm
           open={isCommitteeFormOpen}
           onOpenChange={setIsCommitteeFormOpen}
-          onSubmit={handleUpdateComiteMembers}
+          onSubmit={handleCreateOrUpdateComiteMembers}
           initialData={editingComite}
           initialMembers={initialMembers}
-          isLoading={updateComiteMutation.isPending}
+          isLoading={createComiteMutation.isPending || updateComiteMutation.isPending}
         />
       )}
 

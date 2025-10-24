@@ -10,7 +10,7 @@ import { getReunioes, Reuniao } from '@/integrations/supabase/api/reunioes';
 import { getEnquetes, Enquete } from '@/integrations/supabase/api/enquetes';
 import { getAtividadesComite, AtividadeComite } from '@/integrations/supabase/api/atividades_comite';
 import { showError } from '@/utils/toast';
-import { parseISO, isWithinInterval, addDays, format, startOfDay, endOfDay } from 'date-fns';
+import { parseISO, isWithinInterval, format, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useSession } from '@/components/auth/SessionContextProvider';
 
@@ -65,15 +65,16 @@ const CommitteesDashboard = () => {
   const upcomingMeetings = React.useMemo(() => {
     if (!allMeetings) return [];
     const startOfToday = startOfDay(now);
-    const endOfNextSevenDays = endOfDay(addDays(startOfToday, 6)); // Inclui hoje + 6 dias = 7 dias no total
 
-    return allMeetings
+    // Filter for all meetings that are today or in the future
+    const futureMeetings = allMeetings
       .filter(m => {
         const meetingDate = parseISO(m.data_reuniao);
-        return isWithinInterval(meetingDate, { start: startOfToday, end: endOfNextSevenDays });
+        return meetingDate >= startOfToday;
       })
-      .sort((a, b) => parseISO(a.data_reuniao).getTime() - parseISO(b.data_reuniao).getTime())
-      .slice(0, 5); // Show up to 5 upcoming meetings
+      .sort((a, b) => parseISO(a.data_reuniao).getTime() - parseISO(b.data_reuniao).getTime());
+    
+    return futureMeetings;
   }, [allMeetings, now]);
 
   const activePolls = React.useMemo(() => {
@@ -163,9 +164,9 @@ const CommitteesDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{upcomingMeetings.length}</div>
-            {upcomingMeetings.length > 0 ? (
+            {upcomingMeetings.slice(0, 5).length > 0 ? (
               <ul className="text-xs text-muted-foreground mt-2 space-y-1">
-                {upcomingMeetings.map(meeting => (
+                {upcomingMeetings.slice(0, 5).map(meeting => (
                   <li key={meeting.id} className="truncate">
                     {format(parseISO(meeting.data_reuniao), 'dd/MM HH:mm', { locale: ptBR })} - {meeting.titulo} ({meeting.comite_name})
                   </li>

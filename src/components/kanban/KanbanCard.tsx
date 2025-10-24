@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { Draggable } from "react-beautiful-dnd";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Comite, ComiteMember } from "@/integrations/supabase/api/comites";
 import { UserProfile, getUsers } from "@/integrations/supabase/api/users";
-import { Loader2, PlusCircle, XCircle, FileText } from "lucide-react";
+import { Loader2, PlusCircle, XCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
 import { useSession } from "@/components/auth/SessionContextProvider";

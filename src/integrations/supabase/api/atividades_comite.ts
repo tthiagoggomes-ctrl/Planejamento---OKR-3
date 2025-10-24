@@ -159,7 +159,7 @@ export const createAtividadeComite = async (
 
 export const updateAtividadeComite = async (
   id: string,
-  ata_reuniao_id: string, // Keep ata_reuniao_id in update for RLS policy
+  _ata_reuniao_id: string, // Keep ata_reuniao_id in update for RLS policy, prefixed with _ to mark as unused in function body
   titulo: string,
   descricao: string | null,
   due_date: string | null,

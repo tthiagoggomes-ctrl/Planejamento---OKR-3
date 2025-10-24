@@ -65,7 +65,7 @@ const AlertsAndPending: React.FC = () => {
       objetivos.filter(obj => obj.area_id === area.id).forEach(obj => {
         if (obj.updated_at) {
           const objUpdatedAt = new Date(obj.updated_at);
-          if (objUpdatedAt > (latestUpdate || new Date(0))) {
+          if (latestUpdate === null || objUpdatedAt > latestUpdate) {
             latestUpdate = objUpdatedAt;
           }
         }
@@ -76,7 +76,7 @@ const AlertsAndPending: React.FC = () => {
       krsInArea.forEach(kr => {
         if (kr.updated_at) {
           const krUpdatedAt = new Date(kr.updated_at);
-          if (krUpdatedAt > (latestUpdate || new Date(0))) {
+          if (latestUpdate === null || krUpdatedAt > latestUpdate) {
             latestUpdate = krUpdatedAt;
           }
         }
@@ -87,7 +87,7 @@ const AlertsAndPending: React.FC = () => {
       activitiesInArea.forEach(ativ => {
         if (ativ.updated_at) {
           const ativUpdatedAt = new Date(ativ.updated_at);
-          if (ativUpdatedAt > (latestUpdate || new Date(0))) {
+          if (latestUpdate === null || ativUpdatedAt > latestUpdate) {
             latestUpdate = ativUpdatedAt;
           }
         }

@@ -1,6 +1,5 @@
 import { supabase } from '../client';
 import { showError, showSuccess } from '@/utils/toast';
-import { UserProfile } from './users';
 import { CommitteeFormValues } from '@/components/forms/CommitteeForm';
 
 export interface Comite {

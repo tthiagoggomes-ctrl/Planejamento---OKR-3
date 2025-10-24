@@ -8,7 +8,6 @@ import { PlusCircle, Loader2 } from "lucide-react";
 import { getObjetivos, Objetivo } from "@/integrations/supabase/api/objetivos";
 import { getKeyResultsByObjetivoId, KeyResult, calculateKeyResultProgress } from "@/integrations/supabase/api/key_results";
 import { Atividade } from "@/integrations/supabase/api/atividades";
-import { useSession } from "@/components/auth/SessionContextProvider";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useLocation } from "react-router-dom";
 
@@ -20,7 +19,6 @@ import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o
 
 const Objetivos = () => {
   const queryClient = useQueryClient();
-  const { user } = useSession();
   const location = useLocation();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
 

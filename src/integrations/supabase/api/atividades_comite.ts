@@ -206,3 +206,18 @@ export const deleteAtividadeComite = async (id: string): Promise<boolean> => {
   showSuccess('Atividade do comitê excluída com sucesso!');
   return true;
 };
+
+// NOVO: Função para excluir todas as atividades do comitê vinculadas a uma ata de reunião
+export const deleteAtividadesComiteByAtaReuniaoId = async (ata_reuniao_id: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('atividades_comite')
+    .delete()
+    .eq('ata_reuniao_id', ata_reuniao_id);
+
+  if (error) {
+    console.error('Error deleting committee activities by ata_reuniao_id:', error.message);
+    showError(`Erro ao excluir atividades do comitê para a ata de reunião: ${error.message}`);
+    return false;
+  }
+  return true;
+};

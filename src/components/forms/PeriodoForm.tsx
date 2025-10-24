@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Periodo, PeriodoStatus } from "@/integrations/supabase/api/periodos";
+import { Periodo } from "@/integrations/supabase/api/periodos"; // Removed PeriodoStatus from import
 import { Loader2, CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -180,8 +180,8 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
         setEndDateString(format(newEndDate, "dd/MM/yyyy", { locale: ptBR }));
       } else {
         form.setValue('nome', '', { shouldValidate: true });
-        form.setValue('start_date', undefined, { shouldValidate: true });
-        form.setValue('end_date', undefined, { shouldValidate: true });
+        form.setValue('start_date', undefined, { shouldValidate: true }); // Changed to undefined
+        form.setValue('end_date', undefined, { shouldValidate: true }); // Changed to undefined
         setStartDateString("");
         setEndDateString("");
       }
@@ -380,30 +380,6 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {statusOptions.map((status) => (
-                        <SelectItem key={status.value} value={status.value}>
-                          {status.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             {parentPeriodIdForNew && !initialData && (
               <FormField
                 control={form.control}
@@ -412,7 +388,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                   <FormItem className="hidden">
                     <FormLabel>Parent ID</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} value={field.value || ""} /> {/* Ensure value is string or empty string */}
                     </FormControl>
                     <FormMessage />
                   </FormItem>

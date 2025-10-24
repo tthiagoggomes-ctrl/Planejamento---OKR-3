@@ -90,44 +90,9 @@ const formatParticipants = (selectedMemberIds: string[], guestParticipantsText: 
 };
 
 // Helper function to parse structured pendencias string
-const parsePendencias = (pendenciasString: string | null, allUsers: UserProfile[] | null): { activity_name: string; status: 'Pendente' | 'Em andamento' | 'Concluído'; assignee_id: string; due_date: Date | null }[] => {
-  if (!pendenciasString) return [];
-
-  const lines = pendenciasString.split('\n').map(line => line.trim()).filter(Boolean);
-  const structuredPendencias: { activity_name: string; status: 'Pendente' | 'Em andamento' | 'Concluído'; assignee_id: string; due_date: Date | null }[] = [];
-
-  lines.forEach(line => {
-    // Example format: Analisar processo de cadastro de pessoas físicas | Pendente | Thiago Gomes | 10/10/2025
-    const parts = line.split(' | ').map(p => p.trim());
-    if (parts.length >= 3) {
-      const activity_name = parts[0];
-      const status = parts[1] as 'Pendente' | 'Em andamento' | 'Concluído'; // Cast to valid status
-      const assigneeName = parts[2];
-      const dueDateString = parts[3];
-
-      const assignee = allUsers?.find(u => `${u.first_name} ${u.last_name}`.includes(assigneeName));
-      const due_date = dueDateString && isValid(parseISO(dueDateString)) ? parseISO(dueDateString) : null;
-
-      structuredPendencias.push({
-        activity_name,
-        status,
-        assignee_id: assignee?.id || "",
-        due_date,
-      });
-    }
-  });
-  return structuredPendencias;
-};
-
+// REMOVIDO: parsePendencias não é mais necessário, pois as pendências serão gerenciadas como objetos
 // Helper function to format structured pendencias for DB
-const formatPendencias = (structuredPendencias: { activity_name?: string; status?: 'Pendente' | 'Em andamento' | 'Concluído'; assignee_id?: string; due_date?: Date | null }[], allUsers: UserProfile[] | null): string => {
-  return structuredPendencias.map(p => {
-    const assignee = allUsers?.find(u => u.id === p.assignee_id);
-    const assigneeName = assignee ? `${assignee.first_name} ${assignee.last_name}` : 'N/A';
-    const dueDateFormatted = p.due_date ? format(p.due_date, 'dd/MM/yyyy', { locale: ptBR }) : 'N/A';
-    return `${p.activity_name || ''} | ${p.status || 'Pendente'} | ${assigneeName} | ${dueDateFormatted}`;
-  }).join('\n');
-};
+// REMOVIDO: formatPendencias não é mais necessário, pois as pendências serão gerenciadas como objetos
 
 
 const formSchema = z.object({
@@ -152,11 +117,11 @@ const formSchema = z.object({
   pauta_tratada: z.string().nullable(),
   novos_topicos: z.string().nullable(),
   
-  // Structured field for pendencias
+  // Structured field for pendencias - agora é um array de objetos
   structured_pendencias: z.array(z.object({
     activity_name: z.string().min(1, "O nome da atividade é obrigatório."),
     status: z.enum(['Pendente', 'Em andamento', 'Concluído'], { message: "Selecione um status válido." }),
-    assignee_id: z.string().uuid({ message: "Selecione um responsável válido." }),
+    assignee_id: z.string().uuid({ message: "Selecione um responsável válido." }).nullable(), // Pode ser nulo
     due_date: z.date().nullable().optional(),
   })).optional(),
 
@@ -165,7 +130,7 @@ const formSchema = z.object({
 
 export type AtaReuniaoFormValues = z.infer<typeof formSchema>;
 
-// New type for values submitted to the API
+// New type for values submitted to the API - REMOVIDO 'pendencias'
 export type AtaReuniaoSubmitValues = {
   conteudo: string | null;
   decisoes_tomadas: string | null;
@@ -177,17 +142,19 @@ export type AtaReuniaoSubmitValues = {
   objetivos_reuniao: string | null;
   pauta_tratada: string | null;
   novos_topicos: string | null;
-  pendencias: string | null; // Formatted string
+  // pendencias: string | null; // REMOVIDO
   proximos_passos: string | null;
 };
 
 interface AtaReuniaoFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (values: AtaReuniaoSubmitValues) => void; // Use new submit type
+  // O onSubmit agora espera o tipo transformado E as pendências estruturadas
+  onSubmit: (values: AtaReuniaoSubmitValues, structuredPendencias: AtaReuniaoFormValues['structured_pendencias']) => void;
   initialData?: AtaReuniao | null;
   isLoading?: boolean;
   selectedMeeting?: Reuniao | null;
+  initialStructuredPendencias?: AtaReuniaoFormValues['structured_pendencias']; // NOVO: Para carregar pendências existentes
 }
 
 export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
@@ -197,6 +164,7 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
   initialData,
   isLoading,
   selectedMeeting,
+  initialStructuredPendencias, // NOVO
 }) => {
   const form = useForm<AtaReuniaoFormValues>({
     resolver: zodResolver(formSchema),
@@ -215,7 +183,7 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
       pauta_tratada: initialData?.pauta_tratada || "",
       novos_topicos: initialData?.novos_topicos || "",
       
-      structured_pendencias: [],
+      structured_pendencias: initialStructuredPendencias || [], // NOVO: Usar initialStructuredPendencias
 
       proximos_passos: initialData?.proximos_passos || "",
     },
@@ -240,7 +208,7 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
   React.useEffect(() => {
     if (initialData) {
       const { selectedMembers, guestParticipantsText } = parseParticipants(initialData.participantes, allUsers);
-      const structuredPendencias = parsePendencias(initialData.pendencias, allUsers);
+      // const structuredPendencias = parsePendencias(initialData.pendencias, allUsers); // REMOVIDO
 
       form.reset({
         conteudo: initialData.conteudo,
@@ -254,7 +222,7 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
         objetivos_reuniao: initialData.objetivos_reuniao,
         pauta_tratada: initialData.pauta_tratada,
         novos_topicos: initialData.novos_topicos,
-        structured_pendencias: structuredPendencias,
+        structured_pendencias: initialStructuredPendencias || [], // NOVO: Usar initialStructuredPendencias
         proximos_passos: initialData.proximos_passos,
       });
     } else {
@@ -274,11 +242,11 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
         proximos_passos: "",
       });
     }
-  }, [initialData, form, selectedMeeting, allUsers, committeeMembers]);
+  }, [initialData, form, selectedMeeting, allUsers, committeeMembers, initialStructuredPendencias]); // Adicionado initialStructuredPendencias
 
   const handleSubmit = (values: AtaReuniaoFormValues) => {
     const formattedParticipants = formatParticipants(values.selected_committee_members || [], values.guest_participants_text, allUsers);
-    const formattedPendencias = formatPendencias(values.structured_pendencias || [], allUsers);
+    // const formattedPendencias = formatPendencias(values.structured_pendencias || [], allUsers); // REMOVIDO
 
     const submitValues: AtaReuniaoSubmitValues = {
       conteudo: values.conteudo,
@@ -291,10 +259,10 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
       objetivos_reuniao: values.objetivos_reuniao,
       pauta_tratada: values.pauta_tratada,
       novos_topicos: values.novos_topicos,
-      pendencias: formattedPendencias,
+      // pendencias: formattedPendencias, // REMOVIDO
       proximos_passos: values.proximos_passos,
     };
-    onSubmit(submitValues);
+    onSubmit(submitValues, values.structured_pendencias); // NOVO: Passar pendências estruturadas
     if (!initialData) {
       form.reset({
         conteudo: "",
@@ -630,13 +598,14 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
                       render={({ field: assigneeField }) => (
                         <FormItem>
                           <FormLabel>Responsável</FormLabel>
-                          <Select onValueChange={assigneeField.onChange} value={assigneeField.value}>
+                          <Select onValueChange={assigneeField.onChange} value={assigneeField.value || ""}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Selecione o responsável" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
+                              <SelectItem value="null">Nenhum Responsável</SelectItem>
                               {isLoadingAllUsers ? (
                                 <SelectItem value="" disabled>Carregando usuários...</SelectItem>
                               ) : (
@@ -707,7 +676,7 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => appendPendencia({ activity_name: "", status: "Pendente", assignee_id: "", due_date: null })}
+                onClick={() => appendPendencia({ activity_name: "", status: "Pendente", assignee_id: null, due_date: null })}
                 className="w-full"
               >
                 <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Pendência

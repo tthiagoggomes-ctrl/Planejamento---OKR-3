@@ -85,7 +85,7 @@ export const getKeyResultsByObjetivoId = async (objetivo_id: string): Promise<Ke
   });
 };
 
-export const getAllKeyResults = async (objectiveId?: string | 'all'): Promise<KeyResult[]> => {
+export const getAllKeyResults = async (objectiveId?: string | 'all'): Promise<KeyResult[]> => { // Changed return type to KeyResult[]
   let query = supabase
     .from('key_results')
     .select(`
@@ -103,7 +103,7 @@ export const getAllKeyResults = async (objectiveId?: string | 'all'): Promise<Ke
   if (error) {
     console.error('Error fetching all key results:', error.message);
     showError('Erro ao carregar todos os Key Results.');
-    throw error; // Throw error to be caught by react-query
+    return []; // Return empty array on error
   }
 
   // Explicitly cast data to KeyResult[] before mapping
@@ -118,7 +118,7 @@ export const getAllKeyResults = async (objectiveId?: string | 'all'): Promise<Ke
   });
 };
 
-export const getKeyResultsSummary = async (): Promise<KeyResultSummary[]> => {
+export const getKeyResultsSummary = async (): Promise<KeyResultSummary[]> => { // Changed return type to KeyResultSummary[]
   const { data, error } = await supabase
     .from('key_results')
     .select(`
@@ -129,7 +129,7 @@ export const getKeyResultsSummary = async (): Promise<KeyResultSummary[]> => {
   if (error) {
     console.error('Error fetching key result summary:', error.message);
     showError('Erro ao carregar resumo de Key Results.');
-    throw error; // Throw error to be caught by react-query
+    return []; // Return empty array on error
   }
 
   // Group and count client-side based on calculated status

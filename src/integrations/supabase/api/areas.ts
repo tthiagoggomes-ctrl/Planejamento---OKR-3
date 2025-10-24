@@ -25,7 +25,7 @@ export const getAreas = async (params?: GetAreasParams): Promise<Area[]> => {
   if (error) {
     console.error('Error fetching areas:', error.message);
     showError('Erro ao carregar áreas.');
-    throw error; // Throw error to be caught by react-query
+    return []; // Return empty array on error
   }
   return data || []; // Ensure it always returns an array
 };

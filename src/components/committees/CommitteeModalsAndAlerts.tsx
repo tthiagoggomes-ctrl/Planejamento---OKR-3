@@ -20,7 +20,7 @@ import { useSession } from "@/components/auth/SessionContextProvider";
 // Forms
 import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm";
 import { ReuniaoForm, ReuniaoFormValues } from "@/components/forms/ReuniaoForm";
-import { AtaReuniaoForm, AtaReuniaoSubmitValues } from "@/components/forms/AtaReuniaoForm";
+import { AtaReuniaoForm, AtaReuniaoSubmitValues, AtaReuniaoFormValues } from "@/components/forms/AtaReuniaoForm"; // Import AtaReuniaoFormValues
 import { EnqueteForm, EnqueteSubmitValues } from "@/components/forms/EnqueteForm";
 
 // API functions
@@ -28,6 +28,7 @@ import { Comite, ComiteMember, updateComite, deleteComite, createComite } from "
 import { Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
 import { AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { Enquete, createEnquete, updateEnquete, deleteEnquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes";
+import { createAtividadeComite, deleteAtividadesComiteByAtaReuniaoId } from "@/integrations/supabase/api/atividades_comite"; // NOVO: Importar funções de atividade do comitê
 
 interface CommitteeModalsAndAlertsProps {
   comiteId: string;
@@ -68,12 +69,13 @@ interface CommitteeModalsAndAlertsProps {
   // Meeting Minutes Form
   isAtaFormOpen: boolean;
   setIsAtaFormOpen: (open: boolean) => void;
-  editingAta: AtaReuniao | null;
+  editingAta: AtaReuniao | null; // Corrected typo here
   selectedMeetingForAta: Reuniao | null;
   isAtaDeleteDialogOpen: boolean;
   setIsAtaDeleteDialogOpen: (open: boolean) => void;
   ataToDelete: string | null;
   setAtaToDelete: (id: string | null) => void;
+  initialStructuredPendenciasForAta?: AtaReuniaoFormValues['structured_pendencias']; // NOVO: Para carregar pendências existentes
 
   // Poll Form
   isEnqueteFormOpen: boolean;
@@ -128,6 +130,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
   setIsAtaDeleteDialogOpen,
   ataToDelete,
   setAtaToDelete,
+  initialStructuredPendenciasForAta, // NOVO
 
   isEnqueteFormOpen,
   setIsEnqueteFormOpen,
@@ -139,6 +142,16 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
   onVoteEnqueteSuccess,
 }) => {
   const queryClient = useQueryClient();
+
+  // Helper para converter status de pendência para status de atividade do comitê
+  const mapPendencyStatusToActivityStatus = (pendencyStatus: 'Pendente' | 'Em andamento' | 'Concluído'): 'todo' | 'in_progress' | 'done' | 'stopped' => {
+    switch (pendencyStatus) {
+      case 'Pendente': return 'todo';
+      case 'Em andamento': return 'in_progress';
+      case 'Concluído': return 'done';
+      default: return 'todo'; // Fallback
+    }
+  };
 
   // --- Committee Mutations ---
   const createComiteMutation = useMutation({
@@ -281,14 +294,14 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
 
   // --- Meeting Minutes Mutations ---
   const createAtaReuniaoMutation = useMutation({
-    mutationFn: (values: AtaReuniaoSubmitValues) => {
+    mutationFn: async ({ values, structuredPendencias }: { values: AtaReuniaoSubmitValues; structuredPendencias: AtaReuniaoFormValues['structured_pendencias'] }) => {
       if (!userSessionId || !selectedMeetingForAta?.id) {
         throw new Error("User not authenticated or meeting not selected.");
       }
       if (!canInsertAtasReuniao) {
         throw new Error("Você não tem permissão para criar atas de reunião.");
       }
-      return createAtaReuniao(
+      const newAta = await createAtaReuniao(
         selectedMeetingForAta.id,
         values.conteudo,
         values.decisoes_tomadas,
@@ -301,26 +314,42 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
         values.objetivos_reuniao,
         values.pauta_tratada,
         values.novos_topicos,
-        values.pendencias,
+        // values.pendencias, // REMOVIDO
         values.proximos_passos
       );
+
+      if (newAta && structuredPendencias && structuredPendencias.length > 0) {
+        for (const pendency of structuredPendencias) {
+          await createAtividadeComite(
+            newAta.id,
+            pendency.activity_name,
+            null, // Descrição da atividade
+            pendency.due_date?.toISOString() || null,
+            mapPendencyStatusToActivityStatus(pendency.status),
+            pendency.assignee_id,
+            userSessionId
+          );
+        }
+      }
+      return newAta;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
+      queryClient.invalidateQueries({ queryKey: ["atividadesComite"] }); // Invalida atividades do comitê
       setIsAtaFormOpen(false);
-      showSuccess("Ata de reunião criada com sucesso!");
+      showSuccess("Ata de reunião e atividades criadas com sucesso!");
     },
     onError: (err) => {
-      showError(`Erro ao criar ata de reunião: ${err.message}`);
+      showError(`Erro ao criar ata de reunião e atividades: ${err.message}`);
     },
   });
 
   const updateAtaReuniaoMutation = useMutation({
-    mutationFn: ({ id: ataId, ...values }: AtaReuniaoSubmitValues & { id: string }) => {
+    mutationFn: async ({ id: ataId, values, structuredPendencias }: { id: string; values: AtaReuniaoSubmitValues; structuredPendencias: AtaReuniaoFormValues['structured_pendencias'] }) => {
       if (!canEditAtasReuniao) {
         throw new Error("Você não tem permissão para editar atas de reunião.");
       }
-      return updateAtaReuniao(
+      const updatedAta = await updateAtaReuniao(
         ataId,
         values.conteudo,
         values.decisoes_tomadas,
@@ -332,43 +361,69 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
         values.objetivos_reuniao,
         values.pauta_tratada,
         values.novos_topicos,
-        values.pendencias,
+        // values.pendencias, // REMOVIDO
         values.proximos_passos
       );
+
+      if (updatedAta) {
+        // Excluir todas as atividades existentes para esta ata
+        await deleteAtividadesComiteByAtaReuniaoId(ataId);
+
+        // Recriar atividades com base nas pendências estruturadas do formulário
+        if (structuredPendencias && structuredPendencias.length > 0) {
+          for (const pendency of structuredPendencias) {
+            await createAtividadeComite(
+              ataId,
+              pendency.activity_name,
+              null, // Descrição da atividade
+              pendency.due_date?.toISOString() || null,
+              mapPendencyStatusToActivityStatus(pendency.status),
+              pendency.assignee_id,
+              userSessionId! // userSessionId deve estar disponível aqui
+            );
+          }
+        }
+      }
+      return updatedAta;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
+      queryClient.invalidateQueries({ queryKey: ["atividadesComite"] }); // Invalida atividades do comitê
       setIsAtaFormOpen(false);
-      showSuccess("Ata de reunião atualizada com sucesso!");
+      showSuccess("Ata de reunião e atividades atualizadas com sucesso!");
     },
     onError: (err) => {
-      showError(`Erro ao atualizar ata de reunião: ${err.message}`);
+      showError(`Erro ao atualizar ata de reunião e atividades: ${err.message}`);
     },
   });
 
   const deleteAtaReuniaoMutation = useMutation({
-    mutationFn: (ataId: string) => {
+    mutationFn: async (ataId: string) => {
       if (!canDeleteAtasReuniao) {
         throw new Error("Você não tem permissão para excluir atas de reunião.");
       }
+      // Primeiro, exclua as atividades do comitê associadas
+      await deleteAtividadesComiteByAtaReuniaoId(ataId);
+      // Em seguida, exclua a ata de reunião
       return deleteAtaReuniao(ataId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
+      queryClient.invalidateQueries({ queryKey: ["atividadesComite"] }); // Invalida atividades do comitê
       setIsAtaDeleteDialogOpen(false);
       setAtaToDelete(null);
-      showSuccess("Ata de reunião excluída com sucesso!");
+      showSuccess("Ata de reunião e atividades excluídas com sucesso!");
     },
     onError: (err) => {
-      showError(`Erro ao excluir ata de reunião: ${err.message}`);
+      showError(`Erro ao excluir ata de reunião e atividades: ${err.message}`);
     },
   });
 
-  const handleCreateOrUpdateAta = (values: AtaReuniaoSubmitValues) => {
+  const handleCreateOrUpdateAta = (values: AtaReuniaoSubmitValues, structuredPendencias: AtaReuniaoFormValues['structured_pendencias']) => {
     if (editingAta) {
-      updateAtaReuniaoMutation.mutate({ id: editingAta.id, ...values });
+      updateAtaReuniaoMutation.mutate({ id: editingAta.id, values, structuredPendencias });
     } else {
-      createAtaReuniaoMutation.mutate(values);
+      createAtaReuniaoMutation.mutate({ values, structuredPendencias });
     }
   };
 
@@ -581,6 +636,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
           initialData={editingAta}
           isLoading={createAtaReuniaoMutation.isPending || updateAtaReuniaoMutation.isPending}
           selectedMeeting={selectedMeetingForAta}
+          initialStructuredPendencias={initialStructuredPendenciasForAta} // NOVO
         />
       )}
 

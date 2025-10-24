@@ -63,28 +63,37 @@ const AlertsAndPending: React.FC = () => {
 
       // Check objectives for this area
       objetivos.filter(obj => obj.area_id === area.id).forEach(obj => {
-        if (obj.updated_at && new Date(obj.updated_at) > (latestUpdate || new Date(0))) {
-          latestUpdate = new Date(obj.updated_at);
+        if (obj.updated_at) {
+          const objUpdatedAt = new Date(obj.updated_at);
+          if (objUpdatedAt > (latestUpdate || new Date(0))) {
+            latestUpdate = objUpdatedAt;
+          }
         }
       });
 
       // Check key results for objectives in this area
       const krsInArea = keyResults.filter(kr => objetivos.some(obj => obj.id === kr.objetivo_id && obj.area_id === area.id));
       krsInArea.forEach(kr => {
-        if (kr.updated_at && new Date(kr.updated_at) > (latestUpdate || new Date(0))) {
-          latestUpdate = new Date(kr.updated_at);
+        if (kr.updated_at) {
+          const krUpdatedAt = new Date(kr.updated_at);
+          if (krUpdatedAt > (latestUpdate || new Date(0))) {
+            latestUpdate = krUpdatedAt;
+          }
         }
       });
 
       // Check activities for key results in this area
       const activitiesInArea = atividades.filter(ativ => krsInArea.some(kr => kr.id === ativ.key_result_id));
       activitiesInArea.forEach(ativ => {
-        if (ativ.updated_at && new Date(ativ.updated_at) > (latestUpdate || new Date(0))) {
-          latestUpdate = new Date(ativ.updated_at);
+        if (ativ.updated_at) {
+          const ativUpdatedAt = new Date(ativ.updated_at);
+          if (ativUpdatedAt > (latestUpdate || new Date(0))) {
+            latestUpdate = ativUpdatedAt;
+          }
         }
       });
 
-      if (latestUpdate === null || (latestUpdate instanceof Date && latestUpdate < sevenDaysAgo)) { // Corrigido: Adicionado verificação de tipo
+      if (latestUpdate === null || latestUpdate < sevenDaysAgo) { // Corrigido: Removido instanceof Date, pois latestUpdate já é Date | null
         areasWithNoRecentUpdate.push(area);
       }
     });

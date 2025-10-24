@@ -72,7 +72,7 @@ const Index = () => {
     let totalObjectiveProgress = 0;
     let objectivesWithKRs = 0;
 
-    allObjetivos.forEach(obj => {
+    allObjetivos.forEach((obj: Objetivo) => { // Explicitly type 'obj'
       const krsForObjective = allKeyResults.filter(kr => kr.objetivo_id === obj.id);
       if (krsForObjective.length > 0) {
         const objectiveKRsProgress = krsForObjective.reduce((sum, kr) => sum + calculateKeyResultProgress(kr), 0);
@@ -95,26 +95,26 @@ const Index = () => {
 
   // Prepare data for Objetivo Status Chart
   const objetivoChartData = [
-    { name: 'Rascunhos', value: getStatusCount(objetivosSummary || [], 'draft'), color: '#facc15' },
-    { name: 'Ativos', value: getStatusCount(objetivosSummary || [], 'active'), color: '#3b82f6' },
-    { name: 'Concluídos', value: getStatusCount(objetivosSummary || [], 'completed'), color: '#22c55e' },
-    { name: 'Arquivados', value: getStatusCount(objetivosSummary || [], 'archived'), color: '#6b7280' },
+    { name: 'Rascunhos', value: getStatusCount(objetivosSummary, 'draft'), color: '#facc15' },
+    { name: 'Ativos', value: getStatusCount(objetivosSummary, 'active'), color: '#3b82f6' },
+    { name: 'Concluídos', value: getStatusCount(objetivosSummary, 'completed'), color: '#22c55e' },
+    { name: 'Arquivados', value: getStatusCount(objetivosSummary, 'archived'), color: '#6b7280' },
   ].filter(item => item.value > 0);
 
   // Prepare data for Key Result Status Chart
   const keyResultChartData = [
-    { name: 'No Caminho', value: getStatusCount(keyResultsSummary || [], 'on_track'), color: '#22c55e' },
-    { name: 'Em Risco', value: getStatusCount(keyResultsSummary || [], 'at_risk'), color: '#facc15' },
-    { name: 'Fora do Caminho', value: getStatusCount(keyResultsSummary || [], 'off_track'), color: '#ef4444' },
-    { name: 'Concluídos', value: getStatusCount(keyResultsSummary || [], 'completed'), color: '#3b82f6' },
+    { name: 'No Caminho', value: getStatusCount(keyResultsSummary, 'on_track'), color: '#22c55e' },
+    { name: 'Em Risco', value: getStatusCount(keyResultsSummary, 'at_risk'), color: '#facc15' },
+    { name: 'Fora do Caminho', value: getStatusCount(keyResultsSummary, 'off_track'), color: '#ef4444' },
+    { name: 'Concluídos', value: getStatusCount(keyResultsSummary, 'completed'), color: '#3b82f6' },
   ].filter(item => item.value > 0);
 
   // Prepare data for Atividade Status Chart
   const atividadeChartData = [
-    { name: 'A Fazer', value: getStatusCount(atividadesSummary || [], 'todo'), color: '#1f2937' },
-    { name: 'Em Progresso', value: getStatusCount(atividadesSummary || [], 'in_progress'), color: '#2563eb' },
-    { name: 'Paradas', value: getStatusCount(atividadesSummary || [], 'stopped'), color: '#dc2626' },
-    { name: 'Concluídas', value: getStatusCount(atividadesSummary || [], 'done'), color: '#16a34a' },
+    { name: 'A Fazer', value: getStatusCount(atividadesSummary, 'todo'), color: '#1f2937' },
+    { name: 'Em Progresso', value: getStatusCount(atividadesSummary, 'in_progress'), color: '#2563eb' },
+    { name: 'Paradas', value: getStatusCount(atividadesSummary, 'stopped'), color: '#dc2626' },
+    { name: 'Concluídas', value: getStatusCount(atividadesSummary, 'done'), color: '#16a34a' },
   ].filter(item => item.value > 0);
 
   const isLoadingOverallData = isLoadingAllObjetivos || isLoadingAllKeyResults || isLoadingObjetivosSummary || isLoadingKeyResultsSummary || isLoadingAtividades || permissionsLoading;
@@ -161,11 +161,11 @@ const Index = () => {
           <CardContent>
             {isLoadingOverallData ? renderLoading() : errorOverallData ? <p className="text-red-500">Erro ao carregar</p> : (
               <>
-                <div className="text-2xl font-bold">{getTotalCount(objetivosSummary || [])}</div>
+                <div className="text-2xl font-bold">{getTotalCount(objetivosSummary)}</div>
                 <p className="text-xs text-muted-foreground mt-2 mb-2">
-                  <span className="text-yellow-600 mr-1"><CircleDot className="inline h-3 w-3" /> {getStatusCount(objetivosSummary || [], 'draft')} Rascunhos</span>
-                  <span className="text-blue-600 mr-1"><Flag className="inline h-3 w-3" /> {getStatusCount(objetivosSummary || [], 'active')} Ativos</span>
-                  <span className="text-green-600 mr-1"><CheckCircle className="inline h-3 w-3" /> {getStatusCount(objetivosSummary || [], 'completed')} Concluídos</span>
+                  <span className="text-yellow-600 mr-1"><CircleDot className="inline h-3 w-3" /> {getStatusCount(objetivosSummary, 'draft')} Rascunhos</span>
+                  <span className="text-blue-600 mr-1"><Flag className="inline h-3 w-3" /> {getStatusCount(objetivosSummary, 'active')} Ativos</span>
+                  <span className="text-green-600 mr-1"><CheckCircle className="inline h-3 w-3" /> {getStatusCount(objetivosSummary, 'completed')} Concluídos</span>
                 </p>
                 <div className="flex items-center gap-2">
                   <Progress value={overallObjetivoProgress} className="w-full" />
@@ -186,11 +186,11 @@ const Index = () => {
           <CardContent>
             {isLoadingOverallData ? renderLoading() : errorOverallData ? <p className="text-red-500">Erro ao carregar</p> : (
               <>
-                <div className="text-2xl font-bold">{getTotalCount(keyResultsSummary || [])}</div>
+                <div className="text-2xl font-bold">{getTotalCount(keyResultsSummary)}</div>
                 <p className="text-xs text-muted-foreground mt-2 mb-2">
-                  <span className="text-green-600 mr-1"><CheckCircle className="inline h-3 w-3" /> {getStatusCount(keyResultsSummary || [], 'on_track')} No Caminho</span>
-                  <span className="text-yellow-600 mr-1"><AlertTriangle className="inline h-3 w-3" /> {getStatusCount(keyResultsSummary || [], 'at_risk')} Em Risco</span>
-                  <span className="text-red-600 mr-1"><XCircle className="inline h-3 w-3" /> {getStatusCount(keyResultsSummary || [], 'off_track')} Fora do Caminho</span>
+                  <span className="text-green-600 mr-1"><CheckCircle className="inline h-3 w-3" /> {getStatusCount(keyResultsSummary, 'on_track')} No Caminho</span>
+                  <span className="text-yellow-600 mr-1"><AlertTriangle className="inline h-3 w-3" /> {getStatusCount(keyResultsSummary, 'at_risk')} Em Risco</span>
+                  <span className="text-red-600 mr-1"><XCircle className="inline h-3 w-3" /> {getStatusCount(keyResultsSummary, 'off_track')} Fora do Caminho</span>
                 </p>
                 <div className="flex items-center gap-2">
                   <Progress value={overallKeyResultProgress} className="w-full" />
@@ -211,12 +211,12 @@ const Index = () => {
           <CardContent>
             {isLoadingOverallData ? renderLoading() : errorOverallData ? <p className="text-red-500">Erro ao carregar</p> : (
               <>
-                <div className="text-2xl font-bold">{getTotalCount(atividadesSummary || [])}</div>
+                <div className="text-2xl font-bold">{getTotalCount(atividadesSummary)}</div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  <span className="text-gray-900 mr-1"><Clock className="inline h-3 w-3" /> {getStatusCount(atividadesSummary || [], 'todo')} A Fazer</span>
-                  <span className="text-blue-600 mr-1"><Hourglass className="inline h-3 w-3" /> {getStatusCount(atividadesSummary || [], 'in_progress')} Em Progresso</span>
-                  <span className="text-red-600 mr-1"><StopCircle className="inline h-3 w-3" /> {getStatusCount(atividadesSummary || [], 'stopped')} Paradas</span>
-                  <span className="text-green-600 mr-1"><CheckCircle className="inline h-3 w-3" /> {getStatusCount(atividadesSummary || [], 'done')} Concluídas</span>
+                  <span className="text-gray-900 mr-1"><Clock className="inline h-3 w-3" /> {getStatusCount(atividadesSummary, 'todo')} A Fazer</span>
+                  <span className="text-blue-600 mr-1"><Hourglass className="inline h-3 w-3" /> {getStatusCount(atividadesSummary, 'in_progress')} Em Progresso</span>
+                  <span className="text-red-600 mr-1"><StopCircle className="inline h-3 w-3" /> {getStatusCount(atividadesSummary, 'stopped')} Paradas</span>
+                  <span className="text-green-600 mr-1"><CheckCircle className="inline h-3 w-3" /> {getStatusCount(atividadesSummary, 'done')} Concluídas</span>
                 </p>
                 {/* Activities don't have a single numerical progress, so no progress bar here */}
               </>

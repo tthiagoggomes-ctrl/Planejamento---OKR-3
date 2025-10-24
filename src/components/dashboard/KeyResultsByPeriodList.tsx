@@ -37,7 +37,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
     const groups: Record<string, { period: Periodo; overdueKRs: KeyResult[]; attentionKRs: KeyResult[]; otherKRs: KeyResult[] }> = {};
 
     // Initialize groups for all periods
-    periods.forEach(p => {
+    periods.forEach((p: Periodo) => { // Explicitly type 'p'
       groups[p.id] = {
         period: p,
         overdueKRs: [],
@@ -47,7 +47,7 @@ const KeyResultsByPeriodList: React.FC<KeyResultsByPeriodListProps> = () => {
     });
 
     keyResults.forEach(kr => {
-      const period = periods.find(p => p.nome === kr.periodo);
+      const period = periods.find((p: Periodo) => p.nome === kr.periodo); // Explicitly type 'p'
       if (!period) {
         return;
       }

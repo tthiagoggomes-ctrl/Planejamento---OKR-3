@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integrations/supabase/api/comites";
 import { getReunioes, Reuniao } from "@/integrations/supabase/api/reunioes"; 
-import { AtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
+import { AtaReuniao, getAtasReuniaoByReuniaoId, getAtaReuniaoById } from "@/integrations/supabase/api/atas_reuniao"; // Import getAtaReuniaoById
 import { getEnquetes, Enquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useSession } from "@/components/auth/SessionContextProvider";
@@ -34,6 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AtaReuniaoFormValues } from "@/components/forms/AtaReuniaoForm"; // Import AtaReuniaoFormValues
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -81,6 +82,7 @@ const CommitteeDetails = () => {
   const [selectedMeetingForAta, setSelectedMeetingForAta] = React.useState<Reuniao | null>(null);
   const [isAtaDeleteDialogOpen, setIsAtaDeleteDialogOpen] = React.useState(false);
   const [ataToDelete, setAtaToDelete] = React.useState<string | null>(null);
+  const [initialStructuredPendenciasForAta, setInitialStructuredPendenciasForAta] = React.useState<AtaReuniaoFormValues['structured_pendencias']>([]); // NOVO
 
   const [isEnqueteFormOpen, setIsEnqueteFormOpen] = React.useState(false);
   const [editingEnquete, setEditingEnquete] = React.useState<Enquete | null>(null);
@@ -209,11 +211,32 @@ const CommitteeDetails = () => {
   const handleAddAtaClick = (meeting: Reuniao) => {
     setEditingAta(null);
     setSelectedMeetingForAta(meeting);
+    setInitialStructuredPendenciasForAta([]); // Limpar pendências para nova ata
     setIsAtaFormOpen(true);
   };
-  const handleEditAtaClick = (ata: AtaReuniao) => {
+  const handleEditAtaClick = async (ata: AtaReuniao) => {
     setEditingAta(ata);
-    setSelectedMeetingForAta(null);
+    setSelectedMeetingForAta(null); // Não pre-selecionar reunião ao editar ata existente
+    
+    // NOVO: Carregar atividades do comitê para preencher as pendências estruturadas
+    const { data: atividadesComite, error } = await queryClient.fetchQuery({
+      queryKey: ["atividadesComite", { ata_reuniao_id: ata.id }],
+      queryFn: () => getAtividadesComite({ ata_reuniao_id: ata.id }),
+    });
+
+    if (error) {
+      showError(`Erro ao carregar atividades para a ata: ${error.message}`);
+      setInitialStructuredPendenciasForAta([]);
+    } else {
+      const structuredPendencias = (atividadesComite || []).map(activity => ({
+        activity_name: activity.titulo,
+        status: activity.status === 'todo' ? 'Pendente' : activity.status === 'in_progress' ? 'Em andamento' : 'Concluído', // Mapear status
+        assignee_id: activity.assignee_id,
+        due_date: activity.due_date ? parseISO(activity.due_date) : null,
+      }));
+      setInitialStructuredPendenciasForAta(structuredPendencias);
+    }
+
     setIsAtaFormOpen(true);
   };
   const handleDeleteAtaClick = (ataId: string) => {
@@ -459,6 +482,7 @@ const CommitteeDetails = () => {
         setIsAtaDeleteDialogOpen={setIsAtaDeleteDialogOpen}
         ataToDelete={ataToDelete}
         setAtaToDelete={setAtaToDelete}
+        initialStructuredPendenciasForAta={initialStructuredPendenciasForAta} // NOVO
 
         isEnqueteFormOpen={isEnqueteFormOpen}
         setIsEnqueteFormOpen={setIsEnqueteFormOpen}

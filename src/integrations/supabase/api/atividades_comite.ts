@@ -40,7 +40,7 @@ export const getAtividadesComite = async (params?: GetAtividadesComiteParams): P
           comite:comites(nome, id)
         )
       ),
-      assignee:usuarios(first_name, last_name),
+      assignee:usuarios!atividades_comite_assignee_id_fkey(first_name, last_name),
       creator:usuarios!atividades_comite_created_by_fkey(first_name, last_name)
     `)
     .order('created_at', { ascending: false });
@@ -130,7 +130,7 @@ export const createAtividadeComite = async (
           comite:comites(nome, id)
         )
       ),
-      assignee:usuarios(first_name, last_name),
+      assignee:usuarios!atividades_comite_assignee_id_fkey(first_name, last_name),
       creator:usuarios!atividades_comite_created_by_fkey(first_name, last_name)
     `)
     .single();
@@ -174,7 +174,7 @@ export const updateAtividadeComite = async (
           comite:comites(nome, id)
         )
       ),
-      assignee:usuarios(first_name, last_name),
+      assignee:usuarios!atividades_comite_assignee_id_fkey(first_name, last_name),
       creator:usuarios!atividades_comite_created_by_fkey(first_name, last_name)
     `)
     .single();
@@ -203,7 +203,6 @@ export const deleteAtividadeComite = async (id: string): Promise<boolean> => {
     showError(`Erro ao excluir atividade do comitê: ${error.message}`);
     return false;
   }
-  showSuccess('Atividade do comitê excluída com sucesso!');
   return true;
 };
 

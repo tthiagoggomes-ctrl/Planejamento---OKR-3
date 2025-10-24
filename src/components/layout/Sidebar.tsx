@@ -64,8 +64,8 @@ const committeesModuleItems = [
     icon: <MessageSquare className="h-4 w-4" />,
   },
   {
-    name: "Pendências", // NOVO: Item de menu para Pendências
-    href: "/comites/pendencias",
+    name: "Atividades do Comitê", // NOVO: Item de menu para Atividades do Comitê
+    href: "/comites/atividades",
     icon: <ListTodo className="h-4 w-4" />,
   },
 ];

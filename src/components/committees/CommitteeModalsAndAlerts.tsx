@@ -15,20 +15,20 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { showError, showSuccess } from "@/utils/toast";
-import { useSession } from "@/components/auth/SessionContextProvider";
+// import { useSession } from "@/components/auth/SessionContextProvider"; // REMOVIDO
 
 // Forms
 import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm";
 import { ReuniaoForm, ReuniaoFormValues } from "@/components/forms/ReuniaoForm";
-import { AtaReuniaoForm, AtaReuniaoSubmitValues, AtaReuniaoFormValues } from "@/components/forms/AtaReuniaoForm"; // Import AtaReuniaoFormValues
+import { AtaReuniaoForm, AtaReuniaoSubmitValues, AtaReuniaoFormValues } from "@/components/forms/AtaReuniaoForm";
 import { EnqueteForm, EnqueteSubmitValues } from "@/components/forms/EnqueteForm";
 
 // API functions
-import { Comite, ComiteMember, updateComite, deleteComite, createComite } from "@/integrations/supabase/api/comites"; // Import createComite
+import { Comite, ComiteMember, updateComite, deleteComite, createComite } from "@/integrations/supabase/api/comites";
 import { Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
 import { AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { Enquete, createEnquete, updateEnquete, deleteEnquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes";
-import { createAtividadeComite, deleteAtividadesComiteByAtaReuniaoId } from "@/integrations/supabase/api/atividades_comite"; // NOVO: Importar funções de atividade do comitê
+import { createAtividadeComite, deleteAtividadesComiteByAtaReuniaoId } from "@/integrations/supabase/api/atividades_comite";
 
 interface CommitteeModalsAndAlertsProps {
   comiteId: string;
@@ -69,13 +69,13 @@ interface CommitteeModalsAndAlertsProps {
   // Meeting Minutes Form
   isAtaFormOpen: boolean;
   setIsAtaFormOpen: (open: boolean) => void;
-  editingAta: AtaReuniao | null; // Corrected typo here
+  editingAta: AtaReuniao | null;
   selectedMeetingForAta: Reuniao | null;
   isAtaDeleteDialogOpen: boolean;
   setIsAtaDeleteDialogOpen: (open: boolean) => void;
   ataToDelete: string | null;
   setAtaToDelete: (id: string | null) => void;
-  initialStructuredPendenciasForAta?: AtaReuniaoFormValues['structured_pendencias']; // NOVO: Para carregar pendências existentes
+  initialStructuredPendenciasForAta?: AtaReuniaoFormValues['structured_pendencias'];
 
   // Poll Form
   isEnqueteFormOpen: boolean;
@@ -124,13 +124,13 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
 
   isAtaFormOpen,
   setIsAtaFormOpen,
-  editingAta, // Corrected typo here
+  editingAta,
   selectedMeetingForAta,
   isAtaDeleteDialogOpen,
   setIsAtaDeleteDialogOpen,
   ataToDelete,
   setAtaToDelete,
-  initialStructuredPendenciasForAta, // NOVO
+  initialStructuredPendenciasForAta,
 
   isEnqueteFormOpen,
   setIsEnqueteFormOpen,
@@ -159,7 +159,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
       if (!canManageComiteMembers) { // Assuming create also needs this permission
         throw new Error("Você não tem permissão para criar comitês.");
       }
-      return createComite(values); // NOVO: Passa o objeto 'values' completo como payload
+      return createComite(values);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comites"] });
@@ -180,10 +180,10 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
       return updateComite(comiteId, values);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comites"] }); // Invalida a lista de comitês
-      queryClient.invalidateQueries({ queryKey: ["comite", comiteId] }); // Invalida o comitê específico
-      queryClient.invalidateQueries({ queryKey: ["comiteMembers", comiteId] }); // Invalida os membros do comitê
-      queryClient.refetchQueries({ queryKey: ["comite", comiteId] }); // Força um refetch do comitê específico
+      queryClient.invalidateQueries({ queryKey: ["comites"] });
+      queryClient.invalidateQueries({ queryKey: ["comite", comiteId] });
+      queryClient.invalidateQueries({ queryKey: ["comiteMembers", comiteId] });
+      queryClient.refetchQueries({ queryKey: ["comite", comiteId] });
       setIsCommitteeFormOpen(false);
       showSuccess("Comitê atualizado com sucesso!");
     },
@@ -303,7 +303,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
       }
       const newAta = await createAtaReuniao(
         selectedMeetingForAta.id,
-        values.conteudo,
+        values.conteudo || '', // Ensure string, not null
         values.decisoes_tomadas,
         userSessionId,
         values.data_reuniao,
@@ -314,7 +314,6 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
         values.objetivos_reuniao,
         values.pauta_tratada,
         values.novos_topicos,
-        // values.pendencias, // REMOVIDO
         values.proximos_passos
       );
 
@@ -335,7 +334,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
-      queryClient.invalidateQueries({ queryKey: ["atividadesComite"] }); // Invalida atividades do comitê
+      queryClient.invalidateQueries({ queryKey: ["atividadesComite"] });
       setIsAtaFormOpen(false);
       showSuccess("Ata de reunião e atividades criadas com sucesso!");
     },
@@ -351,7 +350,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
       }
       const updatedAta = await updateAtaReuniao(
         ataId,
-        values.conteudo,
+        values.conteudo || '', // Ensure string, not null
         values.decisoes_tomadas,
         values.data_reuniao,
         values.horario_inicio,
@@ -361,7 +360,6 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
         values.objetivos_reuniao,
         values.pauta_tratada,
         values.novos_topicos,
-        // values.pendencias, // REMOVIDO
         values.proximos_passos
       );
 
@@ -379,7 +377,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
               pendency.due_date?.toISOString() || null,
               mapPendencyStatusToActivityStatus(pendency.status),
               pendency.assignee_id,
-              userSessionId! // userSessionId deve estar disponível aqui
+              userSessionId!
             );
           }
         }
@@ -388,7 +386,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
-      queryClient.invalidateQueries({ queryKey: ["atividadesComite"] }); // Invalida atividades do comitê
+      queryClient.invalidateQueries({ queryKey: ["atividadesComite"] });
       setIsAtaFormOpen(false);
       showSuccess("Ata de reunião e atividades atualizadas com sucesso!");
     },
@@ -409,7 +407,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
-      queryClient.invalidateQueries({ queryKey: ["atividadesComite"] }); // Invalida atividades do comitê
+      queryClient.invalidateQueries({ queryKey: ["atividadesComite"] });
       setIsAtaDeleteDialogOpen(false);
       setAtaToDelete(null);
       showSuccess("Ata de reunião e atividades excluídas com sucesso!");
@@ -529,7 +527,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
       return voteOnEnquete(enqueteId, opcaoId, userSessionId);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["enquetes", comiteId] }); // Invalidate specific poll query
+      queryClient.invalidateQueries({ queryKey: ["enquetes", comiteId] });
       showSuccess("Voto registrado com sucesso!");
       onVoteEnqueteSuccess(variables.enqueteId, variables.opcaoId);
     },
@@ -541,8 +539,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
   return (
     <>
       {/* Committee Form (for managing members) */}
-      {/* This form is used for both creating a new committee and updating an existing one (including members and detailed info) */}
-      {(canManageComiteMembers || (editingComite && editingComite.id)) && ( // Show if managing members or editing an existing committee
+      {(canManageComiteMembers || (editingComite && editingComite.id)) && (
         <CommitteeForm
           open={isCommitteeFormOpen}
           onOpenChange={setIsCommitteeFormOpen}
@@ -636,7 +633,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
           initialData={editingAta}
           isLoading={createAtaReuniaoMutation.isPending || updateAtaReuniaoMutation.isPending}
           selectedMeeting={selectedMeetingForAta}
-          initialStructuredPendencias={initialStructuredPendenciasForAta} // NOVO
+          initialStructuredPendencias={initialStructuredPendenciasForAta}
         />
       )}
 

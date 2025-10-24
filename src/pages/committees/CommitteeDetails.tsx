@@ -6,11 +6,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integrations/supabase/api/comites";
 import { getReunioes, Reuniao } from "@/integrations/supabase/api/reunioes"; 
-import { AtaReuniao, getAtasReuniaoByReuniaoId, getAtaReuniaoById } from "@/integrations/supabase/api/atas_reuniao"; // Import getAtaReuniaoById
+import { AtaReuniao, getAtasReuniaoByReuniaoId, getAtaReuniaoById } from "@/integrations/supabase/api/atas_reuniao";
 import { getEnquetes, Enquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useSession } from "@/components/auth/SessionContextProvider";
 import { showSuccess, showError } from "@/utils/toast";
+import { getAtividadesComite } from "@/integrations/supabase/api/atividades_comite"; // Importar getAtividadesComite
+import { parseISO } from "date-fns"; // Importar parseISO
 
 import { CommitteeDetailsHeader } from "@/components/committees/CommitteeDetailsHeader";
 import { CommitteeMembersSection } from "@/components/committees/CommitteeMembersSection";
@@ -26,15 +28,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { AtaReuniaoFormValues } from "@/components/forms/AtaReuniaoForm"; // Import AtaReuniaoFormValues
+import { AtaReuniaoFormValues } from "@/components/forms/AtaReuniaoForm";
 
 const CommitteeDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -82,7 +76,7 @@ const CommitteeDetails = () => {
   const [selectedMeetingForAta, setSelectedMeetingForAta] = React.useState<Reuniao | null>(null);
   const [isAtaDeleteDialogOpen, setIsAtaDeleteDialogOpen] = React.useState(false);
   const [ataToDelete, setAtaToDelete] = React.useState<string | null>(null);
-  const [initialStructuredPendenciasForAta, setInitialStructuredPendenciasForAta] = React.useState<AtaReuniaoFormValues['structured_pendencias']>([]); // NOVO
+  const [initialStructuredPendenciasForAta, setInitialStructuredPendenciasForAta] = React.useState<AtaReuniaoFormValues['structured_pendencias']>([]);
 
   const [isEnqueteFormOpen, setIsEnqueteFormOpen] = React.useState(false);
   const [editingEnquete, setEditingEnquete] = React.useState<Enquete | null>(null);
@@ -371,7 +365,7 @@ const CommitteeDetails = () => {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <CommitteeMembersSection
-          members={members}
+          members={members || null}
           isLoadingMembers={isLoadingMembers}
           errorMembers={errorMembers}
           canManageComiteMembers={canManageComiteMembers}
@@ -380,7 +374,7 @@ const CommitteeDetails = () => {
 
         <CommitteeMeetingsSection
           comiteId={id!}
-          meetings={meetings}
+          meetings={meetings || null}
           minutesMap={minutesMap || new Map()}
           isLoadingMeetings={isLoadingMeetings}
           errorMeetings={errorMeetings}
@@ -415,7 +409,7 @@ const CommitteeDetails = () => {
         />
 
         <CommitteePollsSection
-          polls={polls}
+          polls={polls || null}
           isLoadingPolls={isLoadingPolls}
           errorPolls={errorPolls}
           canViewEnquetes={canViewEnquetes}
@@ -482,7 +476,7 @@ const CommitteeDetails = () => {
         setIsAtaDeleteDialogOpen={setIsAtaDeleteDialogOpen}
         ataToDelete={ataToDelete}
         setAtaToDelete={setAtaToDelete}
-        initialStructuredPendenciasForAta={initialStructuredPendenciasForAta} // NOVO
+        initialStructuredPendenciasForAta={initialStructuredPendenciasForAta}
 
         isEnqueteFormOpen={isEnqueteFormOpen}
         setIsEnqueteFormOpen={setIsEnqueteFormOpen}

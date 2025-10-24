@@ -1,7 +1,7 @@
 import { supabase } from '../client';
 import { showError, showSuccess } from '@/utils/toast';
-import { UserProfile } from './users'; // Import UserProfile para tipagem
-import { CommitteeFormValues } from '@/components/forms/CommitteeForm'; // NOVO: Importar CommitteeFormValues
+import { UserProfile } from './users';
+import { CommitteeFormValues } from '@/components/forms/CommitteeForm';
 
 export interface Comite {
   id: string;
@@ -12,7 +12,6 @@ export interface Comite {
   objetivo?: string | null;
   justificativa?: string | null;
   atribuicoes_comite?: string | null;
-  // REMOVIDO: composicao_recomendada e composicao_recomendada_adicional
   periodicidade_reunioes?: string | null;
   fluxo_demandas?: string | null;
   criterios_priorizacao?: string | null;
@@ -25,9 +24,9 @@ export interface ComiteMember {
   comite_id: string;
   user_id: string;
   role: 'membro' | 'presidente' | 'secretario';
-  cargo_funcao?: string | null; // NOVO: Adicionado cargo_funcao
+  cargo_funcao?: string | null;
   created_at?: string;
-  user_name?: string; // Joined from profiles
+  user_name?: string;
   user_area_name?: string;
 }
 
@@ -73,7 +72,6 @@ export const createComite = async (
     objetivo,
     justificativa,
     atribuicoes_comite,
-    // REMOVIDO: composicao_recomendada e composicao_recomendada_adicional
     periodicidade_reunioes,
     fluxo_demandas,
     criterios_priorizacao,
@@ -110,7 +108,7 @@ export const createComite = async (
       comite_id: comiteData.id,
       user_id: member.user_id,
       role: member.role,
-      cargo_funcao: member.cargo_funcao, // NOVO: Incluir cargo_funcao
+      cargo_funcao: member.cargo_funcao,
     }));
     const { error: membersError } = await supabase
       .from('comite_membros')
@@ -150,7 +148,6 @@ export const updateComite = async (
     objetivo,
     justificativa,
     atribuicoes_comite,
-    // REMOVIDO: composicao_recomendada e composicao_recomendada_adicional
     periodicidade_reunioes,
     fluxo_demandas,
     criterios_priorizacao,
@@ -194,7 +191,7 @@ export const updateComite = async (
   // Update members
   const { data: currentMembers, error: fetchMembersError } = await supabase
     .from('comite_membros')
-    .select('user_id, role, cargo_funcao') // NOVO: Selecionar cargo_funcao
+    .select('user_id, role, cargo_funcao')
     .eq('comite_id', id);
 
   if (fetchMembersError) {
@@ -206,11 +203,11 @@ export const updateComite = async (
   const currentMemberMap = new Map(currentMembers.map(m => [m.user_id, m]));
   const newMemberIds = new Set(members?.map(m => m.user_id));
 
-  const membersToAdd = members?.filter(m => !currentMemberMap.has(m.user_id)) || [];
-  const membersToUpdate = members?.filter(m => {
+  const membersToAdd = (members || []).filter(m => !currentMemberMap.has(m.user_id));
+  const membersToUpdate = (members || []).filter(m => {
     const existing = currentMemberMap.get(m.user_id);
     return existing && (existing.role !== m.role || existing.cargo_funcao !== m.cargo_funcao);
-  }) || [];
+  });
   const membersToRemove = currentMembers.filter(m => !newMemberIds.has(m.user_id));
 
   // Adicionar novos membros
@@ -229,7 +226,7 @@ export const updateComite = async (
   for (const member of membersToUpdate) {
     const { error: updateRoleError } = await supabase
       .from('comite_membros')
-      .update({ role: member.role, cargo_funcao: member.cargo_funcao }) // NOVO: Atualizar cargo_funcao
+      .update({ role: member.role, cargo_funcao: member.cargo_funcao })
       .eq('comite_id', id)
       .eq('user_id', member.user_id);
     if (updateRoleError) {
@@ -264,14 +261,13 @@ export const deleteComite = async (id: string): Promise<boolean> => {
     showError(`Erro ao excluir comitê: ${error.message}`);
     return false;
   }
-  showSuccess('Comitê excluído com sucesso!');
   return true;
 };
 
 export const getComiteMembers = async (comite_id: string): Promise<ComiteMember[] | null> => {
   const { data: membersData, error: membersError } = await supabase
     .from('comite_membros')
-    .select('*, user:usuarios(first_name, last_name, area:areas(nome))') // NOVO: Join direto para simplificar
+    .select('*, user:usuarios(first_name, last_name, area:areas(nome))')
     .eq('comite_id', comite_id);
 
   if (membersError) {
@@ -291,11 +287,11 @@ export const addComiteMember = async (
   comite_id: string,
   user_id: string,
   role: 'membro' | 'presidente' | 'secretario',
-  cargo_funcao: string | null // NOVO: Adicionado cargo_funcao
+  cargo_funcao: string | null
 ): Promise<ComiteMember | null> => {
   const { data, error } = await supabase
     .from('comite_membros')
-    .insert({ comite_id, user_id, role, cargo_funcao }) // NOVO: Incluir cargo_funcao
+    .insert({ comite_id, user_id, role, cargo_funcao })
     .select(`
       *,
       user:usuarios(first_name, last_name, area:areas(nome))
@@ -319,11 +315,11 @@ export const updateComiteMemberRole = async (
   comite_id: string,
   user_id: string,
   role: 'membro' | 'presidente' | 'secretario',
-  cargo_funcao: string | null // NOVO: Adicionado cargo_funcao
+  cargo_funcao: string | null
 ): Promise<ComiteMember | null> => {
   const { data, error } = await supabase
     .from('comite_membros')
-    .update({ role, cargo_funcao }) // NOVO: Atualizar cargo_funcao
+    .update({ role, cargo_funcao })
     .eq('comite_id', comite_id)
     .eq('user_id', user_id)
     .select(`

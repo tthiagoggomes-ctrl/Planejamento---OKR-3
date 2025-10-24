@@ -19,7 +19,6 @@ export interface AtaReuniao {
   objetivos_reuniao: string | null;
   pauta_tratada: string | null;
   novos_topicos: string | null;
-  // pendencias: string | null; // REMOVIDO: Pendências agora são atividades separadas
   proximos_passos: string | null;
 }
 
@@ -103,7 +102,6 @@ export const createAtaReuniao = async (
   objetivos_reuniao: string | null,
   pauta_tratada: string | null,
   novos_topicos: string | null,
-  // pendencias: string | null, // REMOVIDO
   proximos_passos: string | null
 ): Promise<AtaReuniao | null> => {
   const { data, error } = await supabase
@@ -121,7 +119,6 @@ export const createAtaReuniao = async (
       objetivos_reuniao,
       pauta_tratada,
       novos_topicos,
-      // pendencias, // REMOVIDO
       proximos_passos
     })
     .select(`
@@ -155,7 +152,6 @@ export const updateAtaReuniao = async (
   objetivos_reuniao: string | null,
   pauta_tratada: string | null,
   novos_topicos: string | null,
-  // pendencias: string | null, // REMOVIDO
   proximos_passos: string | null
 ): Promise<AtaReuniao | null> => {
   const { data, error } = await supabase
@@ -172,7 +168,6 @@ export const updateAtaReuniao = async (
       objetivos_reuniao,
       pauta_tratada,
       novos_topicos,
-      // pendencias, // REMOVIDO
       proximos_passos
     })
     .eq('id', id)

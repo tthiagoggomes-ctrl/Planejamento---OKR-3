@@ -2,15 +2,15 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, GitCommit, LayoutDashboard, CalendarDays, MessageSquare, ListTodo, Users } from "lucide-react";
+import { Loader2, GitCommit, LayoutDashboard, CalendarDays, MessageSquare, ListTodo } from "lucide-react";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useQuery } from '@tanstack/react-query';
 import { getComites, Comite } from '@/integrations/supabase/api/comites';
 import { getReunioes, Reuniao } from '@/integrations/supabase/api/reunioes';
 import { getEnquetes, Enquete } from '@/integrations/supabase/api/enquetes';
-import { getAtividadesComite, AtividadeComite } from '@/integrations/supabase/api/atividades_comite'; // Descomentado
+import { getAtividadesComite, AtividadeComite } from '@/integrations/supabase/api/atividades_comite';
 import { showError } from '@/utils/toast';
-import { isFuture, parseISO, isWithinInterval, addDays, format } from 'date-fns';
+import { parseISO, isWithinInterval, addDays, format, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useSession } from '@/components/auth/SessionContextProvider';
 
@@ -22,9 +22,9 @@ const CommitteesDashboard = () => {
   const canViewComites = can('comites', 'view');
   const canViewReunioes = can('reunioes', 'view');
   const canViewEnquetes = can('enquetes', 'view');
-  const canViewAtividadesComite = can('atividades_comite', 'view'); // Descomentado
+  const canViewAtividadesComite = can('atividades_comite', 'view');
 
-  const now = new Date();
+  const now = React.useRef(new Date()).current;
 
   // Fetch all committees
   const { data: comites, isLoading: isLoadingComites, error: errorComites } = useQuery<Comite[] | null, Error>({
@@ -36,21 +36,21 @@ const CommitteesDashboard = () => {
   // Fetch all meetings
   const { data: allMeetings, isLoading: isLoadingMeetings, error: errorMeetings } = useQuery<Reuniao[] | null, Error>({
     queryKey: ["allMeetings"],
-    queryFn: () => getReunioes(), // Fetch all meetings
+    queryFn: () => getReunioes(),
     enabled: canViewReunioes && !permissionsLoading,
   });
 
   // Fetch all polls
   const { data: allPolls, isLoading: isLoadingPolls, error: errorPolls } = useQuery<Enquete[] | null, Error>({
     queryKey: ["allPolls"],
-    queryFn: () => getEnquetes({ currentUserId: user?.id }), // Fetch all polls
+    queryFn: () => getEnquetes({ currentUserId: user?.id }),
     enabled: canViewEnquetes && !permissionsLoading,
   });
 
-  // Fetch all committee activities - Descomentado
+  // Fetch all committee activities
   const { data: allCommitteeActivities, isLoading: isLoadingActivities, error: errorActivities } = useQuery<AtividadeComite[] | null, Error>({
     queryKey: ["allCommitteeActivities"],
-    queryFn: () => getAtividadesComite({ comite_id: 'all' }), // Fetch all committee activities
+    queryFn: () => getAtividadesComite({ comite_id: 'all' }),
     enabled: canViewAtividadesComite && !permissionsLoading,
   });
 
@@ -64,9 +64,14 @@ const CommitteesDashboard = () => {
 
   const upcomingMeetings = React.useMemo(() => {
     if (!allMeetings) return [];
-    const sevenDaysFromNow = addDays(now, 7);
+    const startOfToday = startOfDay(now);
+    const endOfNextSevenDays = endOfDay(addDays(startOfToday, 6)); // Inclui hoje + 6 dias = 7 dias no total
+
     return allMeetings
-      .filter(m => isFuture(parseISO(m.data_reuniao)) && isWithinInterval(parseISO(m.data_reuniao), { start: now, end: sevenDaysFromNow }))
+      .filter(m => {
+        const meetingDate = parseISO(m.data_reuniao);
+        return isWithinInterval(meetingDate, { start: startOfToday, end: endOfNextSevenDays });
+      })
       .sort((a, b) => parseISO(a.data_reuniao).getTime() - parseISO(b.data_reuniao).getTime())
       .slice(0, 5); // Show up to 5 upcoming meetings
   }, [allMeetings, now]);
@@ -78,7 +83,7 @@ const CommitteesDashboard = () => {
       .slice(0, 5); // Show up to 5 active polls
   }, [allPolls, now]);
 
-  // Pending Committee Activities - Descomentado
+  // Pending Committee Activities
   const pendingCommitteeActivities = React.useMemo(() => {
     if (!allCommitteeActivities) return [];
     return allCommitteeActivities
@@ -92,8 +97,8 @@ const CommitteesDashboard = () => {
   }, [allCommitteeActivities]);
 
 
-  const isLoadingOverall = permissionsLoading || isLoadingComites || isLoadingMeetings || isLoadingPolls || isLoadingActivities; // isLoadingActivities adicionado
-  const errorOverall = errorComites || errorMeetings || errorPolls || errorActivities; // errorActivities adicionado
+  const isLoadingOverall = permissionsLoading || isLoadingComites || isLoadingMeetings || isLoadingPolls || isLoadingActivities;
+  const errorOverall = errorComites || errorMeetings || errorPolls || errorActivities;
 
   if (isLoadingOverall) {
     return (
@@ -125,7 +130,7 @@ const CommitteesDashboard = () => {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-2xl font-bold flex items-center">
-            <LayoutDashboard className="mr-2 h-6 w-6" /> Dashboard de Comitês
+            <LayoutDashboard className="mr-2 h-6 w-6 text-fade-red" /> Dashboard de Comitês
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -194,7 +199,7 @@ const CommitteesDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Atividades Pendentes do Comitê Card - Descomentado */}
+        {/* Atividades Pendentes do Comitê Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Atividades Pendentes</CardTitle>

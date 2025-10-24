@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { Reuniao } from "@/integrations/supabase/api/reunioes";
-import { Loader2, CalendarIcon, PlusCircle, XCircle, Check, ChevronDown } from "lucide-react"; // Import ChevronDown
+import { Loader2, CalendarIcon, PlusCircle, XCircle, Check, ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO, isValid } from "date-fns";
@@ -61,7 +61,7 @@ const parseParticipants = (participantsString: string | null, allUsers: UserProf
 
   lines.forEach(line => {
     // Try to match by full name first, then by first name if role is present
-    const userMatch = allUsers?.find(u => {
+    const userMatch = (allUsers || []).find(u => {
       const fullName = `${u.first_name} ${u.last_name}`;
       return line.includes(fullName) || line.split('–')[0].trim() === fullName;
     });
@@ -78,7 +78,7 @@ const parseParticipants = (participantsString: string | null, allUsers: UserProf
 // Helper function to format structured participants for DB
 const formatParticipants = (selectedMemberIds: string[], guestParticipantsText: string | null, allUsers: UserProfile[] | null): string => {
   const formattedMembers = selectedMemberIds.map(id => {
-    const user = allUsers?.find(u => u.id === id);
+    const user = (allUsers || []).find(u => u.id === id);
     // Find the role from committeeMembers if available, otherwise use user.permissao
     // This is a simplification, ideally committeeMembers should be passed here
     return user ? `${user.first_name} ${user.last_name} – ${user.permissao}` : '';
@@ -88,12 +88,6 @@ const formatParticipants = (selectedMemberIds: string[], guestParticipantsText: 
 
   return [...formattedMembers, ...formattedGuests].join('\n');
 };
-
-// Helper function to parse structured pendencias string
-// REMOVIDO: parsePendencias não é mais necessário, pois as pendências serão gerenciadas como objetos
-// Helper function to format structured pendencias for DB
-// REMOVIDO: formatPendencias não é mais necessário, pois as pendências serão gerenciadas como objetos
-
 
 const formSchema = z.object({
   conteudo: z.string().nullable(),
@@ -142,7 +136,6 @@ export type AtaReuniaoSubmitValues = {
   objetivos_reuniao: string | null;
   pauta_tratada: string | null;
   novos_topicos: string | null;
-  // pendencias: string | null; // REMOVIDO
   proximos_passos: string | null;
 };
 
@@ -233,7 +226,7 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
         horario_inicio: selectedMeeting?.data_reuniao ? format(parseISO(selectedMeeting.data_reuniao), "HH:mm") : "",
         horario_fim: "",
         local_reuniao: selectedMeeting?.local || "",
-        selected_committee_members: committeeMembers?.map(m => m.user_id) || [], // Pre-select all committee members
+        selected_committee_members: (committeeMembers || []).map(m => m.user_id) || [], // Pre-select all committee members
         guest_participants_text: "",
         objetivos_reuniao: "",
         pauta_tratada: "",
@@ -242,7 +235,7 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
         proximos_passos: "",
       });
     }
-  }, [initialData, form, selectedMeeting, allUsers, committeeMembers, initialStructuredPendencias]); // Adicionado initialStructuredPendencias
+  }, [initialData, form, selectedMeeting, allUsers, committeeMembers, initialStructuredPendencias]);
 
   const handleSubmit = (values: AtaReuniaoFormValues) => {
     const formattedParticipants = formatParticipants(values.selected_committee_members || [], values.guest_participants_text, allUsers);
@@ -259,7 +252,6 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
       objetivos_reuniao: values.objetivos_reuniao,
       pauta_tratada: values.pauta_tratada,
       novos_topicos: values.novos_topicos,
-      // pendencias: formattedPendencias, // REMOVIDO
       proximos_passos: values.proximos_passos,
     };
     onSubmit(submitValues, values.structured_pendencias); // NOVO: Passar pendências estruturadas
@@ -271,7 +263,7 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
         horario_inicio: selectedMeeting?.data_reuniao ? format(parseISO(selectedMeeting.data_reuniao), "HH:mm") : "",
         horario_fim: "",
         local_reuniao: selectedMeeting?.local || "",
-        selected_committee_members: committeeMembers?.map(m => m.user_id) || [],
+        selected_committee_members: (committeeMembers || []).map(m => m.user_id) || [],
         guest_participants_text: "",
         objetivos_reuniao: "",
         pauta_tratada: "",
@@ -288,13 +280,13 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
     { value: "Concluído", label: "Concluído" },
   ];
 
-  const availableUsersForAssignee = allUsers?.map(u => ({
+  const availableUsersForAssignee = (allUsers || []).map(u => ({
     id: u.id,
     name: `${u.first_name} ${u.last_name}`,
   })) || [];
 
-  const committeeMembersForSelection = committeeMembers?.map(m => {
-    const user = allUsers?.find(u => u.id === m.user_id);
+  const committeeMembersForSelection = (committeeMembers || []).map(m => {
+    const user = (allUsers || []).find(u => u.id === m.user_id);
     return user ? { id: user.id, name: `${user.first_name} ${user.last_name} (${m.role})` } : null;
   }).filter(Boolean) || [];
 

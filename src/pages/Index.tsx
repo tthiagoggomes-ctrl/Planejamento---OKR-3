@@ -51,11 +51,11 @@ const Index = () => {
     enabled: canViewDashboard && !permissionsLoading,
   });
 
-  const getTotalCount = (summary: { count: number }[] | null) => {
+  const getTotalCount = (summary: { count: number }[] | null | undefined) => {
     return summary?.reduce((acc, item) => acc + item.count, 0) || 0;
   };
 
-  const getStatusCount = (summary: { status: string; count: number }[] | null, status: string) => {
+  const getStatusCount = (summary: { status: string; count: number }[] | null | undefined, status: string) => {
     return summary?.find(item => item.status === status)?.count || 0;
   };
 

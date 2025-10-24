@@ -5,7 +5,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautif
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { ListTodo, Hourglass, CheckCircle, Edit, Trash2, Kanban, StopCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { ListTodo, Hourglass, CheckCircle, Edit, Trash2, StopCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { showError } from "@/utils/toast"; // Import showError
 

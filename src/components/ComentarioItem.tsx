@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card"; // Removido CardContent da desestruturação
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, UserCircle } from "lucide-react";
 import { Comentario } from "@/integrations/supabase/api/comentarios";

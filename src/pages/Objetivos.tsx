@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,6 @@ const Objetivos = () => {
   const canDeleteKeyResults = can('key_results', 'delete');
 
   // Permissões para Atividades
-  const canViewAtividades = can('atividades', 'view');
   const canInsertAtividades = can('atividades', 'insert');
   const canEditAtividades = can('atividades', 'edit');
   const canDeleteAtividades = can('atividades', 'delete');
@@ -308,7 +307,7 @@ const Objetivos = () => {
           />
 
           <ObjetivoList
-            objetivos={objetivos}
+            objetivos={objetivos || null} // Explicitly pass null if undefined
             keyResultsMap={keyResultsMap}
             isLoadingKeyResults={isLoadingKeyResults}
             expandedObjetivos={expandedObjetivos}

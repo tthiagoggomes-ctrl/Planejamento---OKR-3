@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, CalendarDays, MessageSquare, ListTodo, PlusCircle, Edit, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { Reuniao } from "@/integrations/supabase/api/reunioes";
 import { AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isPast, isFuture, isToday, isSameDay } from "date-fns"; // Importar funções de data
 import { ptBR } from "date-fns/locale";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
@@ -67,6 +67,27 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
   expandedMinutes,
   toggleMinutesExpansion,
 }) => {
+  const now = new Date();
+  const sortedMeetings = React.useMemo(() => {
+    return meetings ? [...meetings].sort((a, b) => parseISO(a.data_reuniao).getTime() - parseISO(b.data_reuniao).getTime()) : [];
+  }, [meetings]);
+
+  const nextMeeting = React.useMemo(() => {
+    return sortedMeetings.find(m => isFuture(parseISO(m.data_reuniao)) || isToday(parseISO(m.data_reuniao)));
+  }, [sortedMeetings]);
+
+  const getMeetingStatusClass = (meeting: Reuniao) => {
+    const meetingDate = parseISO(meeting.data_reuniao);
+    if (isPast(meetingDate) && !isToday(meetingDate)) {
+      return "text-gray-500"; // Passada
+    } else if (nextMeeting && isSameDay(meetingDate, parseISO(nextMeeting.data_reuniao))) {
+      return "text-blue-600 font-bold"; // Próxima
+    } else if (isFuture(meetingDate) || isToday(meetingDate)) {
+      return "text-green-600"; // Futura
+    }
+    return "";
+  };
+
   return (
     <>
       {canViewReunioes && (
@@ -89,12 +110,12 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           ) : errorMeetings ? (
             <p className="text-red-500">Erro ao carregar reuniões: {errorMeetings.message}</p>
-          ) : meetings && meetings.length > 0 ? (
+          ) : sortedMeetings && sortedMeetings.length > 0 ? (
             <div className="space-y-4">
-              {meetings.map(meeting => (
+              {sortedMeetings.map(meeting => (
                 <div key={meeting.id} className="border rounded-md p-3">
                   <div className="flex justify-between items-center">
-                    <h3 className="font-semibold">{meeting.titulo}</h3>
+                    <h3 className={`font-semibold ${getMeetingStatusClass(meeting)}`}>{meeting.titulo}</h3>
                     <div className="flex items-center gap-2">
                       {canEditReunioes && (
                         <Button variant="ghost" size="icon" onClick={() => onEditReuniaoClick(meeting)}>
@@ -111,7 +132,7 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
                       </Button>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className={`text-sm text-muted-foreground ${getMeetingStatusClass(meeting)}`}>
                     {format(new Date(meeting.data_reuniao), "PPP 'às' HH:mm", { locale: ptBR })} - {meeting.local || 'Local não informado'}
                     {meeting.recurrence_type !== 'none' && ` (Recorrência: ${meeting.recurrence_type === 'weekly' ? 'Semanal' : meeting.recurrence_type === 'bi_weekly' ? 'Quinzenal' : 'Mensal'} até ${format(new Date(meeting.recurrence_end_date!), 'PPP', { locale: ptBR })})`}
                   </p>

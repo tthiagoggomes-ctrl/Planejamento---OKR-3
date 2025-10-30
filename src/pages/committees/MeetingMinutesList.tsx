@@ -3,7 +3,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, MessageSquare, CalendarDays, GitCommit, Search, ArrowUp, ArrowDown } from "lucide-react";
+import { Loader2, MessageSquare, Search, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -104,7 +104,6 @@ const MeetingMinutesList = () => {
         ata.objetivos_reuniao?.toLowerCase().includes(query) ||
         ata.pauta_tratada?.toLowerCase().includes(query) ||
         ata.novos_topicos?.toLowerCase().includes(query) ||
-        ata.pendencias?.toLowerCase().includes(query) ||
         ata.proximos_passos?.toLowerCase().includes(query)
       );
     }

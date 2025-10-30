@@ -6,12 +6,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { getComiteById, getComiteMembers, Comite, ComiteMember } from "@/integrations/supabase/api/comites";
 import { getReunioes, Reuniao } from "@/integrations/supabase/api/reunioes"; 
-import { AtaReuniao, getAtasReuniaoByReuniaoId, getAtaReuniaoById } from "@/integrations/supabase/api/atas_reuniao";
+import { AtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
 import { getEnquetes, Enquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useSession } from "@/components/auth/SessionContextProvider";
 import { showSuccess, showError } from "@/utils/toast";
-import { getAtividadesComite } from "@/integrations/supabase/api/atividades_comite"; // Importar getAtividadesComite
+import { getAtividadesComite, AtividadeComite } from "@/integrations/supabase/api/atividades_comite"; // Importar getAtividadesComite
 import { parseISO } from "date-fns"; // Importar parseISO
 
 import { CommitteeDetailsHeader } from "@/components/committees/CommitteeDetailsHeader";
@@ -213,16 +213,16 @@ const CommitteeDetails = () => {
     setSelectedMeetingForAta(null); // Não pre-selecionar reunião ao editar ata existente
     
     // NOVO: Carregar atividades do comitê para preencher as pendências estruturadas
-    const { data: atividadesComite, error } = await queryClient.fetchQuery({
+    const atividadesComite = await queryClient.fetchQuery<AtividadeComite[], Error>({
       queryKey: ["atividadesComite", { ata_reuniao_id: ata.id }],
       queryFn: () => getAtividadesComite({ ata_reuniao_id: ata.id }),
     });
 
-    if (error) {
-      showError(`Erro ao carregar atividades para a ata: ${error.message}`);
+    if (atividadesComite instanceof Error) { // Check if it's an Error instance
+      showError(`Erro ao carregar atividades para a ata: ${atividadesComite.message}`);
       setInitialStructuredPendenciasForAta([]);
     } else {
-      const structuredPendencias = (atividadesComite || []).map(activity => ({
+      const structuredPendencias = (atividadesComite || []).map((activity: AtividadeComite) => ({
         activity_name: activity.titulo,
         status: activity.status === 'todo' ? 'Pendente' : activity.status === 'in_progress' ? 'Em andamento' : 'Concluído', // Mapear status
         assignee_id: activity.assignee_id,
@@ -452,7 +452,7 @@ const CommitteeDetails = () => {
         isCommitteeFormOpen={isCommitteeFormOpen}
         setIsCommitteeFormOpen={setIsCommitteeFormOpen}
         editingComite={editingComite}
-        initialMembers={members}
+        initialMembers={members || null}
 
         isReuniaoFormOpen={isReuniaoFormOpen}
         setIsReuniaoFormOpen={setIsReuniaoFormOpen}
@@ -486,6 +486,7 @@ const CommitteeDetails = () => {
         enqueteToDelete={enqueteToDelete}
         setEnqueteToDelete={setEnqueteToDelete}
         onVoteEnqueteSuccess={handleVoteEnqueteSuccess}
+        voteOnEnqueteMutation={voteOnEnqueteMutation}
       />
 
       <CommitteeRulesDisplay

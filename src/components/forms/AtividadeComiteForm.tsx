@@ -133,7 +133,7 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
   React.useEffect(() => {
     const setInitialDropdowns = async () => {
       if (initialData?.ata_reuniao_id) {
-        const { data: ata, error: ataError } = await supabase
+        const { data: ata } = await supabase
           .from('atas_reuniao')
           .select('id, reuniao_id, reuniao:reunioes(id, comite_id)')
           .eq('id', initialData.ata_reuniao_id)
@@ -145,7 +145,7 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
           form.setValue('ata_reuniao_id', initialData.ata_reuniao_id);
         }
       } else if (preselectedAtaReuniaoId) {
-        const { data: ata, error: ataError } = await supabase
+        const { data: ata } = await supabase
           .from('atas_reuniao')
           .select('id, reuniao_id, reuniao:reunioes(id, comite_id)')
           .eq('id', preselectedAtaReuniaoId)

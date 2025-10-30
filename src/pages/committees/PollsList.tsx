@@ -3,7 +3,7 @@
 import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, MessageSquare, CalendarDays, GitCommit, Search, ArrowUp, ArrowDown, CheckCircle } from "lucide-react";
+import { Loader2, MessageSquare, Search, ArrowUp, ArrowDown, CheckCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -18,7 +18,6 @@ import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useSession } from "@/components/auth/SessionContextProvider";
 import { format, parseISO, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -33,7 +32,6 @@ import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { showError, showSuccess } from "@/utils/toast";
-import { Separator } from "@/components/ui/separator";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 const PollsList = () => {

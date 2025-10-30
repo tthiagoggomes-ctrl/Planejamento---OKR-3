@@ -10,11 +10,15 @@ import { useSession } from "@/components/auth/SessionContextProvider";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 import { showError } from "@/utils/toast"; // Import showError for logout errors
+import { useIdleTimeout } from "@/hooks/use-idle-timeout"; // NEW: Import useIdleTimeout
 
 const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
   const isMobile = useIsMobile();
   const { session, loading } = useSession();
+
+  // NEW: Initialize idle timeout for the current user
+  useIdleTimeout(session?.user?.id);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);

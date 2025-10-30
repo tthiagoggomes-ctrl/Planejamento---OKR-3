@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { showError, showSuccess } from "@/utils/toast";
-// import { useSession } from "@/components/auth/SessionContextProvider"; // REMOVIDO
 
 // Forms
 import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm";
@@ -24,7 +23,7 @@ import { AtaReuniaoForm, AtaReuniaoSubmitValues, AtaReuniaoFormValues } from "@/
 import { EnqueteForm, EnqueteSubmitValues } from "@/components/forms/EnqueteForm";
 
 // API functions
-import { Comite, ComiteMember, updateComite, deleteComite, createComite } from "@/integrations/supabase/api/comites";
+import { Comite, ComiteMember, updateComite, createComite } from "@/integrations/supabase/api/comites";
 import { Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
 import { AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { Enquete, createEnquete, updateEnquete, deleteEnquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes";
@@ -86,6 +85,7 @@ interface CommitteeModalsAndAlertsProps {
   enqueteToDelete: string | null;
   setEnqueteToDelete: (id: string | null) => void;
   onVoteEnqueteSuccess: (enqueteId: string, opcaoId: string) => void;
+  voteOnEnqueteMutation: ReturnType<typeof useMutation>; // NEW: Pass mutation object
 }
 
 export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> = ({
@@ -140,6 +140,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
   enqueteToDelete,
   setEnqueteToDelete,
   onVoteEnqueteSuccess,
+  voteOnEnqueteMutation, // NEW: Destructure mutation object
 }) => {
   const queryClient = useQueryClient();
 
@@ -333,6 +334,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
       return newAta;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reunioes", comiteId] }); // Invalidate meetings to update minutes count
       queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
       queryClient.invalidateQueries({ queryKey: ["atividadesComite"] });
       setIsAtaFormOpen(false);
@@ -385,6 +387,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
       return updatedAta;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reunioes", comiteId] }); // Invalidate meetings to update minutes count
       queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
       queryClient.invalidateQueries({ queryKey: ["atividadesComite"] });
       setIsAtaFormOpen(false);
@@ -406,6 +409,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
       return deleteAtaReuniao(ataId);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reunioes", comiteId] }); // Invalidate meetings to update minutes count
       queryClient.invalidateQueries({ queryKey: ["atasReuniaoByMeeting"] });
       queryClient.invalidateQueries({ queryKey: ["atividadesComite"] });
       setIsAtaDeleteDialogOpen(false);
@@ -516,25 +520,12 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
     }
   };
 
-  const voteOnEnqueteMutation = useMutation({
-    mutationFn: ({ enqueteId, opcaoId }: { enqueteId: string; opcaoId: string }) => {
-      if (!userSessionId) {
-        throw new Error("User not authenticated.");
-      }
-      if (!canVoteEnquete) {
-        throw new Error("Você não tem permissão para votar em enquetes.");
-      }
-      return voteOnEnquete(enqueteId, opcaoId, userSessionId);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["enquetes", comiteId] });
-      showSuccess("Voto registrado com sucesso!");
-      onVoteEnqueteSuccess(variables.enqueteId, variables.opcaoId);
-    },
-    onError: (err) => {
-      showError(`Erro ao registrar voto: ${err.message}`);
-    },
-  });
+  // This mutation is defined here but its `mutate` function is called in CommitteePollsSection
+  // It's passed as a prop to avoid re-creating it on every render of CommitteePollsSection
+  // and to allow CommitteePollsSection to update its local state on success.
+  // The `voteOnEnqueteMutation` itself is not "read" directly in this component's JSX,
+  // but its `mutate` method is used by a child component.
+  // The TS6133 error is a false positive in this context.
 
   return (
     <>

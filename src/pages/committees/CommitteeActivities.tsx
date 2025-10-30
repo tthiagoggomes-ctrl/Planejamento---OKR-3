@@ -153,16 +153,16 @@ const CommitteeActivities = () => { // Renamed component
   });
 
   const updateAtividadeMutation = useMutation({
-    mutationFn: ({ id, ...values }: AtividadeComiteFormValues & { id: string }) => {
+    mutationFn: ({ id, ata_reuniao_id, titulo, descricao, due_date, status, assignee_id }: AtividadeComiteFormValues & { id: string }) => {
       if (!canEditAtividadesComite) throw new Error("Você não tem permissão para editar atividades do comitê.");
       return updateAtividadeComite(
         id,
-        values.ata_reuniao_id,
-        values.titulo,
-        values.descricao,
-        formatDueDateForApi(values.due_date),
-        values.status,
-        values.assignee_id
+        ata_reuniao_id, // Pass ata_reuniao_id for RLS
+        titulo,
+        descricao,
+        formatDueDateForApi(due_date),
+        status,
+        assignee_id
       );
     },
     onSuccess: () => {
@@ -225,7 +225,7 @@ const CommitteeActivities = () => { // Renamed component
     if (atividadeToUpdate) {
       updateAtividadeMutation.mutate({
         id: atividadeToUpdate.id,
-        ata_reuniao_id: atividadeToUpdate.ata_reuniao_id,
+        ata_reuniao_id: atividadeToUpdate.ata_reuniao_id, // Pass ata_reuniao_id
         titulo: atividadeToUpdate.titulo,
         descricao: atividadeToUpdate.descricao,
         due_date: atividadeToUpdate.due_date ? parseISO(atividadeToUpdate.due_date) : null,

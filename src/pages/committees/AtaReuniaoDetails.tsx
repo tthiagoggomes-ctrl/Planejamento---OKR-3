@@ -4,7 +4,7 @@ import React from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, MessageSquare, CalendarDays, Clock, MapPin, Users, ChevronLeft } from "lucide-react"; // Target, ListTodo, FileText removidos
+import { Loader2, MessageSquare, CalendarDays, Clock, MapPin, Users, Target, ListTodo, FileText, ChevronLeft } from "lucide-react";
 import { AtaReuniao, getAtaReuniaoById } from "@/integrations/supabase/api/atas_reuniao";
 import { showError } from "@/utils/toast";
 import { format, parseISO } from "date-fns";
@@ -150,6 +150,18 @@ const AtaReuniaoDetails = () => {
                 <p className="text-sm font-medium text-muted-foreground mb-2">Novos Tópicos</p>
                 <pre className="whitespace-pre-wrap font-sans text-base bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
                   {ataReuniao.novos_topicos}
+                </pre>
+              </div>
+            </>
+          )}
+
+          {ataReuniao.pendencias && (
+            <>
+              <Separator />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-2">Pendências</p>
+                <pre className="whitespace-pre-wrap font-sans text-base bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                  {ataReuniao.pendencias}
                 </pre>
               </div>
             </>

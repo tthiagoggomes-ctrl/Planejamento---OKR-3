@@ -24,7 +24,7 @@ import { AtaReuniaoForm, AtaReuniaoSubmitValues, AtaReuniaoFormValues } from "@/
 import { EnqueteForm, EnqueteSubmitValues } from "@/components/forms/EnqueteForm";
 
 // API functions
-import { Comite, ComiteMember, updateComite, deleteComite, createComite } from "@/integrations/supabase/api/comites";
+import { Comite, ComiteMember, updateComite, createComite } from "@/integrations/supabase/api/comites"; // deleteComite removido
 import { Reuniao, createReuniao, updateReuniao, deleteReuniao } from "@/integrations/supabase/api/reunioes";
 import { AtaReuniao, createAtaReuniao, updateAtaReuniao, deleteAtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { Enquete, createEnquete, updateEnquete, deleteEnquete, voteOnEnquete } from "@/integrations/supabase/api/enquetes";
@@ -371,7 +371,7 @@ export const CommitteeModalsAndAlerts: React.FC<CommitteeModalsAndAlertsProps> =
         if (structuredPendencias && structuredPendencias.length > 0) {
           for (const pendency of structuredPendencias) {
             await createAtividadeComite(
-              ataId,
+              updatedAta.id, // Use o ID da ata atualizada
               pendency.activity_name,
               null, // Descrição da atividade
               pendency.due_date?.toISOString() || null,

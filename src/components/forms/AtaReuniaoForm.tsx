@@ -27,7 +27,7 @@ import { Reuniao } from "@/integrations/supabase/api/reunioes";
 import { Loader2, CalendarIcon, PlusCircle, XCircle, Check, ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, parseISO, isValid } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -200,7 +200,7 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
 
   React.useEffect(() => {
     if (initialData) {
-      const { selectedMembers, guestParticipantsText } = parseParticipants(initialData.participantes, allUsers);
+      const { selectedMembers, guestParticipantsText } = parseParticipants(initialData.participantes, allUsers || null);
       // const structuredPendencias = parsePendencias(initialData.pendencias, allUsers); // REMOVIDO
 
       form.reset({
@@ -238,7 +238,7 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
   }, [initialData, form, selectedMeeting, allUsers, committeeMembers, initialStructuredPendencias]);
 
   const handleSubmit = (values: AtaReuniaoFormValues) => {
-    const formattedParticipants = formatParticipants(values.selected_committee_members || [], values.guest_participants_text, allUsers);
+    const formattedParticipants = formatParticipants(values.selected_committee_members || [], values.guest_participants_text, allUsers || null);
     // const formattedPendencias = formatPendencias(values.structured_pendencias || [], allUsers); // REMOVIDO
 
     const submitValues: AtaReuniaoSubmitValues = {
@@ -288,7 +288,7 @@ export const AtaReuniaoForm: React.FC<AtaReuniaoFormProps> = ({
   const committeeMembersForSelection = (committeeMembers || []).map(m => {
     const user = (allUsers || []).find(u => u.id === m.user_id);
     return user ? { id: user.id, name: `${user.first_name} ${user.last_name} (${m.role})` } : null;
-  }).filter(Boolean) || [];
+  }).filter(Boolean) as { id: string; name: string }[]; // Explicitly cast after filtering nulls
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

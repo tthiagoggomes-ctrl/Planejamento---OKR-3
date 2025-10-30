@@ -140,7 +140,7 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
                     <div className="mt-3 pt-3 border-t">
                       <div className="flex justify-between items-center mb-2">
                         <h4 className="font-medium flex items-center">
-                          <MessageSquare className="mr-2 h-4 w-4" /> Atas de Reunião ({minutesMap?.get(meeting.id)?.length || 0})
+                          <MessageSquare className="mr-2 h-4 w-4" /> Atas de Reunião ({(minutesMap?.get(meeting.id) || []).length || 0})
                         </h4>
                         {canInsertAtasReuniao && (
                           <Button size="sm" variant="outline" onClick={() => onAddAtaClick(meeting)}>
@@ -150,9 +150,9 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
                       </div>
                       {isLoadingMinutes ? (
                         <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                      ) : minutesMap?.get(meeting.id)?.length > 0 ? (
+                      ) : (minutesMap?.get(meeting.id) || []).length > 0 ? (
                         <ul className="space-y-2 pl-4">
-                          {minutesMap.get(meeting.id)?.map(minutes => (
+                          {(minutesMap?.get(meeting.id) || []).map(minutes => (
                             <li key={minutes.id} className="border rounded-md p-2">
                               <div className="flex justify-between items-center">
                                 <p className="font-medium">Ata de {minutes.data_reuniao ? format(parseISO(minutes.data_reuniao), "PPP", { locale: ptBR }) : format(new Date(minutes.created_at!), "PPP", { locale: ptBR })}</p>
@@ -205,12 +205,6 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
                                     <>
                                       <p><strong>Novos Tópicos:</strong></p>
                                       <pre className="whitespace-pre-wrap text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded-md">{minutes.novos_topicos}</pre>
-                                    </>
-                                  )}
-                                  {minutes.pendencias && (
-                                    <>
-                                      <p><strong>Pendências:</strong></p>
-                                      <pre className="whitespace-pre-wrap text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded-md">{minutes.pendencias}</pre>
                                     </>
                                   )}
                                   {minutes.proximos_passos && (

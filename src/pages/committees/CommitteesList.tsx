@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, GitCommit, Users, CalendarDays, MessageSquare } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2, GitCommit } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { getComites, createComite, updateComite, deleteComite, Comite, getComiteMembers, ComiteMember } from "@/integrations/supabase/api/comites";
 import { showSuccess, showError } from "@/utils/toast";
-import { useUserPermissions } from '@/hooks/use-user-permissions'; // <-- Correção aqui
+import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { Link } from "react-router-dom";
 import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm";
 
@@ -52,7 +52,7 @@ const CommitteesList = () => {
 
   const createComiteMutation = useMutation({
     mutationFn: (values: CommitteeFormValues) =>
-      createComite(values), // NOVO: Passa o objeto 'values' completo como payload
+      createComite(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comites"] });
       setIsFormOpen(false);
@@ -67,9 +67,9 @@ const CommitteesList = () => {
     mutationFn: ({ id, ...values }: CommitteeFormValues & { id: string }) =>
       updateComite(
         id,
-        values // NOVO: Passa o objeto 'values' completo como payload
+        values
       ),
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => { // Alterado 'data' para '_'
       queryClient.invalidateQueries({ queryKey: ["comites"] });
       queryClient.invalidateQueries({ queryKey: ["comiteMembers", variables.id] });
       setIsFormOpen(false);

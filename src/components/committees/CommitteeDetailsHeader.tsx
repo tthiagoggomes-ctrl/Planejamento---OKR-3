@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { GitCommit, Eye } from "lucide-react"; // Import Eye icon
 import { Comite } from "@/integrations/supabase/api/comites";
 import { Button } from "@/components/ui/button";

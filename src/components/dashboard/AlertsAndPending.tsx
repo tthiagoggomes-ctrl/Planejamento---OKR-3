@@ -93,6 +93,7 @@ const AlertsAndPending: React.FC = () => {
         }
       });
 
+      // Fix: Ensure latestUpdate is compared as Date object
       if (latestUpdate === null || (latestUpdate instanceof Date && latestUpdate < sevenDaysAgo)) {
         areasWithNoRecentUpdate.push(area);
       }

@@ -19,7 +19,8 @@ export const useIdleTimeout = (userId: string | undefined) => {
         showError("Erro ao fazer logout por inatividade.");
       } else {
         showSuccess("Você foi desconectado por inatividade.");
-        navigate('/login');
+        // Force navigation to login page
+        navigate('/login', { replace: true });
       }
     }
   }, [userId, navigate]);
@@ -29,7 +30,7 @@ export const useIdleTimeout = (userId: string | undefined) => {
       clearTimeout(timeoutRef.current);
     }
     if (userId) { // Only set timeout if user is logged in
-      timeoutRef.current = setTimeout(logout, IDLE_TIMEOUT_MS) as unknown as number;
+      timeoutRef.current = window.setTimeout(logout, IDLE_TIMEOUT_MS);
     }
   }, [logout, userId]);
 

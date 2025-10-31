@@ -25,7 +25,7 @@ const Login = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <img src="/assets/logo-fade-ufpe.png" alt="Logo FADE-UFPE" className="mx-auto mb-4 h-16" />
-          <CardTitle className="text-3xl font-bold text-fade-red">FADE-UFPE OKR Login</CardTitle> {/* Cor aplicada aqui */}
+          <CardTitle className="text-3xl font-bold text-fade-red">FADE-UFPE OKR Login</CardTitle>
         </CardHeader>
         <CardContent>
           <Auth
@@ -36,13 +36,13 @@ const Login = () => {
               variables: {
                 default: {
                   colors: {
-                    brand: '#b5121b', // Cor aplicada diretamente aqui
-                    brandAccent: '#8a0f15', // Um tom mais escuro para o hover/active
+                    brand: '#b5121b',
+                    brandAccent: '#8a0f15',
                   },
                 },
               },
             }}
-            theme="light" // Use light theme, can be dynamic later
+            theme="light"
             redirectTo={window.location.origin + '/'}
           />
         </CardContent>

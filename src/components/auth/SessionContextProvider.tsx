@@ -6,7 +6,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from "@/components/ui/sonner";
 import { showSuccess, showError } from '@/utils/toast';
-// import { Loader2 } from "lucide-react"; // For loading indicator // REMOVIDO
 
 interface SessionContextType {
   session: Session | null;
@@ -20,6 +19,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [toastShown, setToastShown] = useState(false); // Track if toast was shown
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -33,6 +33,12 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setSession(session);
       setUser(session?.user || null);
       setLoading(false);
+      
+      // Show login success message only once
+      if (session && !toastShown) {
+        showSuccess("Login realizado com sucesso!");
+        setToastShown(true);
+      }
     };
 
     getSession();
@@ -43,20 +49,27 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setLoading(false);
 
       if (_event === 'SIGNED_IN') {
-        showSuccess("Login realizado com sucesso!");
+        // Only show success message if we're on login page or if it hasn't been shown yet
+        if ((location.pathname === '/login' || !toastShown) && session) {
+          showSuccess("Login realizado com sucesso!");
+          setToastShown(true);
+        }
+        // Redirect to dashboard if on login page
         if (location.pathname === '/login') {
-          navigate('/'); // Redirect to dashboard if on login page
+          navigate('/');
         }
       } else if (_event === 'SIGNED_OUT') {
-        showSuccess("Logout realizado com sucesso!");
-        navigate('/login'); // Redirect to login page on sign out
+        // Reset toast shown state on logout
+        setToastShown(false);
+        // Redirect to login page on sign out
+        navigate('/login');
       } else if (_event === 'USER_UPDATED') {
         showSuccess("Perfil atualizado com sucesso!");
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, location.pathname]);
+  }, [navigate, location.pathname, toastShown]);
 
   // Redirect unauthenticated users to login page, except for the login page itself
   useEffect(() => {

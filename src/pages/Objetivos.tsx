@@ -18,7 +18,6 @@ import { ObjetivoModalsAndAlerts } from "@/components/objetivos/ObjetivoModalsAn
 import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
 
 const Objetivos = () => {
-  const _queryClient = useQueryClient(); // Renomeado para _queryClient para indicar que não é usado diretamente
   const location = useLocation();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
 

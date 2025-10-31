@@ -8,7 +8,6 @@ import { Reuniao } from "@/integrations/supabase/api/reunioes";
 import { AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { format, parseISO, isPast, isFuture, isToday, isSameDay } from "date-fns"; // Importar funções de data
 import { ptBR } from "date-fns/locale";
-import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
 import { MeetingCalendar } from "./MeetingCalendar"; // Importar o calendário
 
@@ -23,7 +22,6 @@ interface CommitteeMeetingsSectionProps {
   canInsertReunioes: boolean;
   canEditReunioes: boolean;
   canDeleteReunioes: boolean;
-  canViewAtasReuniao: boolean;
   canInsertAtasReuniao: boolean;
   canEditAtasReuniao: boolean;
   canDeleteAtasReuniao: boolean;
@@ -51,7 +49,6 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
   canInsertReunioes,
   canEditReunioes,
   canDeleteReunioes,
-  canViewAtasReuniao,
   canInsertAtasReuniao,
   canEditAtasReuniao,
   canDeleteAtasReuniao,
@@ -67,7 +64,6 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
   expandedMinutes,
   toggleMinutesExpansion,
 }) => {
-  const now = new Date();
   const sortedMeetings = React.useMemo(() => {
     return meetings ? [...meetings].sort((a, b) => parseISO(a.data_reuniao).getTime() - parseISO(b.data_reuniao).getTime()) : [];
   }, [meetings]);
@@ -226,8 +222,6 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
                                     </>
                                   )}
                                   <p>Criado por: {minutes.created_by_name}</p>
-
-                                  <Separator className="my-3" />
 
                                   <div className="flex justify-between items-center mb-2">
                                     <h5 className="font-medium flex items-center">

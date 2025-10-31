@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2, CalendarDays, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,6 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PeriodoForm, PeriodoFormValues } from "@/components/forms/PeriodoForm";
+import { getPeriodos, createPeriodo, updatePeriodo, deletePeriodo, Periodo } from "@/integrations/supabase/api/periodos";
+import { showSuccess, showError } from "@/utils/toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,9 +26,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PeriodoForm, PeriodoFormValues } from "@/components/forms/PeriodoForm";
-import { getPeriodos, createPeriodo, updatePeriodo, deletePeriodo, Periodo } from "@/integrations/supabase/api/periodos";
-import { showSuccess, showError } from "@/utils/toast";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
 
 const Periodos = () => {
@@ -62,12 +69,10 @@ const Periodos = () => {
         annual.push(period);
       } else {
         const parentId = period.parent_id;
-        if (parentId) { // Adicionar verificação de nulidade
-          if (!quarterlyMap.has(parentId)) {
-            quarterlyMap.set(parentId, []);
-          }
-          quarterlyMap.get(parentId)?.push(period);
+        if (!quarterlyMap.has(parentId)) {
+          quarterlyMap.set(parentId, []);
         }
+        quarterlyMap.get(parentId)?.push(period);
       }
     });
 
@@ -78,7 +83,7 @@ const Periodos = () => {
           if (name.includes('2º Trimestre')) return 2;
           if (name.includes('3º Trimestre')) return 3;
           if (name.includes('4º Trimestre')) return 4;
-          return 99; // Fallback
+          return 99;
         };
         return getQuarterOrder(a.nome) - getQuarterOrder(b.nome);
       });
@@ -91,8 +96,8 @@ const Periodos = () => {
     mutationFn: (values: PeriodoFormValues) =>
       createPeriodo(
         values.nome,
-        values.start_date?.toISOString() || '', // Adicionar verificação de nulidade
-        values.end_date?.toISOString() || '',   // Adicionar verificação de nulidade
+        values.start_date.toISOString(),
+        values.end_date.toISOString(),
         values.status,
         values.parent_id
       ),
@@ -112,8 +117,8 @@ const Periodos = () => {
       updatePeriodo(
         id,
         values.nome,
-        values.start_date?.toISOString() || '', // Adicionar verificação de nulidade
-        values.end_date?.toISOString() || '',   // Adicionar verificação de nulidade
+        values.start_date.toISOString(),
+        values.end_date.toISOString(),
         values.status,
         values.parent_id
       ),
@@ -330,7 +335,7 @@ const Periodos = () => {
                                 </Button>
                               )}
                             </div>
-                            {(quarterlyPeriodsMap.get(annualPeriod.id)?.length || 0) > 0 ? (
+                            {quarterlyPeriodsMap.get(annualPeriod.id)?.length > 0 ? (
                               <Table className="bg-white dark:bg-gray-900">
                                 <TableHeader>
                                   <TableRow>

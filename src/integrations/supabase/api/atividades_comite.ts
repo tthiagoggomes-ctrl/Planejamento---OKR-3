@@ -1,6 +1,5 @@
 import { supabase } from '../client';
 import { showError, showSuccess } from '@/utils/toast';
-import { UserProfile } from './users'; // Importar UserProfile para tipagem
 
 export interface AtividadeComite {
   id: string;
@@ -15,7 +14,7 @@ export interface AtividadeComite {
   updated_at?: string;
   // Campos unidos para exibição
   reuniao_titulo?: string;
-  comite_nome?: string; // NOVO: Adicionado comite_name à interface
+  comite_nome?: string;
   comite_id?: string; // NOVO: Adicionado comite_id à interface
   ata_reuniao_data_reuniao?: string; // Data da ata de reunião
   assignee_name?: string; // Nome do responsável
@@ -29,7 +28,7 @@ interface GetAtividadesComiteParams {
   limit?: number;
 }
 
-export const getAtividadesComite = async (params?: GetAtividadesComiteParams): Promise<AtividadeComite[]> => {
+export const getAtividadesComite = async (params?: GetAtividadesComiteParams): Promise<AtividadeComite[] | null> => {
   let query = supabase
     .from('atividades_comite')
     .select(`
@@ -40,13 +39,16 @@ export const getAtividadesComite = async (params?: GetAtividadesComiteParams): P
           titulo,
           comite:comites(nome, id)
         )
-      )
+      ),
+      assignee:usuarios(first_name, last_name),
+      creator:usuarios!atividades_comite_created_by_fkey(first_name, last_name)
     `)
     .order('created_at', { ascending: false });
 
   if (params?.ata_reuniao_id && params.ata_reuniao_id !== 'all') {
     query = query.eq('ata_reuniao_id', params.ata_reuniao_id);
   } else if (params?.comite_id && params.comite_id !== 'all') {
+    // Se filtrar por comitê, precisamos buscar as atas de reunião desse comitê primeiro
     const { data: reunioesData, error: reunioesError } = await supabase
       .from('reunioes')
       .select('id')
@@ -55,7 +57,7 @@ export const getAtividadesComite = async (params?: GetAtividadesComiteParams): P
     if (reunioesError) {
       console.error('Error fetching meetings for committee filter:', reunioesError.message);
       showError('Erro ao carregar reuniões para o filtro de comitê.');
-      return [];
+      return null;
     }
     const reuniaoIds = reunioesData.map(r => r.id);
 
@@ -66,16 +68,16 @@ export const getAtividadesComite = async (params?: GetAtividadesComiteParams): P
     const { data: atasData, error: atasError } = await supabase
       .from('atas_reuniao')
       .select('id')
-      .in('reuniao_id', reuniaoIds);
+      .in('reuniao_id', reuniaoIds); // Corrigido: Usar os IDs das reuniões
 
     if (atasError) {
       console.error('Error fetching meeting minutes for committee filter:', atasError.message);
       showError('Erro ao carregar atas de reunião para o filtro de comitê.');
-      return [];
+      return null;
     }
     const ataIds = atasData.map(ata => ata.id);
     if (ataIds.length === 0) {
-      return [];
+      return []; // Nenhum ata para este comitê, então nenhuma atividade
     }
     query = query.in('ata_reuniao_id', ataIds);
   }
@@ -93,43 +95,17 @@ export const getAtividadesComite = async (params?: GetAtividadesComiteParams): P
   if (error) {
     console.error('Error fetching committee activities:', error.message);
     showError('Erro ao carregar atividades do comitê.');
-    return [];
+    return null;
   }
 
-  const activities = data as AtividadeComite[];
-
-  // Coletar todos os user_ids únicos para buscar os nomes
-  const userIds = new Set<string>();
-  activities.forEach(activity => {
-    if (activity.assignee_id) userIds.add(activity.assignee_id);
-    if (activity.created_by) userIds.add(activity.created_by);
-  });
-
-  let usersMap = new Map<string, UserProfile>();
-  if (userIds.size > 0) {
-    const { data: usersData, error: usersError } = await supabase
-      .from('usuarios')
-      .select('id, first_name, last_name')
-      .in('id', Array.from(userIds));
-
-    if (usersError) {
-      console.error('Error fetching users for activities:', usersError.message);
-      showError('Erro ao carregar nomes de usuários para atividades.');
-    } else {
-      usersData.forEach(user => {
-        usersMap.set(user.id, user as UserProfile);
-      });
-    }
-  }
-
-  return activities.map(activity => ({
+  return data.map(activity => ({
     ...activity,
     reuniao_titulo: (activity as any).ata_reuniao?.reuniao?.titulo || 'N/A',
     comite_nome: (activity as any).ata_reuniao?.reuniao?.comite?.nome || 'N/A',
-    comite_id: (activity as any).ata_reuniao?.reuniao?.comite?.id || null,
+    comite_id: (activity as any).ata_reuniao?.reuniao?.comite?.id || null, // NOVO: Mapeando comite_id
     ata_reuniao_data_reuniao: (activity as any).ata_reuniao?.data_reuniao || (activity as any).ata_reuniao?.created_at || null,
-    assignee_name: activity.assignee_id ? `${usersMap.get(activity.assignee_id)?.first_name || ''} ${usersMap.get(activity.assignee_id)?.last_name || ''}`.trim() || 'N/A' : 'N/A',
-    created_by_name: activity.created_by ? `${usersMap.get(activity.created_by)?.first_name || ''} ${usersMap.get(activity.created_by)?.last_name || ''}`.trim() || 'N/A' : 'N/A',
+    assignee_name: (activity as any).assignee ? `${(activity as any).assignee.first_name} ${(activity as any).assignee.last_name}` : 'N/A',
+    created_by_name: (activity as any).creator ? `${(activity as any).creator.first_name} ${(activity as any).creator.last_name}` : 'N/A',
   }));
 };
 
@@ -145,7 +121,18 @@ export const createAtividadeComite = async (
   const { data, error } = await supabase
     .from('atividades_comite')
     .insert({ ata_reuniao_id, titulo, descricao, due_date, status, assignee_id, created_by })
-    .select() // Seleciona apenas os campos da atividade criada
+    .select(`
+      *,
+      ata_reuniao:atas_reuniao(
+        data_reuniao,
+        reuniao:reunioes(
+          titulo,
+          comite:comites(nome, id)
+        )
+      ),
+      assignee:usuarios(first_name, last_name),
+      creator:usuarios!atividades_comite_created_by_fkey(first_name, last_name)
+    `)
     .single();
 
   if (error) {
@@ -154,12 +141,20 @@ export const createAtividadeComite = async (
     return null;
   }
   showSuccess('Atividade do comitê criada com sucesso!');
-  return data; // Retorna os dados brutos da atividade
+  return {
+    ...data,
+    reuniao_titulo: (data as any).ata_reuniao?.reuniao?.titulo || 'N/A',
+    comite_nome: (data as any).ata_reuniao?.reuniao?.comite?.nome || 'N/A',
+    comite_id: (data as any).ata_reuniao?.reuniao?.comite?.id || null, // NOVO: Mapeando comite_id
+    ata_reuniao_data_reuniao: (data as any).ata_reuniao?.data_reuniao || (data as any).ata_reuniao?.created_at || null,
+    assignee_name: (data as any).assignee ? `${(data as any).assignee.first_name} ${(data as any).assignee.last_name}` : 'N/A',
+    created_by_name: (data as any).creator ? `${(data as any).creator.first_name} ${(data as any).creator.last_name}` : 'N/A',
+  };
 };
 
 export const updateAtividadeComite = async (
   id: string,
-  _ata_reuniao_id: string, // Keep ata_reuniao_id in update for RLS policy, prefixed with _ to mark as unused in function body
+  ata_reuniao_id: string, // Keep ata_reuniao_id in update for RLS policy
   titulo: string,
   descricao: string | null,
   due_date: string | null,
@@ -170,7 +165,18 @@ export const updateAtividadeComite = async (
     .from('atividades_comite')
     .update({ titulo, descricao, due_date, status, assignee_id, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select() // Seleciona apenas os campos da atividade atualizada
+    .select(`
+      *,
+      ata_reuniao:atas_reuniao(
+        data_reuniao,
+        reuniao:reunioes(
+          titulo,
+          comite:comites(nome, id)
+        )
+      ),
+      assignee:usuarios(first_name, last_name),
+      creator:usuarios!atividades_comite_created_by_fkey(first_name, last_name)
+    `)
     .single();
 
   if (error) {
@@ -179,7 +185,15 @@ export const updateAtividadeComite = async (
     return null;
   }
   showSuccess('Atividade do comitê atualizada com sucesso!');
-  return data; // Retorna os dados brutos da atividade
+  return {
+    ...data,
+    reuniao_titulo: (data as any).ata_reuniao?.reuniao?.titulo || 'N/A',
+    comite_nome: (data as any).ata_reuniao?.reuniao?.comite?.nome || 'N/A',
+    comite_id: (data as any).ata_reuniao?.reuniao?.comite?.id || null, // NOVO: Mapeando comite_id
+    ata_reuniao_data_reuniao: (data as any).ata_reuniao?.data_reuniao || (data as any).ata_reuniao?.created_at || null,
+    assignee_name: (data as any).assignee ? `${(data as any).assignee.first_name} ${(data as any).assignee.last_name}` : 'N/A',
+    created_by_name: (data as any).creator ? `${(data as any).creator.first_name} ${(data as any).creator.last_name}` : 'N/A',
+  };
 };
 
 export const deleteAtividadeComite = async (id: string): Promise<boolean> => {
@@ -189,19 +203,6 @@ export const deleteAtividadeComite = async (id: string): Promise<boolean> => {
     showError(`Erro ao excluir atividade do comitê: ${error.message}`);
     return false;
   }
-  return true;
-};
-
-export const deleteAtividadesComiteByAtaReuniaoId = async (ata_reuniao_id: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from('atividades_comite')
-    .delete()
-    .eq('ata_reuniao_id', ata_reuniao_id);
-
-  if (error) {
-    console.error('Error deleting committee activities by ata_reuniao_id:', error.message);
-    showError(`Erro ao excluir atividades do comitê para a ata de reunião: ${error.message}`);
-    return false;
-  }
+  showSuccess('Atividade do comitê excluída com sucesso!');
   return true;
 };

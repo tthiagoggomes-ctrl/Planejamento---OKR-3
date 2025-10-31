@@ -1,6 +1,6 @@
 import { supabase } from '../client';
 import { showError } from '@/utils/toast';
-import { Atividade } from './atividades'; // Importar Atividade
+import { Atividade } from './atividades'; // Import Atividade interface
 
 export interface KeyResult {
   id: string;
@@ -57,7 +57,7 @@ export const determineKeyResultStatus = (kr: KeyResult): KeyResult['status'] => 
   }
 };
 
-export const getKeyResultsByObjetivoId = async (objetivo_id: string): Promise<KeyResult[]> => {
+export const getKeyResultsByObjetivoId = async (objetivo_id: string): Promise<KeyResult[] | null> => {
   const { data, error } = await supabase
     .from('key_results')
     .select(`
@@ -70,7 +70,7 @@ export const getKeyResultsByObjetivoId = async (objetivo_id: string): Promise<Ke
   if (error) {
     console.error('Error fetching key results:', error.message);
     showError('Erro ao carregar Key Results.');
-    throw error; // Throw error to be caught by react-query
+    return null;
   }
 
   // Explicitly cast data to KeyResult[] before mapping
@@ -85,7 +85,7 @@ export const getKeyResultsByObjetivoId = async (objetivo_id: string): Promise<Ke
   });
 };
 
-export const getAllKeyResults = async (objectiveId?: string | 'all'): Promise<KeyResult[]> => { // Changed return type to KeyResult[]
+export const getAllKeyResults = async (objectiveId?: string | 'all'): Promise<KeyResult[] | null> => {
   let query = supabase
     .from('key_results')
     .select(`
@@ -103,7 +103,7 @@ export const getAllKeyResults = async (objectiveId?: string | 'all'): Promise<Ke
   if (error) {
     console.error('Error fetching all key results:', error.message);
     showError('Erro ao carregar todos os Key Results.');
-    return []; // Return empty array on error
+    return null;
   }
 
   // Explicitly cast data to KeyResult[] before mapping
@@ -118,7 +118,7 @@ export const getAllKeyResults = async (objectiveId?: string | 'all'): Promise<Ke
   });
 };
 
-export const getKeyResultsSummary = async (): Promise<KeyResultSummary[]> => { // Changed return type to KeyResultSummary[]
+export const getKeyResultsSummary = async (): Promise<KeyResultSummary[] | null> => {
   const { data, error } = await supabase
     .from('key_results')
     .select(`
@@ -129,7 +129,7 @@ export const getKeyResultsSummary = async (): Promise<KeyResultSummary[]> => { /
   if (error) {
     console.error('Error fetching key result summary:', error.message);
     showError('Erro ao carregar resumo de Key Results.');
-    return []; // Return empty array on error
+    return null;
   }
 
   // Group and count client-side based on calculated status
@@ -152,23 +152,10 @@ export const createKeyResult = async (
   valor_meta: number,
   unidade: string | null,
   periodo: string, // NOVO: Adicionado 'periodo'
-): Promise<KeyResult> => {
+): Promise<KeyResult | null> => {
   // Initial status and valor_atual when no activities exist
   const initialProgress = 0;
-  const initialStatus = determineKeyResultStatus({
-    id: 'temp-id', // Placeholder
-    objetivo_id: objetivo_id,
-    user_id: user_id,
-    titulo: titulo,
-    tipo: tipo,
-    unidade: unidade,
-    periodo: periodo,
-    valor_inicial,
-    valor_meta,
-    valor_atual: initialProgress,
-    atividades: [],
-    status: 'off_track', // Adicionado status inicial
-  } as KeyResult);
+  const initialStatus = determineKeyResultStatus({ valor_inicial, valor_meta, valor_atual: initialProgress, atividades: [] } as KeyResult);
 
   const { data, error } = await supabase
     .from('key_results')
@@ -193,7 +180,7 @@ export const createKeyResult = async (
   if (error) {
     console.error('Error creating key result:', error.message);
     showError(`Erro ao criar Key Result: ${error.message}`);
-    throw error; // Throw error to be caught by react-query
+    return null;
   }
   // Recalculate status and valor_atual after insert (though it should be 0/off_track initially)
   const createdKr = data as unknown as KeyResult; // Explicitly cast data
@@ -210,7 +197,7 @@ export const updateKeyResult = async (
   valor_meta: number,
   unidade: string | null,
   periodo: string, // NOVO: Adicionado 'periodo'
-): Promise<KeyResult> => {
+): Promise<KeyResult | null> => {
   // When updating, we need to fetch current activities to determine status
   const { data: currentKr, error: fetchError } = await supabase
     .from('key_results')
@@ -221,7 +208,7 @@ export const updateKeyResult = async (
   if (fetchError || !currentKr) {
     console.error('Error fetching current KR for update:', fetchError?.message);
     showError(`Erro ao buscar Key Result para atualização: ${fetchError?.message}`);
-    throw fetchError || new Error("Key Result not found for update."); // Throw error
+    return null;
   }
 
   const typedCurrentKr = currentKr as unknown as KeyResult; // Explicitly cast
@@ -251,7 +238,7 @@ export const updateKeyResult = async (
   if (error) {
     console.error('Error updating key result:', error.message);
     showError(`Erro ao atualizar Key Result: ${error.message}`);
-    throw error; // Throw error to be caught by react-query
+    return null;
   }
   // Recalculate again to ensure consistency, though it should be the same
   const updatedKr = data as unknown as KeyResult; // Explicitly cast data
@@ -265,7 +252,7 @@ export const deleteKeyResult = async (id: string): Promise<boolean> => {
   if (error) {
     console.error('Error deleting key result:', error.message);
     showError(`Erro ao excluir Key Result: ${error.message}`);
-    throw error; // Throw error to be caught by react-query
+    return false;
   }
   return true;
 };

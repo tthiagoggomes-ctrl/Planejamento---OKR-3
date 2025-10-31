@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, List, Kanban, Search, GanttChartSquare } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2, List, Kanban, StopCircle, Search, GanttChartSquare } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -41,6 +41,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/use-debounce";
 import GanttChart from "@/components/GanttChart";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
 
 const Atividades = () => {
@@ -124,16 +126,16 @@ const Atividades = () => {
   });
 
   const updateAtividadeMutation = useMutation({
-    mutationFn: ({ id, key_result_id, user_id, titulo, descricao, due_date, status }: Omit<AtividadeFormValues, 'comite_id' | 'reuniao_id' | 'ata_reuniao_id'> & { id: string }) => {
+    mutationFn: ({ id, ...values }: AtividadeFormValues & { id: string }) => {
       if (!canEditAtividades) throw new Error("Você não tem permissão para editar atividades.");
       return updateAtividade(
         id,
-        key_result_id,
-        user_id,
-        titulo,
-        descricao,
-        formatDueDateForApi(due_date),
-        status
+        values.key_result_id,
+        values.user_id,
+        values.titulo,
+        values.descricao,
+        formatDueDateForApi(values.due_date),
+        values.status
       );
     },
     onSuccess: () => {
@@ -305,7 +307,7 @@ const Atividades = () => {
             <Select
               value={selectedKeyResultFilter}
               onValueChange={(value: string | 'all') => setSelectedKeyResultFilter(value)}
-              disabled={selectedObjectiveFilter === 'all' || isLoadingAllKeyResults}
+              disabled={isLoadingAllKeyResults}
             >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filtrar por Key Result" />
@@ -395,11 +397,7 @@ const Atividades = () => {
             />
           ) : ( // Gantt view
             <GanttChart
-              atividades={filteredAtividades.map(a => ({ // Map to generic Atividade type for GanttChart
-                ...a,
-                key_result_title: a.key_result_title, // Use key_result_title for Gantt
-                key_result_objetivo_id: a.key_result_objetivo_id || undefined, // Use objective ID for Gantt
-              }))}
+              atividades={filteredAtividades}
               groupByKr={groupByKr}
               onGroupByKrChange={setGroupByKr}
               ganttSortBy={ganttSortBy}

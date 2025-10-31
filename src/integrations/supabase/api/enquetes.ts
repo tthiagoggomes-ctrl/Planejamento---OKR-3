@@ -14,7 +14,6 @@ export interface Enquete {
   created_at?: string;
   updated_at?: string;
   created_by_name?: string; // Joined from profiles
-  comite_name?: string; // NOVO: Adicionado para exibir o nome do comitê
   opcoes?: OpcaoEnquete[]; // Nested options
   total_votes?: number; // Calculated client-side or via view
   user_vote?: VotoEnquete | null; // NEW: User's vote for this poll
@@ -35,38 +34,27 @@ export interface VotoEnquete {
   created_at?: string;
 }
 
-interface GetEnquetesParams {
-  comite_id?: string; // Tornar opcional
-  currentUserId?: string; // Manter opcional para a lógica de voto do usuário
-}
-
-export const getEnquetes = async (params?: GetEnquetesParams): Promise<Enquete[] | null> => {
-  let query = supabase
+export const getEnquetesByComiteId = async (comite_id: string, currentUserId: string | undefined): Promise<Enquete[] | null> => {
+  const { data, error } = await supabase
     .from('enquetes')
     .select(`
       *,
       created_by_user:usuarios(first_name, last_name),
-      comite:comites(nome),
       opcoes:opcoes_enquete(*),
       votos:votos_enquete(id, opcao_id, user_id)
     `)
+    .eq('comite_id', comite_id)
     .order('created_at', { ascending: false });
 
-  if (params?.comite_id) {
-    query = query.eq('comite_id', params.comite_id);
-  }
-
-  const { data, error } = await query;
-
   if (error) {
-    console.error('Error fetching polls:', error.message);
+    console.error('Error fetching polls:', error.message); // Adicionado log detalhado
     showError('Erro ao carregar enquetes.');
     return null;
   }
 
   return (data as any[]).map((enquete: any) => {
     const totalVotes = enquete.votos ? enquete.votos.length : 0;
-    const userVote = params?.currentUserId ? enquete.votos?.find((vote: VotoEnquete) => vote.user_id === params.currentUserId) : null;
+    const userVote = currentUserId ? enquete.votos?.find((vote: VotoEnquete) => vote.user_id === currentUserId) : null;
 
     const optionsWithCounts = enquete.opcoes?.map((option: OpcaoEnquete) => {
       const voteCount = enquete.votos?.filter((vote: VotoEnquete) => vote.opcao_id === option.id).length || 0;
@@ -79,7 +67,6 @@ export const getEnquetes = async (params?: GetEnquetesParams): Promise<Enquete[]
     return {
       ...enquete,
       created_by_name: enquete.created_by_user ? `${enquete.created_by_user.first_name} ${enquete.created_by_user.last_name}` : 'N/A',
-      comite_name: enquete.comite?.nome || 'N/A', // Mapear o nome do comitê
       opcoes: optionsWithCounts || [],
       total_votes: totalVotes,
       user_vote: userVote || null,

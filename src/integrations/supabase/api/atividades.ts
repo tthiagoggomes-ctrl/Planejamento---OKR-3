@@ -25,7 +25,7 @@ export const getAtividades = async (
   limit?: number,
   objectiveId?: string | 'all', // Novo parâmetro para filtrar por objetivo
   keyResultId?: string | 'all' // Novo parâmetro para filtrar por Key Result
-): Promise<Atividade[]> => { // Changed return type to Atividade[]
+): Promise<Atividade[] | null> => {
   console.log('API: getAtividades chamada com:', { limit, objectiveId, keyResultId });
 
   let query = supabase
@@ -57,7 +57,7 @@ export const getAtividades = async (
     if (krsError) {
       console.error('Error fetching key results for objective filter:', krsError.message);
       showError('Erro ao carregar Key Results para o filtro de objetivo.');
-      return []; // Return empty array on error
+      return null;
     }
     const keyResultIdsForObjective = krsData.map(kr => kr.id);
 
@@ -74,7 +74,7 @@ export const getAtividades = async (
   if (error) {
     console.error('Error fetching activities:', error.message);
     showError('Erro ao carregar atividades.');
-    return []; // Return empty array on error
+    return null;
   }
 
   return data.map(atividade => ({
@@ -110,7 +110,7 @@ export const getAtividadesByKeyResultId = async (key_result_id: string): Promise
   }));
 };
 
-export const getAtividadesSummary = async (): Promise<AtividadeSummary[]> => { // Changed return type to AtividadeSummary[]
+export const getAtividadesSummary = async (): Promise<AtividadeSummary[] | null> => {
   const { data, error } = await supabase
     .from('atividades')
     .select('status'); // Select only the status column
@@ -118,7 +118,7 @@ export const getAtividadesSummary = async (): Promise<AtividadeSummary[]> => { /
   if (error) {
     console.error('Error fetching activity summary:', error.message);
     showError('Erro ao carregar resumo de atividades.');
-    return []; // Return empty array on error
+    return null;
   }
 
   // Group and count client-side

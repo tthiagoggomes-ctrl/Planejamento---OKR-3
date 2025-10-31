@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, User, Mail, Building, Shield, CheckCircle, Ban } from "lucide-react";

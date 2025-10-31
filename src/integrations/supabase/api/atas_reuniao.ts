@@ -19,6 +19,7 @@ export interface AtaReuniao {
   objetivos_reuniao: string | null;
   pauta_tratada: string | null;
   novos_topicos: string | null;
+  pendencias: string | null;
   proximos_passos: string | null;
 }
 
@@ -41,28 +42,6 @@ export const getAtasReuniaoByReuniaoId = async (reuniao_id: string): Promise<Ata
     ...ata,
     created_by_name: (ata as any).created_by_user ? `${(ata as any).created_by_user.first_name} ${(ata as any).created_by_user.last_name}` : 'N/A',
   }));
-};
-
-// NEW: Function to get a single meeting minute by ID
-export const getAtaReuniaoById = async (id: string): Promise<AtaReuniao | null> => {
-  const { data, error } = await supabase
-    .from('atas_reuniao')
-    .select(`
-      *,
-      created_by_user:usuarios(first_name, last_name)
-    `)
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    console.error('Error fetching single meeting minute:', error.message);
-    showError('Erro ao carregar detalhes da ata de reunião.');
-    return null;
-  }
-  return {
-    ...data,
-    created_by_name: (data as any).created_by_user ? `${(data as any).created_by_user.first_name} ${(data as any).created_by_user.last_name}` : 'N/A',
-  };
 };
 
 // NEW: Function to get meeting minutes by committee ID
@@ -102,6 +81,7 @@ export const createAtaReuniao = async (
   objetivos_reuniao: string | null,
   pauta_tratada: string | null,
   novos_topicos: string | null,
+  pendencias: string | null,
   proximos_passos: string | null
 ): Promise<AtaReuniao | null> => {
   const { data, error } = await supabase
@@ -119,6 +99,7 @@ export const createAtaReuniao = async (
       objetivos_reuniao,
       pauta_tratada,
       novos_topicos,
+      pendencias,
       proximos_passos
     })
     .select(`
@@ -152,6 +133,7 @@ export const updateAtaReuniao = async (
   objetivos_reuniao: string | null,
   pauta_tratada: string | null,
   novos_topicos: string | null,
+  pendencias: string | null,
   proximos_passos: string | null
 ): Promise<AtaReuniao | null> => {
   const { data, error } = await supabase
@@ -168,6 +150,7 @@ export const updateAtaReuniao = async (
       objetivos_reuniao,
       pauta_tratada,
       novos_topicos,
+      pendencias,
       proximos_passos
     })
     .eq('id', id)

@@ -80,7 +80,6 @@ const Users = () => {
         values.permissao,
         values.selected_permissions,
         values.password,
-        values.cargo_funcao // NOVO: Passar cargo_funcao
       );
     },
     onSuccess: () => {
@@ -94,9 +93,9 @@ const Users = () => {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ id, first_name, last_name, area_id, permissao, status, selected_permissions, email, cargo_funcao }: UpdateUserMutationArgs) => {
+    mutationFn: ({ id, first_name, last_name, area_id, permissao, status, selected_permissions, email }: UpdateUserMutationArgs) => {
       if (!canEditUsers) throw new Error("Você não tem permissão para editar usuários.");
-      return updateUserProfile(id, first_name, last_name, area_id, permissao, status, selected_permissions, email, cargo_funcao); // NOVO: Passar cargo_funcao
+      return updateUserProfile(id, first_name, last_name, area_id, permissao, status, selected_permissions, email);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -179,7 +178,6 @@ const Users = () => {
         status: values.status || 'active',
         selected_permissions: values.selected_permissions,
         email: editingUser.email,
-        cargo_funcao: values.cargo_funcao, // NOVO: Passar cargo_funcao
       });
     } else {
       createUserMutation.mutate({
@@ -190,7 +188,6 @@ const Users = () => {
         area_id: values.area_id,
         permissao: values.permissao,
         status: 'active',
-        cargo_funcao: values.cargo_funcao, // NOVO: Passar cargo_funcao
         selected_permissions: values.selected_permissions,
       });
     }
@@ -330,18 +327,6 @@ const Users = () => {
                   <TableHead>
                     <Button
                       variant="ghost"
-                      onClick={() => handleSort('cargo_funcao')} // NOVO: Ordenar por cargo_funcao
-                      className="flex items-center px-0 py-0 h-auto"
-                    >
-                      Cargo/Função
-                      {sortBy === 'cargo_funcao' && (
-                        sortOrder === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
-                      )}
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
                       onClick={() => handleSort('permissao')}
                       className="flex items-center px-0 py-0 h-auto"
                     >
@@ -372,7 +357,6 @@ const Users = () => {
                     <TableCell className="font-medium">{user.first_name} {user.last_name}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{(user as any).area_name || 'N/A'}</TableCell>
-                    <TableCell>{user.cargo_funcao || 'N/A'}</TableCell> {/* NOVO: Exibir cargo_funcao */}
                     <TableCell>{getPermissaoLabel(user.permissao)}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${

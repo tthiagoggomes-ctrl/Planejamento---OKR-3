@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Loader2, CalendarDays, MessageSquare, ListTodo, PlusCircle, Edit, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { Reuniao } from "@/integrations/supabase/api/reunioes";
 import { AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
-import { format, parseISO, isPast, isFuture, isToday, isSameDay } from "date-fns"; // Importar funções de data
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
 import { MeetingCalendar } from "./MeetingCalendar"; // Importar o calendário
 
@@ -22,6 +23,7 @@ interface CommitteeMeetingsSectionProps {
   canInsertReunioes: boolean;
   canEditReunioes: boolean;
   canDeleteReunioes: boolean;
+  canViewAtasReuniao: boolean;
   canInsertAtasReuniao: boolean;
   canEditAtasReuniao: boolean;
   canDeleteAtasReuniao: boolean;
@@ -49,6 +51,7 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
   canInsertReunioes,
   canEditReunioes,
   canDeleteReunioes,
+  canViewAtasReuniao,
   canInsertAtasReuniao,
   canEditAtasReuniao,
   canDeleteAtasReuniao,
@@ -64,26 +67,6 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
   expandedMinutes,
   toggleMinutesExpansion,
 }) => {
-  const sortedMeetings = React.useMemo(() => {
-    return meetings ? [...meetings].sort((a, b) => parseISO(a.data_reuniao).getTime() - parseISO(b.data_reuniao).getTime()) : [];
-  }, [meetings]);
-
-  const nextMeeting = React.useMemo(() => {
-    return sortedMeetings.find(m => isFuture(parseISO(m.data_reuniao)) || isToday(parseISO(m.data_reuniao)));
-  }, [sortedMeetings]);
-
-  const getMeetingStatusClass = (meeting: Reuniao) => {
-    const meetingDate = parseISO(meeting.data_reuniao);
-    if (isPast(meetingDate) && !isToday(meetingDate)) {
-      return "text-gray-500"; // Passada
-    } else if (nextMeeting && isSameDay(meetingDate, parseISO(nextMeeting.data_reuniao))) {
-      return "text-blue-600 font-bold"; // Próxima
-    } else if (isFuture(meetingDate) || isToday(meetingDate)) {
-      return "text-green-600"; // Futura
-    }
-    return "";
-  };
-
   return (
     <>
       {canViewReunioes && (
@@ -106,12 +89,12 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           ) : errorMeetings ? (
             <p className="text-red-500">Erro ao carregar reuniões: {errorMeetings.message}</p>
-          ) : sortedMeetings && sortedMeetings.length > 0 ? (
+          ) : meetings && meetings.length > 0 ? (
             <div className="space-y-4">
-              {sortedMeetings.map(meeting => (
+              {meetings.map(meeting => (
                 <div key={meeting.id} className="border rounded-md p-3">
                   <div className="flex justify-between items-center">
-                    <h3 className={`font-semibold ${getMeetingStatusClass(meeting)}`}>{meeting.titulo}</h3>
+                    <h3 className="font-semibold">{meeting.titulo}</h3>
                     <div className="flex items-center gap-2">
                       {canEditReunioes && (
                         <Button variant="ghost" size="icon" onClick={() => onEditReuniaoClick(meeting)}>
@@ -128,7 +111,7 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
                       </Button>
                     </div>
                   </div>
-                  <p className={`text-sm text-muted-foreground ${getMeetingStatusClass(meeting)}`}>
+                  <p className="text-sm text-muted-foreground">
                     {format(new Date(meeting.data_reuniao), "PPP 'às' HH:mm", { locale: ptBR })} - {meeting.local || 'Local não informado'}
                     {meeting.recurrence_type !== 'none' && ` (Recorrência: ${meeting.recurrence_type === 'weekly' ? 'Semanal' : meeting.recurrence_type === 'bi_weekly' ? 'Quinzenal' : 'Mensal'} até ${format(new Date(meeting.recurrence_end_date!), 'PPP', { locale: ptBR })})`}
                   </p>
@@ -136,7 +119,7 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
                     <div className="mt-3 pt-3 border-t">
                       <div className="flex justify-between items-center mb-2">
                         <h4 className="font-medium flex items-center">
-                          <MessageSquare className="mr-2 h-4 w-4" /> Atas de Reunião ({(minutesMap?.get(meeting.id) || []).length || 0})
+                          <MessageSquare className="mr-2 h-4 w-4" /> Atas de Reunião ({minutesMap?.get(meeting.id)?.length || 0})
                         </h4>
                         {canInsertAtasReuniao && (
                           <Button size="sm" variant="outline" onClick={() => onAddAtaClick(meeting)}>
@@ -146,9 +129,9 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
                       </div>
                       {isLoadingMinutes ? (
                         <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                      ) : (minutesMap?.get(meeting.id) || []).length > 0 ? (
+                      ) : minutesMap?.get(meeting.id)?.length > 0 ? (
                         <ul className="space-y-2 pl-4">
-                          {(minutesMap?.get(meeting.id) || []).map(minutes => (
+                          {minutesMap.get(meeting.id)?.map(minutes => (
                             <li key={minutes.id} className="border rounded-md p-2">
                               <div className="flex justify-between items-center">
                                 <p className="font-medium">Ata de {minutes.data_reuniao ? format(parseISO(minutes.data_reuniao), "PPP", { locale: ptBR }) : format(new Date(minutes.created_at!), "PPP", { locale: ptBR })}</p>
@@ -203,6 +186,12 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
                                       <pre className="whitespace-pre-wrap text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded-md">{minutes.novos_topicos}</pre>
                                     </>
                                   )}
+                                  {minutes.pendencias && (
+                                    <>
+                                      <p><strong>Pendências:</strong></p>
+                                      <pre className="whitespace-pre-wrap text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded-md">{minutes.pendencias}</pre>
+                                    </>
+                                  )}
                                   {minutes.proximos_passos && (
                                     <>
                                       <p><strong>Próximos Passos:</strong></p>
@@ -222,6 +211,8 @@ export const CommitteeMeetingsSection: React.FC<CommitteeMeetingsSectionProps> =
                                     </>
                                   )}
                                   <p>Criado por: {minutes.created_by_name}</p>
+
+                                  <Separator className="my-3" />
 
                                   <div className="flex justify-between items-center mb-2">
                                     <h5 className="font-medium flex items-center">

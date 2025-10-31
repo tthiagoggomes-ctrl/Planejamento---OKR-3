@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Objetivo } from "@/integrations/supabase/api/objetivos";
 import { Area, getAreas } from "@/integrations/supabase/api/areas";
+import { Periodo, getPeriodos } from "@/integrations/supabase/api/periodos";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 

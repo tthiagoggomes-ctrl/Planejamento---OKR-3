@@ -7,55 +7,55 @@ import { useQuery } from "@tanstack/react-query";
 import { getObjetivos, getObjetivosSummary, Objetivo, ObjetivoSummary } from "@/integrations/supabase/api/objetivos";
 import { getAllKeyResults, getKeyResultsSummary, KeyResult, KeyResultSummary, calculateKeyResultProgress } from "@/integrations/supabase/api/key_results";
 import { getAtividadesSummary, AtividadeSummary } from "@/integrations/supabase/api/atividades";
-import { Loader2, Target, ListTodo, CheckCircle, Hourglass, XCircle, Flag, TrendingUp, AlertTriangle, Clock, CircleDot, StopCircle, LayoutDashboard } from "lucide-react";
+import { Loader2, Target, ListTodo, CheckCircle, Hourglass, XCircle, Flag, TrendingUp, AlertTriangle, Clock, CircleDot, StopCircle } from "lucide-react";
 import StatusDistributionChart from "@/components/charts/StatusDistributionChart";
 import { Progress } from "@/components/ui/progress";
 import AreaProgressList from '@/components/dashboard/AreaProgressList';
 import RecentActivitiesList from '@/components/dashboard/RecentActivitiesList';
 import AlertsAndPending from '@/components/dashboard/AlertsAndPending';
 import KeyResultsByPeriodList from '@/components/dashboard/KeyResultsByPeriodList';
-import { useUserPermissions } from '@/hooks/use-user-permissions';
+import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
 
 const Index = () => {
   const { can, isLoading: permissionsLoading } = useUserPermissions();
   const canViewDashboard = can('dashboard', 'view');
 
-  const { data: objetivosSummary, isLoading: isLoadingObjetivosSummary, error: errorObjetivosSummary } = useQuery<ObjetivoSummary[], Error>({
+  const { data: objetivosSummary, isLoading: isLoadingObjetivosSummary, error: errorObjetivosSummary } = useQuery<ObjetivoSummary[] | null, Error>({
     queryKey: ["objetivosSummary"],
     queryFn: getObjetivosSummary,
-    enabled: canViewDashboard && !permissionsLoading,
+    enabled: canViewDashboard && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
-  const { data: keyResultsSummary, isLoading: isLoadingKeyResultsSummary, error: errorKeyResultsSummary } = useQuery<KeyResultSummary[], Error>({
+  const { data: keyResultsSummary, isLoading: isLoadingKeyResultsSummary, error: errorKeyResultsSummary } = useQuery<KeyResultSummary[] | null, Error>({
     queryKey: ["keyResultsSummary"],
     queryFn: getKeyResultsSummary,
-    enabled: canViewDashboard && !permissionsLoading,
+    enabled: canViewDashboard && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
-  const { data: atividadesSummary, isLoading: isLoadingAtividades, error: errorAtividades } = useQuery<AtividadeSummary[], Error>({
+  const { data: atividadesSummary, isLoading: isLoadingAtividades, error: errorAtividades } = useQuery<AtividadeSummary[] | null, Error>({
     queryKey: ["atividadesSummary"],
     queryFn: getAtividadesSummary,
-    enabled: canViewDashboard && !permissionsLoading,
+    enabled: canViewDashboard && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
   // Fetch all objectives and key results for overall progress calculation
-  const { data: allObjetivos, isLoading: isLoadingAllObjetivos, error: errorAllObjetivos } = useQuery<Objetivo[], Error>({
+  const { data: allObjetivos, isLoading: isLoadingAllObjetivos, error: errorAllObjetivos } = useQuery<Objetivo[] | null, Error>({
     queryKey: ["allObjetivos"],
     queryFn: () => getObjetivos(),
-    enabled: canViewDashboard && !permissionsLoading,
+    enabled: canViewDashboard && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
-  const { data: allKeyResults, isLoading: isLoadingAllKeyResults, error: errorAllKeyResults } = useQuery<KeyResult[], Error>({
+  const { data: allKeyResults, isLoading: isLoadingAllKeyResults, error: errorAllKeyResults } = useQuery<KeyResult[] | null, Error>({
     queryKey: ["allKeyResults"],
-    queryFn: () => getAllKeyResults(),
-    enabled: canViewDashboard && !permissionsLoading,
+    queryFn: () => getAllKeyResults(), // This now fetches activities too
+    enabled: canViewDashboard && !permissionsLoading, // Habilitar query apenas se tiver permissão
   });
 
-  const getTotalCount = (summary: { count: number }[] | null | undefined) => {
+  const getTotalCount = (summary: { count: number }[] | null) => {
     return summary?.reduce((acc, item) => acc + item.count, 0) || 0;
   };
 
-  const getStatusCount = (summary: { status: string; count: number }[] | null | undefined, status: string) => {
+  const getStatusCount = (summary: { status: string; count: number }[] | null, status: string) => {
     return summary?.find(item => item.status === status)?.count || 0;
   };
 
@@ -72,7 +72,7 @@ const Index = () => {
     let totalObjectiveProgress = 0;
     let objectivesWithKRs = 0;
 
-    allObjetivos.forEach((obj: Objetivo) => { // Explicitly type 'obj'
+    allObjetivos.forEach(obj => {
       const krsForObjective = allKeyResults.filter(kr => kr.objetivo_id === obj.id);
       if (krsForObjective.length > 0) {
         const objectiveKRsProgress = krsForObjective.reduce((sum, kr) => sum + calculateKeyResultProgress(kr), 0);
@@ -95,26 +95,26 @@ const Index = () => {
 
   // Prepare data for Objetivo Status Chart
   const objetivoChartData = [
-    { name: 'Rascunhos', value: getStatusCount(objetivosSummary, 'draft'), color: '#facc15' },
-    { name: 'Ativos', value: getStatusCount(objetivosSummary, 'active'), color: '#3b82f6' },
-    { name: 'Concluídos', value: getStatusCount(objetivosSummary, 'completed'), color: '#22c55e' },
-    { name: 'Arquivados', value: getStatusCount(objetivosSummary, 'archived'), color: '#6b7280' },
+    { name: 'Rascunhos', value: getStatusCount(objetivosSummary, 'draft'), color: '#facc15' }, // yellow-500
+    { name: 'Ativos', value: getStatusCount(objetivosSummary, 'active'), color: '#3b82f6' }, // blue-500
+    { name: 'Concluídos', value: getStatusCount(objetivosSummary, 'completed'), color: '#22c55e' }, // green-500
+    { name: 'Arquivados', value: getStatusCount(objetivosSummary, 'archived'), color: '#6b7280' }, // gray-500
   ].filter(item => item.value > 0);
 
   // Prepare data for Key Result Status Chart
   const keyResultChartData = [
-    { name: 'No Caminho', value: getStatusCount(keyResultsSummary, 'on_track'), color: '#22c55e' },
-    { name: 'Em Risco', value: getStatusCount(keyResultsSummary, 'at_risk'), color: '#facc15' },
-    { name: 'Fora do Caminho', value: getStatusCount(keyResultsSummary, 'off_track'), color: '#ef4444' },
-    { name: 'Concluídos', value: getStatusCount(keyResultsSummary, 'completed'), color: '#3b82f6' },
+    { name: 'No Caminho', value: getStatusCount(keyResultsSummary, 'on_track'), color: '#22c55e' }, // green-500
+    { name: 'Em Risco', value: getStatusCount(keyResultsSummary, 'at_risk'), color: '#facc15' }, // yellow-500
+    { name: 'Fora do Caminho', value: getStatusCount(keyResultsSummary, 'off_track'), color: '#ef4444' }, // red-500
+    { name: 'Concluídos', value: getStatusCount(keyResultsSummary, 'completed'), color: '#3b82f6' }, // blue-500
   ].filter(item => item.value > 0);
 
   // Prepare data for Atividade Status Chart
   const atividadeChartData = [
-    { name: 'A Fazer', value: getStatusCount(atividadesSummary, 'todo'), color: '#1f2937' },
-    { name: 'Em Progresso', value: getStatusCount(atividadesSummary, 'in_progress'), color: '#2563eb' },
-    { name: 'Paradas', value: getStatusCount(atividadesSummary, 'stopped'), color: '#dc2626' },
-    { name: 'Concluídas', value: getStatusCount(atividadesSummary, 'done'), color: '#16a34a' },
+    { name: 'A Fazer', value: getStatusCount(atividadesSummary, 'todo'), color: '#1f2937' }, // Preto (gray-900)
+    { name: 'Em Progresso', value: getStatusCount(atividadesSummary, 'in_progress'), color: '#2563eb' }, // Azul (blue-600)
+    { name: 'Paradas', value: getStatusCount(atividadesSummary, 'stopped'), color: '#dc2626' }, // Vermelho (red-600)
+    { name: 'Concluídas', value: getStatusCount(atividadesSummary, 'done'), color: '#16a34a' }, // Verde (green-600)
   ].filter(item => item.value > 0);
 
   const isLoadingOverallData = isLoadingAllObjetivos || isLoadingAllKeyResults || isLoadingObjetivosSummary || isLoadingKeyResultsSummary || isLoadingAtividades || permissionsLoading;
@@ -136,9 +136,7 @@ const Index = () => {
     <div className="container mx-auto py-6">
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold flex items-center">
-            <LayoutDashboard className="mr-2 h-6 w-6 text-fade-red" /> Dashboard OKR
-          </CardTitle>
+          <CardTitle className="text-2xl font-bold">Dashboard OKR</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-gray-600 mb-4">

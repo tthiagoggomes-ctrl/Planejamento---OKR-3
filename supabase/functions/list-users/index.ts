@@ -1,6 +1,5 @@
-/// <reference lib="deno.ns" />
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-import { createClient, User } from 'https://esm.sh/@supabase/supabase-js@2.45.0' // Import User type
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,7 +36,7 @@ serve(async (req) => {
         status: 500,
       })
     }
-    const authUsersMap = new Map<string, User>(authUsersData.users.map(user => [user.id, user])) // Explicitly type the Map
+    const authUsersMap = new Map(authUsersData.users.map(user => [user.id, user]))
 
     // Fetch user profiles from public.usuarios, joining with areas
     let profilesQuery = supabaseAdmin

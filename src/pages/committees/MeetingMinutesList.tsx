@@ -3,7 +3,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, MessageSquare, Search, ArrowUp, ArrowDown } from "lucide-react";
+import { Loader2, MessageSquare, CalendarDays, GitCommit, Search, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AtaReuniao, getAtasReuniaoByReuniaoId } from "@/integrations/supabase/api/atas_reuniao";
-import { getReunioes, Reuniao } from "@/integrations/supabase/api/reunioes";
+import { getReunioesByComiteId, Reuniao } from "@/integrations/supabase/api/reunioes";
 import { getComites, Comite } from "@/integrations/supabase/api/comites";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { format, parseISO } from "date-fns";
@@ -56,7 +56,7 @@ const MeetingMinutesList = () => {
     queryKey: ["allMeetings"],
     queryFn: async () => {
       if (!comites) return [];
-      const meetingsPromises = comites.map(comite => getReunioes({ comite_id: comite.id }));
+      const meetingsPromises = comites.map(comite => getReunioesByComiteId(comite.id));
       const results = await Promise.all(meetingsPromises);
       return results.flat().filter(Boolean) as Reuniao[];
     },
@@ -104,6 +104,7 @@ const MeetingMinutesList = () => {
         ata.objetivos_reuniao?.toLowerCase().includes(query) ||
         ata.pauta_tratada?.toLowerCase().includes(query) ||
         ata.novos_topicos?.toLowerCase().includes(query) ||
+        ata.pendencias?.toLowerCase().includes(query) ||
         ata.proximos_passos?.toLowerCase().includes(query)
       );
     }
@@ -265,11 +266,13 @@ const MeetingMinutesList = () => {
                     <TableCell>{ata.data_reuniao ? format(parseISO(ata.data_reuniao), "PPP", { locale: ptBR }) : 'N/A'}</TableCell>
                     <TableCell>{ata.created_by_name}</TableCell>
                     <TableCell className="text-right">
-                      <Link to={`/comites/atas/${ata.id}`}> {/* NOVO: Link para a nova página de detalhes da ata */}
-                        <Button variant="ghost" size="sm">
-                          Ver Detalhes
-                        </Button>
-                      </Link>
+                      {ata.comite_id && ( // Renderizar o botão apenas se houver comite_id
+                        <Link to={`/comites/${ata.comite_id}`} state={{ ataId: ata.id }}>
+                          <Button variant="ghost" size="sm">
+                            Ver Detalhes
+                          </Button>
+                        </Link>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

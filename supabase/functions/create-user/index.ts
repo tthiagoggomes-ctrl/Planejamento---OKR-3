@@ -1,4 +1,3 @@
-/// <reference lib="deno.ns" />
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
@@ -13,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email, password, first_name, last_name, area_id, permissao, selected_permissions, cargo_funcao } = await req.json(); // NOVO: Receber cargo_funcao
+    const { email, password, first_name, last_name, area_id, permissao, selected_permissions } = await req.json();
 
     // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
@@ -42,11 +41,11 @@ serve(async (req) => {
       });
     }
 
-    // Update public.usuarios profile with area_id, permissao, and cargo_funcao
+    // Update public.usuarios profile with area_id and permissao
     // The handle_new_user trigger will create the initial profile, then we update it.
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from('usuarios')
-      .update({ area_id, permissao, cargo_funcao, updated_at: new Date().toISOString() }) // NOVO: Incluir cargo_funcao
+      .update({ area_id, permissao, updated_at: new Date().toISOString() })
       .eq('id', authData.user.id)
       .select('*, area:areas(nome)')
       .single();

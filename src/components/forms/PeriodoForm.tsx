@@ -21,7 +21,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Periodo } from "@/integrations/supabase/api/periodos";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Periodo, PeriodoStatus } from "@/integrations/supabase/api/periodos";
 import { Loader2, CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -50,20 +57,17 @@ const formSchema = z.object({
   nome: z.string().min(2, {
     message: "O nome do período deve ter pelo menos 2 caracteres.",
   }),
-  start_date: z.date().nullable().optional(), // Alterado para nullable().optional()
-  end_date: z.date().nullable().optional(),   // Alterado para nullable().optional()
+  start_date: z.date({
+    required_error: "A data de início é obrigatória.",
+  }),
+  end_date: z.date({
+    required_error: "A data de término é obrigatória.",
+  }),
   status: z.enum(['active', 'archived'], {
     message: "Selecione um status válido.",
   }),
   parent_id: z.string().uuid().nullable().optional(),
-}).refine((data) => {
-  if (data.start_date && data.end_date) {
-    return data.end_date >= data.start_date;
-  }
-  // If dates are null/undefined, this refinement doesn't apply,
-  // but the API will set them for annual periods.
-  return true;
-}, {
+}).refine((data) => data.end_date >= data.start_date, {
   message: "A data de término não pode ser anterior à data de início.",
   path: ["end_date"],
 });
@@ -91,8 +95,8 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
     resolver: zodResolver(formSchema),
     defaultValues: {
       nome: initialData?.nome || "",
-      start_date: initialData?.start_date ? new Date(initialData.start_date) : null, // Alterado para null
-      end_date: initialData?.end_date ? new Date(initialData.end_date) : null,     // Alterado para null
+      start_date: initialData?.start_date ? new Date(initialData.start_date) : undefined,
+      end_date: initialData?.end_date ? new Date(initialData.end_date) : undefined,
       status: initialData?.status || "active",
       parent_id: initialData?.parent_id || parentPeriodIdForNew,
     },
@@ -176,8 +180,8 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
         setEndDateString(format(newEndDate, "dd/MM/yyyy", { locale: ptBR }));
       } else {
         form.setValue('nome', '', { shouldValidate: true });
-        form.setValue('start_date', null, { shouldValidate: true }); // Alterado para null
-        form.setValue('end_date', null, { shouldValidate: true });     // Alterado para null
+        form.setValue('start_date', undefined, { shouldValidate: true });
+        form.setValue('end_date', undefined, { shouldValidate: true });
         setStartDateString("");
         setEndDateString("");
       }
@@ -227,8 +231,8 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
     if (!initialData) {
       form.reset({
         nome: "",
-        start_date: null, // Alterado para null
-        end_date: null,     // Alterado para null
+        start_date: undefined,
+        end_date: undefined,
         status: "active",
         parent_id: parentPeriodIdForNew,
       });
@@ -238,10 +242,10 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
     }
   };
 
-  // const statusOptions = [ // REMOVIDO: Não utilizado
-  //   { value: "active", label: "Ativo" },
-  //   { value: "archived", label: "Arquivado" },
-  // ];
+  const statusOptions = [
+    { value: "active", label: "Ativo" },
+    { value: "archived", label: "Arquivado" },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -297,7 +301,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                               const formatted = formatInputDate(e.target.value);
                               setStartDateString(formatted);
                               const parsedDate = parse(formatted, "dd/MM/yyyy", new Date(), { locale: ptBR });
-                              field.onChange(isValid(parsedDate) ? parsedDate : null); // Alterado para null
+                              field.onChange(isValid(parsedDate) ? parsedDate : undefined);
                             }}
                             placeholder="DD/MM/AAAA"
                             className={cn(
@@ -313,7 +317,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={field.value || undefined} // Alterado para undefined
+                        selected={field.value}
                         onSelect={(date) => {
                           field.onChange(date);
                           setStartDateString(date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : "");
@@ -345,7 +349,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                               const formatted = formatInputDate(e.target.value);
                               setEndDateString(formatted);
                               const parsedDate = parse(formatted, "dd/MM/yyyy", new Date(), { locale: ptBR });
-                              field.onChange(isValid(parsedDate) ? parsedDate : null); // Alterado para null
+                              field.onChange(isValid(parsedDate) ? parsedDate : undefined);
                             }}
                             placeholder="DD/MM/AAAA"
                             className={cn(
@@ -361,7 +365,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={field.value || undefined} // Alterado para undefined
+                        selected={field.value}
                         onSelect={(date) => {
                           field.onChange(date);
                           setEndDateString(date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : "");
@@ -376,6 +380,30 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {statusOptions.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>
+                          {status.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             {parentPeriodIdForNew && !initialData && (
               <FormField
                 control={form.control}
@@ -384,7 +412,7 @@ export const PeriodoForm: React.FC<PeriodoFormProps> = ({
                   <FormItem className="hidden">
                     <FormLabel>Parent ID</FormLabel>
                     <FormControl>
-                      <Input {...field} value={field.value || ""} /> {/* Ensure value is string or empty string */}
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -12,31 +12,20 @@ export interface Reuniao {
   created_at?: string;
   updated_at?: string;
   created_by_name?: string; // Joined from profiles
-  comite_name?: string; // NOVO: Adicionado para exibir o nome do comitê
   recurrence_type: 'none' | 'weekly' | 'bi_weekly' | 'monthly'; // NEW
   recurrence_end_date: string | null; // NEW
   recurrence_group_id: string | null; // NEW
 }
 
-interface GetReunioesParams {
-  comite_id?: string; // Tornar opcional
-}
-
-export const getReunioes = async (params?: GetReunioesParams): Promise<Reuniao[] | null> => {
-  let query = supabase
+export const getReunioesByComiteId = async (comite_id: string): Promise<Reuniao[] | null> => {
+  const { data, error } = await supabase
     .from('reunioes')
     .select(`
       *,
-      created_by_user:usuarios(first_name, last_name),
-      comite:comites(nome)
+      created_by_user:usuarios(first_name, last_name)
     `)
-    .order('data_reuniao', { ascending: true });
-
-  if (params?.comite_id) {
-    query = query.eq('comite_id', params.comite_id);
-  }
-
-  const { data, error } = await query;
+    .eq('comite_id', comite_id)
+    .order('data_reuniao', { ascending: true }); // Alterado para ordem crescente
 
   if (error) {
     console.error('Error fetching meetings:', error.message);
@@ -46,7 +35,6 @@ export const getReunioes = async (params?: GetReunioesParams): Promise<Reuniao[]
   return data.map(reuniao => ({
     ...reuniao,
     created_by_name: (reuniao as any).created_by_user ? `${(reuniao as any).created_by_user.first_name} ${(reuniao as any).created_by_user.last_name}` : 'N/A',
-    comite_name: (reuniao as any).comite?.nome || 'N/A', // Mapear o nome do comitê
   }));
 };
 
@@ -61,7 +49,7 @@ export const createReuniao = async (
 ): Promise<Reuniao | null> => {
   let currentMeetingDate = new Date(data_reuniao);
   const endDate = recurrence_end_date ? new Date(recurrence_end_date) : null;
-  const meetingsToCreate: Omit<Reuniao, 'id' | 'created_at' | 'updated_at' | 'created_by_name' | 'comite_name'>[] = [];
+  const meetingsToCreate: Omit<Reuniao, 'id' | 'created_at' | 'updated_at' | 'created_by_name'>[] = [];
 
   // First, create the initial meeting to get its ID for recurrence_group_id
   const { data: firstMeetingData, error: firstMeetingError } = await supabase
@@ -94,8 +82,7 @@ export const createReuniao = async (
     .eq('id', recurrenceGroupId)
     .select(`
       *,
-      created_by_user:usuarios(first_name, last_name),
-      comite:comites(nome)
+      created_by_user:usuarios(first_name, last_name)
     `)
     .single();
 
@@ -155,7 +142,6 @@ export const createReuniao = async (
   return {
     ...updatedFirstMeetingData,
     created_by_name: (updatedFirstMeetingData as any).created_by_user ? `${(updatedFirstMeetingData as any).created_by_user.first_name} ${(updatedFirstMeetingData as any).created_by_user.last_name}` : 'N/A',
-    comite_name: (updatedFirstMeetingData as any).comite?.nome || 'N/A',
   };
 };
 
@@ -180,8 +166,7 @@ export const updateReuniao = async (
     .eq('id', id)
     .select(`
       *,
-      created_by_user:usuarios(first_name, last_name),
-      comite:comites(nome)
+      created_by_user:usuarios(first_name, last_name)
     `)
     .single();
 
@@ -194,7 +179,6 @@ export const updateReuniao = async (
   return {
     ...data,
     created_by_name: (data as any).created_by_user ? `${(data as any).created_by_user.first_name} ${(data as any).created_by_user.last_name}` : 'N/A',
-    comite_name: (data as any).comite?.nome || 'N/A',
   };
 };
 

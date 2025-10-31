@@ -1,7 +1,8 @@
 import { supabase } from '../client';
+// Removed direct import of supabaseAdmin for client-side security
 import { showSuccess, showError } from '@/utils/toast';
-// import { User } from '@supabase/supabase-js'; // REMOVIDO
-// import { Permission } from '@/hooks/use-user-permissions'; // REMOVIDO
+import { User } from '@supabase/supabase-js';
+import { Permission } from '@/hooks/use-user-permissions'; // Import Permission interface
 
 export interface UserProfile {
   id: string;
@@ -9,20 +10,19 @@ export interface UserProfile {
   last_name: string;
   email: string;
   area_id: string | null;
-  area_name?: string;
-  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario';
+  area_name?: string; // Added to the interface
+  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario'; // Updated permission types
   status: 'active' | 'blocked';
-  cargo_funcao?: string | null;
   created_at?: string;
   updated_at?: string;
 }
 
 interface GetUsersParams {
-  sortBy?: keyof UserProfile | 'area_name' | 'email';
+  sortBy?: keyof UserProfile | 'area_name' | 'email'; // Added 'email' and 'area_name' for sorting
   sortOrder?: 'asc' | 'desc';
 }
 
-export const getUsers = async (params?: GetUsersParams): Promise<UserProfile[]> => {
+export const getUsers = async (params?: GetUsersParams): Promise<UserProfile[] | null> => {
   try {
     const queryParams = new URLSearchParams();
     if (params?.sortBy) {
@@ -39,24 +39,24 @@ export const getUsers = async (params?: GetUsersParams): Promise<UserProfile[]> 
     if (error) {
       console.error('Error invoking list-users edge function:', error.message);
       showError('Erro ao carregar dados de autenticação dos usuários.');
-      throw error; // Throw error to be caught by react-query
+      return null;
     }
 
     return data as UserProfile[];
   } catch (error: any) {
     console.error('Error in getUsers (client-side):', error.message);
     showError('Erro ao carregar dados de autenticação dos usuários.');
-    throw error; // Throw error to be caught by react-query
+    return null;
   }
 };
 
-export const getCurrentUserProfile = async (): Promise<UserProfile> => {
+export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) {
     console.error('Error fetching current auth user:', authError?.message);
     showError('Erro ao carregar dados do usuário autenticado.');
-    throw authError || new Error("User not authenticated."); // Throw error
+    return null;
   }
 
   const { data: profileData, error: profileError } = await supabase
@@ -68,7 +68,7 @@ export const getCurrentUserProfile = async (): Promise<UserProfile> => {
   if (profileError) {
     console.error('Error fetching current user profile:', profileError.message);
     showError('Erro ao carregar perfil do usuário.');
-    throw profileError; // Throw error
+    return null;
   }
 
   return {
@@ -84,15 +84,14 @@ export const createUser = async (
   first_name: string,
   last_name: string,
   area_id: string | null,
-  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario',
-  selected_permissions: string[] = [],
-  password?: string,
-  cargo_funcao: string | null = null
+  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario', // Updated permission type
+  selected_permissions: string[] = [], // New parameter for granular permissions
+  password?: string // Moved optional parameter to the end
 ): Promise<UserProfile | null> => {
   try {
     const { data, error } = await supabase.functions.invoke('create-user', {
       method: 'POST',
-      body: { email, password, first_name, last_name, area_id, permissao, selected_permissions, cargo_funcao },
+      body: { email, password, first_name, last_name, area_id, permissao, selected_permissions },
     });
 
     if (error) {
@@ -115,18 +114,17 @@ export const updateUserProfile = async (
   first_name: string,
   last_name: string,
   area_id: string | null,
-  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario',
+  permissao: 'administrador' | 'diretoria' | 'gerente' | 'supervisor' | 'usuario', // Updated permission type
   status: 'active' | 'blocked',
-  selected_permissions: string[] = [],
-  email: string,
-  cargo_funcao: string | null = null
+  selected_permissions: string[] = [], // New parameter for granular permissions
+  email: string // Added email as a parameter
 ): Promise<UserProfile | null> => {
   // First, update the user's profile in the 'usuarios' table
   const { data, error } = await supabase
     .from('usuarios')
-    .update({ first_name, last_name, area_id, permissao, status, cargo_funcao, updated_at: new Date().toISOString() })
+    .update({ first_name, last_name, area_id, permissao, status, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select('*, area:areas(nome)');
+    .select('*, area:areas(nome)'); // Removed .single()
 
   if (error) {
     console.error('Error updating user profile:', error.message);
@@ -140,7 +138,7 @@ export const updateUserProfile = async (
     return null;
   }
 
-  const updatedProfileData = data[0];
+  const updatedProfileData = data[0]; // Get the first (and only expected) updated row
 
   // Fetch all available permissions to map selected_permissions (string keys) to permission_ids (UUIDs)
   const { data: allPermissions, error: permissionsError } = await supabase.from('permissions').select('id, resource, action');
@@ -150,7 +148,7 @@ export const updateUserProfile = async (
     return null;
   }
 
-  const permissionMap = new Map<string, string>();
+  const permissionMap = new Map<string, string>(); // Map "resource_action" to "id"
   allPermissions.forEach(p => permissionMap.set(`${p.resource}_${p.action}`, p.id));
 
   const newPermissionIds = selected_permissions
@@ -203,12 +201,14 @@ export const updateUserProfile = async (
 
   return {
     ...updatedProfileData,
-    email: email,
+    email: email, // Use the email passed as an argument
     area_name: (updatedProfileData as any).area?.nome || 'N/A',
   };
 };
 
 export const deleteUser = async (id: string): Promise<boolean> => {
+  // This function still uses supabaseAdmin.auth.admin.deleteUser.
+  // For full security, this should also be moved to an Edge Function.
   const { error } = await supabase.auth.admin.deleteUser(id);
   if (error) {
     console.error('Error deleting user:', error.message);
@@ -219,8 +219,10 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 };
 
 export const sendPasswordResetEmail = async (email: string): Promise<boolean> => {
+  // This function still uses supabaseAdmin.auth.admin.generateLink.
+  // For full security, this should also be moved to an Edge Function.
   const { error } = await supabase.auth.admin.generateLink({
-    type: 'recovery',
+    type: 'recovery', // Corrigido: 'password_reset' para 'recovery'
     email,
   });
 
@@ -242,9 +244,10 @@ export const blockUser = async (id: string): Promise<UserProfile | null> => {
 
   if (error) {
     console.error('Error blocking user:', error.message);
-    showError(`Erro ao bloquear usuário: ${error.message}`);
+    showError(`Erro ao bloquear usuário: ${error.message}`); // Corrigido: err.message para error.message
     return null;
   }
+  // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.
   const { data: { user: authUserSession } } = await supabase.auth.getUser();
   const email = authUserSession?.id === id ? authUserSession.email : 'N/A';
   return { ...data, email: email || 'N/A', area_name: (data as any).area?.nome || 'N/A' };
@@ -260,9 +263,10 @@ export const unblockUser = async (id: string): Promise<UserProfile | null> => {
 
   if (error) {
     console.error('Error unblocking user:', error.message);
-    showError(`Erro ao desbloquear usuário: ${error.message}`);
+    showError(`Erro ao desbloquear usuário: ${error.message}`); // Corrigido: err.message para error.message
     return null;
   }
+  // This still fetches auth user data directly. For full security, this should also be moved to an Edge Function.
   const { data: { user: authUserSession } } = await supabase.auth.getUser();
   const email = authUserSession?.id === id ? authUserSession.email : 'N/A';
   return { ...data, email: email || 'N/A', area_name: (data as any).area?.nome || 'N/A' };

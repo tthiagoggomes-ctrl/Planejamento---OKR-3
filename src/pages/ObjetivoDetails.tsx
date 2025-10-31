@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";

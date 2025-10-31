@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +11,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         navigate('/'); // Redirect to dashboard after successful login
       }
@@ -25,7 +25,7 @@ const Login = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <img src="/assets/logo-fade-ufpe.png" alt="Logo FADE-UFPE" className="mx-auto mb-4 h-16" />
-          <CardTitle className="text-3xl font-bold text-fade-red">FADE-UFPE OKR Login</CardTitle>
+          <CardTitle className="text-3xl font-bold text-fade-red">FADE-UFPE OKR Login</CardTitle> {/* Cor aplicada aqui */}
         </CardHeader>
         <CardContent>
           <Auth
@@ -36,13 +36,13 @@ const Login = () => {
               variables: {
                 default: {
                   colors: {
-                    brand: '#b5121b',
-                    brandAccent: '#8a0f15',
+                    brand: '#b5121b', // Cor aplicada diretamente aqui
+                    brandAccent: '#8a0f15', // Um tom mais escuro para o hover/active
                   },
                 },
               },
             }}
-            theme="light"
+            theme="light" // Use light theme, can be dynamic later
             redirectTo={window.location.origin + '/'}
           />
         </CardContent>

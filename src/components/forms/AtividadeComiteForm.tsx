@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
 import { getComites, Comite } from "@/integrations/supabase/api/comites";
-import { getReunioesByComiteId, Reuniao } from "@/integrations/supabase/api/reunioes";
+import { getReunioes, Reuniao } from "@/integrations/supabase/api/reunioes";
 import { getAtasReuniaoByReuniaoId, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { UserProfile, getUsers } from "@/integrations/supabase/api/users";
 import { Loader2 } from "lucide-react";
@@ -41,7 +41,17 @@ import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client'; // NOVO: Importar supabase
+
+// Adicione esta interface em algum lugar no topo do arquivo, por exemplo, antes de formSchema
+interface AtaWithReuniaoAndComiteData {
+  id: string;
+  reuniao_id: string;
+  reuniao: Array<{ // <--- Alterado para Array
+    id: string;
+    comite_id: string;
+  }> | null; // 'reuniao' pode ser null se a relação não for encontrada
+}
 
 const formSchema = z.object({
   titulo: z.string().min(5, {
@@ -86,8 +96,8 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
       descricao: initialData?.descricao || "",
       due_date: initialData?.due_date ? parseISO(initialData.due_date) : null,
       status: initialData?.status || "todo",
-      comite_id: initialData?.ata_reuniao_id ? "" : preselectedComiteId || "",
-      reuniao_id: initialData?.ata_reuniao_id ? "" : "",
+      comite_id: initialData?.ata_reuniao_id ? "" : preselectedComiteId || "", // Will be set by effect
+      reuniao_id: initialData?.ata_reuniao_id ? "" : "", // Will be set by effect
       ata_reuniao_id: initialData?.ata_reuniao_id || preselectedAtaReuniaoId || "",
       assignee_id: initialData?.assignee_id || null,
     },
@@ -95,7 +105,7 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
 
   const selectedComiteId = form.watch('comite_id');
   const selectedReuniaoId = form.watch('reuniao_id');
-  const selectedAtaReuniaoId = form.watch('ata_reuniao_id');
+  // const selectedAtaReuniaoId = form.watch('ata_reuniao_id'); // This is not used directly for fetching, but for form state
 
   const { data: comites, isLoading: isLoadingComites } = useQuery<Comite[] | null, Error>({
     queryKey: ["comites"],
@@ -104,7 +114,7 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
 
   const { data: reunioes, isLoading: isLoadingReunioes } = useQuery<Reuniao[] | null, Error>({
     queryKey: ["reunioesForForm", selectedComiteId],
-    queryFn: () => selectedComiteId ? getReunioesByComiteId(selectedComiteId) : Promise.resolve(null),
+    queryFn: () => selectedComiteId ? getReunioes({ comite_id: selectedComiteId }) : Promise.resolve(null),
     enabled: !!selectedComiteId,
   });
 
@@ -123,43 +133,27 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
   React.useEffect(() => {
     const setInitialDropdowns = async () => {
       if (initialData?.ata_reuniao_id) {
-        const { data: ata, error: ataError } = await supabase
+        const { data: ata } = await supabase
           .from('atas_reuniao')
-          .select(`
-            id, 
-            reuniao_id,
-            reunioes (
-              id,
-              comite_id
-            )
-          `)
+          .select('id, reuniao_id, reuniao:reunioes(id, comite_id)')
           .eq('id', initialData.ata_reuniao_id)
-          .single();
+          .single<AtaWithReuniaoAndComiteData>();
 
-        // Fix: Properly access nested properties
-        if (ata && (ata as any).reunioes) {
-          form.setValue('comite_id', (ata as any).reunioes.comite_id);
-          form.setValue('reuniao_id', (ata as any).reuniao_id);
+        if (ata && ata.reuniao && ata.reuniao.length > 0) { // Corrected access
+          form.setValue('comite_id', ata.reuniao[0].comite_id); // Corrected access
+          form.setValue('reuniao_id', ata.reuniao_id);
           form.setValue('ata_reuniao_id', initialData.ata_reuniao_id);
         }
       } else if (preselectedAtaReuniaoId) {
-        const { data: ata, error: ataError } = await supabase
+        const { data: ata } = await supabase
           .from('atas_reuniao')
-          .select(`
-            id, 
-            reuniao_id,
-            reunioes (
-              id,
-              comite_id
-            )
-          `)
+          .select('id, reuniao_id, reuniao:reunioes(id, comite_id)')
           .eq('id', preselectedAtaReuniaoId)
-          .single();
+          .single<AtaWithReuniaoAndComiteData>();
 
-        // Fix: Properly access nested properties
-        if (ata && (ata as any).reunioes) {
-          form.setValue('comite_id', (ata as any).reunioes.comite_id);
-          form.setValue('reuniao_id', (ata as any).reuniao_id);
+        if (ata && ata.reuniao && ata.reuniao.length > 0) { // Corrected access
+          form.setValue('comite_id', ata.reuniao[0].comite_id); // Corrected access
+          form.setValue('reuniao_id', ata.reuniao_id);
           form.setValue('ata_reuniao_id', preselectedAtaReuniaoId);
         }
       } else if (preselectedComiteId) {

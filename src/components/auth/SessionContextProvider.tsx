@@ -1,12 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from "@/components/ui/sonner";
 import { showSuccess, showError } from '@/utils/toast';
-import { Loader2 } from "lucide-react";
 
 interface SessionContextType {
   session: Session | null;
@@ -16,68 +15,13 @@ interface SessionContextType {
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
-// Session timeout in milliseconds (15 minutes)
-const SESSION_TIMEOUT = 15 * 60 * 1000;
-
 export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [toastShown, setToastShown] = useState(false); // Track if toast was shown
   const navigate = useNavigate();
   const location = useLocation();
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastActivityRef = useRef<number>(Date.now());
-
-  // Reset inactivity timer
-  const resetInactivityTimer = () => {
-    lastActivityRef.current = Date.now();
-    
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    
-    timeoutRef.current = setTimeout(() => {
-      handleSessionTimeout();
-    }, SESSION_TIMEOUT);
-  };
-
-  // Handle session timeout
-  const handleSessionTimeout = async () => {
-    try {
-      await supabase.auth.signOut();
-      showSuccess("Sessão expirada por inatividade. Por favor, faça login novamente.");
-      navigate('/login');
-    } catch (error) {
-      console.error("Error during timeout logout:", error);
-      showError("Erro ao encerrar sessão.");
-    }
-  };
-
-  // Set up activity listeners
-  useEffect(() => {
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    
-    const handleUserActivity = () => {
-      resetInactivityTimer();
-    };
-    
-    events.forEach(event => {
-      window.addEventListener(event, handleUserActivity, { passive: true });
-    });
-    
-    // Initial setup
-    resetInactivityTimer();
-    
-    return () => {
-      events.forEach(event => {
-        window.removeEventListener(event, handleUserActivity);
-      });
-      
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     const getSession = async () => {
@@ -89,6 +33,12 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setSession(session);
       setUser(session?.user || null);
       setLoading(false);
+      
+      // Show login success message only once
+      if (session && !toastShown) {
+        showSuccess("Login realizado com sucesso!");
+        setToastShown(true);
+      }
     };
 
     getSession();
@@ -99,19 +49,19 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setLoading(false);
 
       if (_event === 'SIGNED_IN') {
-        // Don't show success message on page refresh or returning to app
-        if (location.pathname !== '/login' && location.pathname !== '/') {
+        // Only show success message if we're on login page or if it hasn't been shown yet
+        if ((location.pathname === '/login' || !toastShown) && session) {
           showSuccess("Login realizado com sucesso!");
+          setToastShown(true);
         }
+        // Redirect to dashboard if on login page
         if (location.pathname === '/login') {
           navigate('/');
         }
-        resetInactivityTimer(); // Reset timer on login
       } else if (_event === 'SIGNED_OUT') {
-        // Only show message if it's an intentional logout
-        if (Date.now() - lastActivityRef.current < SESSION_TIMEOUT - 1000) {
-          showSuccess("Logout realizado com sucesso!");
-        }
+        // Reset toast shown state on logout
+        setToastShown(false);
+        // Redirect to login page on sign out
         navigate('/login');
       } else if (_event === 'USER_UPDATED') {
         showSuccess("Perfil atualizado com sucesso!");
@@ -119,7 +69,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, location.pathname]);
+  }, [navigate, location.pathname, toastShown]);
 
   // Redirect unauthenticated users to login page, except for the login page itself
   useEffect(() => {
@@ -131,7 +81,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   return (
     <SessionContext.Provider value={{ session, user, loading }}>
       {children}
-      <Toaster />
+      <Toaster /> {/* Ensure Toaster is available for toasts */}
     </SessionContext.Provider>
   );
 };

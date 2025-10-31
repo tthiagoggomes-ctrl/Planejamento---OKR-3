@@ -85,7 +85,7 @@ export const AtividadeForm: React.FC<AtividadeFormProps> = ({
     },
   });
 
-  const { data: objetivos, isLoading: isLoadingObjetivos } = useQuery<Objetivo[] | null, Error>({
+  const { data: objetivos } = useQuery<Objetivo[] | null, Error>({ // isLoadingObjetivos removido
     queryKey: ["objetivos"],
     queryFn: () => getObjetivos(),
   });

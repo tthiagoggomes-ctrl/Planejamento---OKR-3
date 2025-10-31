@@ -29,7 +29,7 @@ interface GetObjetivosParams {
   sortOrder?: 'asc' | 'desc';
 }
 
-export const getObjetivos = async (params?: GetObjetivosParams): Promise<Objetivo[] | null> => {
+export const getObjetivos = async (params?: GetObjetivosParams): Promise<Objetivo[]> => {
   let query = supabase
     .from('objetivos')
     .select('*, area:areas(nome)');
@@ -71,7 +71,7 @@ export const getObjetivos = async (params?: GetObjetivosParams): Promise<Objetiv
   if (error) {
     console.error('Error fetching objectives:', error.message);
     showError('Erro ao carregar objetivos.');
-    return null;
+    return []; // Return empty array on error
   }
 
   return data.map(obj => ({
@@ -80,7 +80,7 @@ export const getObjetivos = async (params?: GetObjetivosParams): Promise<Objetiv
   }));
 };
 
-export const getObjetivosSummary = async (): Promise<ObjetivoSummary[] | null> => {
+export const getObjetivosSummary = async (): Promise<ObjetivoSummary[]> => {
   const { data, error } = await supabase
     .from('objetivos')
     .select('status'); // Select only the status column
@@ -88,7 +88,7 @@ export const getObjetivosSummary = async (): Promise<ObjetivoSummary[] | null> =
   if (error) {
     console.error('Error fetching objective summary:', error.message);
     showError('Erro ao carregar resumo de objetivos.');
-    return null;
+    return []; // Return empty array on error
   }
 
   // Group and count client-side

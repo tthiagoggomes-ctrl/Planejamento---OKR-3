@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { PlusCircle, Loader2 } from "lucide-react";
 import { getObjetivos, Objetivo } from "@/integrations/supabase/api/objetivos";
 import { getKeyResultsByObjetivoId, KeyResult, calculateKeyResultProgress } from "@/integrations/supabase/api/key_results";
 import { Atividade } from "@/integrations/supabase/api/atividades";
-import { useSession } from "@/components/auth/SessionContextProvider";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useLocation } from "react-router-dom";
 
@@ -19,8 +18,6 @@ import { ObjetivoModalsAndAlerts } from "@/components/objetivos/ObjetivoModalsAn
 import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
 
 const Objetivos = () => {
-  const queryClient = useQueryClient();
-  const { user } = useSession();
   const location = useLocation();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
 
@@ -37,7 +34,6 @@ const Objetivos = () => {
   const canDeleteKeyResults = can('key_results', 'delete');
 
   // Permissões para Atividades
-  const canViewAtividades = can('atividades', 'view');
   const canInsertAtividades = can('atividades', 'insert');
   const canEditAtividades = can('atividades', 'edit');
   const canDeleteAtividades = can('atividades', 'delete');
@@ -308,7 +304,7 @@ const Objetivos = () => {
           />
 
           <ObjetivoList
-            objetivos={objetivos}
+            objetivos={objetivos || null} // Explicitly pass null if undefined
             keyResultsMap={keyResultsMap}
             isLoadingKeyResults={isLoadingKeyResults}
             expandedObjetivos={expandedObjetivos}

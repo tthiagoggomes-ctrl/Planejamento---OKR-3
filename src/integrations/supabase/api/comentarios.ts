@@ -16,7 +16,7 @@ export const getComentariosByAtividadeId = async (atividade_id: string): Promise
     .from('comentarios')
     .select(`
       *,
-      author:usuarios(first_name, last_name)
+      author:usuarios!comentarios_user_id_fkey(first_name, last_name)
     `)
     .eq('atividade_id', atividade_id)
     .order('created_at', { ascending: true });
@@ -43,7 +43,7 @@ export const createComentario = async (
     .insert({ atividade_id, user_id, conteudo })
     .select(`
       *,
-      author:usuarios(first_name, last_name)
+      author:usuarios!comentarios_user_id_fkey(first_name, last_name)
     `)
     .single();
 
@@ -68,7 +68,7 @@ export const updateComentario = async (
     .eq('id', id)
     .select(`
       *,
-      author:usuarios(first_name, last_name)
+      author:usuarios!comentarios_user_id_fkey(first_name, last_name)
     `)
     .single();
 

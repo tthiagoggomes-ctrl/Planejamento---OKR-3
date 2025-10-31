@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, ArrowUp, ArrowDown } from "lucide-react";
-import { useDebounce } from "@/hooks/use-debounce";
 import { useQuery } from "@tanstack/react-query";
 import { getAreas, Area } from "@/integrations/supabase/api/areas";
 import { Objetivo } from "@/integrations/supabase/api/objetivos";

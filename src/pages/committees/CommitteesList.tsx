@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, GitCommit, Users, CalendarDays, MessageSquare } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2, GitCommit } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -27,7 +27,7 @@ import { getComites, createComite, updateComite, deleteComite, Comite, getComite
 import { showSuccess, showError } from "@/utils/toast";
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { Link } from "react-router-dom";
-import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm"; // Importar o novo formulário
+import { CommitteeForm, CommitteeFormValues } from "@/components/forms/CommitteeForm";
 
 const CommitteesList = () => {
   const queryClient = useQueryClient();
@@ -52,15 +52,11 @@ const CommitteesList = () => {
 
   const createComiteMutation = useMutation({
     mutationFn: (values: CommitteeFormValues) =>
-      createComite(
-        values.nome,
-        values.descricao,
-        values.status,
-        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[]
-      ),
+      createComite(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comites"] });
       setIsFormOpen(false);
+      showSuccess("Comitê criado com sucesso!");
     },
     onError: (err) => {
       showError(`Erro ao criar comitê: ${err.message}`);
@@ -71,17 +67,15 @@ const CommitteesList = () => {
     mutationFn: ({ id, ...values }: CommitteeFormValues & { id: string }) =>
       updateComite(
         id,
-        values.nome,
-        values.descricao,
-        values.status,
-        (values.members || []).filter(m => m.user_id && m.role) as { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[]
+        values
       ),
-    onSuccess: (data, variables) => { // Adicionado 'variables' aqui
+    onSuccess: (_, variables) => { // Alterado 'data' para '_'
       queryClient.invalidateQueries({ queryKey: ["comites"] });
-      queryClient.invalidateQueries({ queryKey: ["comiteMembers", variables.id] }); // Usando variables.id
+      queryClient.invalidateQueries({ queryKey: ["comiteMembers", variables.id] });
       setIsFormOpen(false);
       setEditingComite(null);
       setEditingComiteMembers(null);
+      showSuccess("Comitê atualizado com sucesso!");
     },
     onError: (err) => {
       showError(`Erro ao atualizar comitê: ${err.message}`);
@@ -94,6 +88,7 @@ const CommitteesList = () => {
       queryClient.invalidateQueries({ queryKey: ["comites"] });
       setIsDeleteDialogOpen(false);
       setComiteToDelete(null);
+      showSuccess("Comitê excluído com sucesso!");
     },
     onError: (err) => {
       showError(`Erro ao excluir comitê: ${err.message}`);
@@ -110,7 +105,6 @@ const CommitteesList = () => {
 
   const handleEditClick = async (comite: Comite) => {
     setEditingComite(comite);
-    // Fetch members for the committee being edited
     const members = await getComiteMembers(comite.id);
     setEditingComiteMembers(members);
     setIsFormOpen(true);

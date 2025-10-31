@@ -3,7 +3,7 @@
 import React from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Reuniao } from '@/integrations/supabase/api/reunioes';
-import { format, isSameDay, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalendarDays } from 'lucide-react';

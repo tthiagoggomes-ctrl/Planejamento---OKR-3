@@ -4,7 +4,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Loader2, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -28,7 +28,6 @@ import { getComentariosByAtividadeId, createComentario, updateComentario, delete
 import { getAtividades, Atividade } from "@/integrations/supabase/api/atividades";
 import { showSuccess, showError } from "@/utils/toast";
 import { useSession } from "@/components/auth/SessionContextProvider";
-import { format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { ComentarioItem } from "@/components/ComentarioItem";
 import { useUserPermissions } from '@/hooks/use-user-permissions'; // Importar o hook de permissões
@@ -247,9 +246,9 @@ const Comentarios = () => {
                                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
                               </div>
                             ) : (
-                              comentariosMap?.get(atividade.id)?.length > 0 ? (
+                              (comentariosMap?.get(atividade.id)?.length || 0) > 0 ? (
                                 <div className="space-y-4">
-                                  {comentariosMap.get(atividade.id)?.map((comment) => (
+                                  {comentariosMap!.get(atividade.id)!.map((comment) => (
                                     <ComentarioItem
                                       key={comment.id}
                                       comment={comment}

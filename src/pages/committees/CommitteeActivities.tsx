@@ -26,7 +26,7 @@ import {
 import { AtividadeComiteForm, AtividadeComiteFormValues } from "@/components/forms/AtividadeComiteForm";
 import { getAtividadesComite, createAtividadeComite, updateAtividadeComite, deleteAtividadeComite, AtividadeComite } from "@/integrations/supabase/api/atividades_comite";
 import { getComites, Comite } from "@/integrations/supabase/api/comites";
-import { getReunioesByComiteId, Reuniao } from "@/integrations/supabase/api/reunioes";
+import { getReunioes, Reuniao } from "@/integrations/supabase/api/reunioes";
 import { getAtasReuniaoByReuniaoId, AtaReuniao } from "@/integrations/supabase/api/atas_reuniao";
 import { showSuccess, showError } from "@/utils/toast";
 import { format, parseISO } from "date-fns";
@@ -46,7 +46,7 @@ import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useLocation } from "react-router-dom";
 import { useSession } from "@/components/auth/SessionContextProvider";
 
-const CommitteeActivitiesNew = () => {
+const CommitteeActivities = () => { // Renamed component
   const queryClient = useQueryClient();
   const { can, isLoading: permissionsLoading } = useUserPermissions();
   const location = useLocation();
@@ -97,7 +97,7 @@ const CommitteeActivitiesNew = () => {
     queryKey: ["reunioesForActivities", selectedComiteFilter],
     queryFn: () => {
       if (selectedComiteFilter === 'all') return null;
-      return getReunioesByComiteId(selectedComiteFilter);
+      return getReunioes({ comite_id: selectedComiteFilter });
     },
     enabled: selectedComiteFilter !== 'all' && canViewAtividadesComite && !permissionsLoading,
   });
@@ -153,16 +153,16 @@ const CommitteeActivitiesNew = () => {
   });
 
   const updateAtividadeMutation = useMutation({
-    mutationFn: ({ id, ...values }: AtividadeComiteFormValues & { id: string }) => {
+    mutationFn: ({ id, ata_reuniao_id, titulo, descricao, due_date, status, assignee_id }: AtividadeComiteFormValues & { id: string }) => {
       if (!canEditAtividadesComite) throw new Error("Você não tem permissão para editar atividades do comitê.");
       return updateAtividadeComite(
         id,
-        values.ata_reuniao_id,
-        values.titulo,
-        values.descricao,
-        formatDueDateForApi(values.due_date),
-        values.status,
-        values.assignee_id
+        ata_reuniao_id, // Pass ata_reuniao_id for RLS
+        titulo,
+        descricao,
+        formatDueDateForApi(due_date),
+        status,
+        assignee_id
       );
     },
     onSuccess: () => {
@@ -225,7 +225,7 @@ const CommitteeActivitiesNew = () => {
     if (atividadeToUpdate) {
       updateAtividadeMutation.mutate({
         id: atividadeToUpdate.id,
-        ata_reuniao_id: atividadeToUpdate.ata_reuniao_id,
+        ata_reuniao_id: atividadeToUpdate.ata_reuniao_id, // Pass ata_reuniao_id
         titulo: atividadeToUpdate.titulo,
         descricao: atividadeToUpdate.descricao,
         due_date: atividadeToUpdate.due_date ? parseISO(atividadeToUpdate.due_date) : null,
@@ -282,7 +282,7 @@ const CommitteeActivitiesNew = () => {
   }
 
   return (
-    <React.Fragment>
+    <>
       <div className="container mx-auto py-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -454,7 +454,7 @@ const CommitteeActivitiesNew = () => {
                 <p className="text-gray-600">Nenhuma atividade do comitê cadastrada ainda ou correspondente aos filtros.</p>
               )
             ) : viewMode === 'kanban' ? (
-              <KanbanBoard<AtividadeComite>
+              <KanbanBoard
                 atividades={filteredAtividades}
                 onStatusChange={handleStatusChangeFromKanban}
                 onEdit={handleEditClick}
@@ -464,7 +464,7 @@ const CommitteeActivitiesNew = () => {
                 canChangeActivityStatus={canChangeActivityStatusComite}
               />
             ) : ( // Gantt view
-              <GanttChart<AtividadeComite>
+              <GanttChart
                 atividades={filteredAtividades.map(a => ({ // Map to generic Atividade type for GanttChart
                   ...a,
                   key_result_title: a.reuniao_titulo, // Use meeting title as KR title for Gantt
@@ -513,8 +513,8 @@ const CommitteeActivitiesNew = () => {
           </AlertDialogContent>
         </AlertDialog>
       )}
-    </React.Fragment>
+    </>
   );
 };
 
-export default CommitteeActivitiesNew;
+export default CommitteeActivities; // Renamed component

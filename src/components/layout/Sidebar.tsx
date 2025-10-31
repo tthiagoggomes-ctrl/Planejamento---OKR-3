@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { Home, Building, Users, Target, ListTodo, LayoutDashboard, MessageSquare, UserCircle, FolderOpen, CalendarDays, GitCommit } from "lucide-react";
+import { Building, Users, Target, ListTodo, LayoutDashboard, MessageSquare, UserCircle, FolderOpen, CalendarDays, GitCommit } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,7 +12,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
-import { useUserPermissions } from "@/hooks/use-user-permissions"; // Importar o hook de permissões
+import { useUserPermissions } from "@/hooks/use-user-permissions";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   isOpen: boolean;
@@ -59,20 +59,15 @@ const committeesModuleItems = [
     icon: <CalendarDays className="h-4 w-4" />,
   },
   {
-    name: "Atividades do Comitê", // Reativado
+    name: "Enquetes",
+    href: "/comites/enquetes",
+    icon: <MessageSquare className="h-4 w-4" />,
+  },
+  {
+    name: "Atividades do Comitê", // NOVO: Item de menu para Atividades do Comitê
     href: "/comites/atividades",
     icon: <ListTodo className="h-4 w-4" />,
   },
-  // {
-  //   name: "Reuniões",
-  //   href: "/comites/reunioes",
-  //   icon: <CalendarDays className="h-4 w-4" />,
-  // },
-  // {
-  //   name: "Enquetes",
-  //   href: "/comites/enquetes",
-  //   icon: <MessageSquare className="h-4 w-4" />,
-  // },
 ];
 
 const cadastroItems = [
@@ -91,7 +86,7 @@ const cadastroItems = [
     href: "/usuarios",
     icon: <Users className="h-4 w-4" />,
   },
-].sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
+].sort((a, b) => a.name.localeCompare(b.name));
 
 export function Sidebar({ isOpen, onClose, className }: SidebarProps) {
   const [isStrategicPlanningOpen, setIsStrategicPlanningOpen] = React.useState(true);
@@ -107,7 +102,7 @@ export function Sidebar({ isOpen, onClose, className }: SidebarProps) {
   const canViewProfile = can('module', 'profile_view');
 
   if (permissionsLoading) {
-    return null; // Ou um spinner de carregamento, se preferir
+    return null;
   }
 
   return (

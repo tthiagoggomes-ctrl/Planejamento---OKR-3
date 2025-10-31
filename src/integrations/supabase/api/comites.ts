@@ -1,12 +1,20 @@
 import { supabase } from '../client';
 import { showError, showSuccess } from '@/utils/toast';
-import { UserProfile } from './users'; // Import UserProfile para tipagem
+import { CommitteeFormValues } from '@/components/forms/CommitteeForm';
 
 export interface Comite {
   id: string;
   nome: string;
   descricao: string | null;
   status: 'active' | 'archived';
+  regras_comite?: string | null;
+  objetivo?: string | null;
+  justificativa?: string | null;
+  atribuicoes_comite?: string | null;
+  periodicidade_reunioes?: string | null;
+  fluxo_demandas?: string | null;
+  criterios_priorizacao?: string | null;
+  beneficios_esperados?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -15,10 +23,13 @@ export interface ComiteMember {
   comite_id: string;
   user_id: string;
   role: 'membro' | 'presidente' | 'secretario';
+  cargo_funcao?: string | null;
   created_at?: string;
-  user_name?: string; // Joined from profiles
-  user_area_name?: string; // MODIFICADO: Substituído user_email por user_area_name
+  user_name?: string;
+  user_area_name?: string;
 }
+
+export type UpdateComitePayload = CommitteeFormValues;
 
 export const getComites = async (): Promise<Comite[] | null> => {
   const { data, error } = await supabase
@@ -50,14 +61,38 @@ export const getComiteById = async (id: string): Promise<Comite | null> => {
 };
 
 export const createComite = async (
-  nome: string,
-  descricao: string | null,
-  status: 'active' | 'archived' = 'active',
-  members: { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[] = []
+  payload: CommitteeFormValues
 ): Promise<Comite | null> => {
+  const {
+    nome,
+    descricao,
+    status,
+    regras_comite,
+    objetivo,
+    justificativa,
+    atribuicoes_comite,
+    periodicidade_reunioes,
+    fluxo_demandas,
+    criterios_priorizacao,
+    beneficios_esperados,
+    members
+  } = payload;
+
   const { data: comiteData, error: comiteError } = await supabase
     .from('comites')
-    .insert({ nome, descricao, status })
+    .insert({
+      nome,
+      descricao,
+      status,
+      regras_comite,
+      objetivo,
+      justificativa,
+      atribuicoes_comite,
+      periodicidade_reunioes,
+      fluxo_demandas,
+      criterios_priorizacao,
+      beneficios_esperados
+    })
     .select()
     .single();
 
@@ -67,11 +102,12 @@ export const createComite = async (
     return null;
   }
 
-  if (comiteData && members.length > 0) {
+  if (comiteData && members && members.length > 0) {
     const membersToInsert = members.map(member => ({
       comite_id: comiteData.id,
       user_id: member.user_id,
       role: member.role,
+      cargo_funcao: member.cargo_funcao,
     }));
     const { error: membersError } = await supabase
       .from('comite_membros')
@@ -80,29 +116,70 @@ export const createComite = async (
     if (membersError) {
       console.error('Error adding committee members:', membersError.message);
       showError(`Erro ao adicionar membros ao comitê: ${membersError.message}`);
-      // Optionally, roll back committee creation if members are essential
       await deleteComite(comiteData.id);
       return null;
     }
   }
 
   showSuccess('Comitê criado com sucesso!');
-  return comiteData;
+  return {
+    ...comiteData,
+    regras_comite,
+    objetivo,
+    justificativa,
+    atribuicoes_comite,
+    periodicidade_reunioes,
+    fluxo_demandas,
+    criterios_priorizacao,
+    beneficios_esperados
+  };
 };
 
 export const updateComite = async (
   id: string,
-  nome: string,
-  descricao: string | null,
-  status: 'active' | 'archived',
-  members: { user_id: string; role: 'membro' | 'presidente' | 'secretario' }[] = []
+  payload: UpdateComitePayload
 ): Promise<Comite | null> => {
+  const {
+    nome,
+    descricao,
+    status,
+    regras_comite,
+    objetivo,
+    justificativa,
+    atribuicoes_comite,
+    periodicidade_reunioes,
+    fluxo_demandas,
+    criterios_priorizacao,
+    beneficios_esperados,
+    members
+  } = payload;
+
+  const updateObject = {
+    nome,
+    descricao,
+    status,
+    regras_comite,
+    objetivo,
+    justificativa,
+    atribuicoes_comite,
+    periodicidade_reunioes,
+    fluxo_demandas,
+    criterios_priorizacao,
+    beneficios_esperados,
+    updated_at: new Date().toISOString()
+  };
+
+  console.log('[API updateComite] Objeto de atualização enviado para Supabase:', JSON.stringify(updateObject, null, 2));
+
   const { data: comiteData, error: comiteError } = await supabase
     .from('comites')
-    .update({ nome, descricao, status, updated_at: new Date().toISOString() })
+    .update(updateObject)
     .eq('id', id)
     .select()
     .single();
+
+  console.log('[API updateComite] Supabase response - Data:', JSON.stringify(comiteData, null, 2));
+  console.log('[API updateComite] Supabase response - Error:', comiteError);
 
   if (comiteError) {
     console.error('Error updating comite:', comiteError.message);
@@ -113,7 +190,7 @@ export const updateComite = async (
   // Update members
   const { data: currentMembers, error: fetchMembersError } = await supabase
     .from('comite_membros')
-    .select('user_id, role')
+    .select('user_id, role, cargo_funcao')
     .eq('comite_id', id);
 
   if (fetchMembersError) {
@@ -122,20 +199,21 @@ export const updateComite = async (
     return null;
   }
 
-  const currentMemberIds = new Set(currentMembers.map(m => m.user_id));
-  const newMemberIds = new Set(members.map(m => m.user_id));
+  const currentMemberMap = new Map(currentMembers.map(m => [m.user_id, m]));
+  const newMemberIds = new Set(members?.map(m => m.user_id));
 
-  const membersToAdd = members.filter(m => !currentMemberIds.has(m.user_id));
-  const membersToUpdate = members.filter(m => currentMemberIds.has(m.user_id) &&
-    currentMembers.find(cm => cm.user_id === m.user_id)?.role !== m.role
-  );
+  const membersToAdd = (members || []).filter(m => !currentMemberMap.has(m.user_id));
+  const membersToUpdate = (members || []).filter(m => {
+    const existing = currentMemberMap.get(m.user_id);
+    return existing && (existing.role !== m.role || existing.cargo_funcao !== m.cargo_funcao);
+  });
   const membersToRemove = currentMembers.filter(m => !newMemberIds.has(m.user_id));
 
-  // Add new members
+  // Adicionar novos membros
   if (membersToAdd.length > 0) {
     const { error: addError } = await supabase
       .from('comite_membros')
-      .insert(membersToAdd.map(m => ({ comite_id: id, user_id: m.user_id, role: m.role })));
+      .insert(membersToAdd.map(m => ({ comite_id: id, user_id: m.user_id, role: m.role, cargo_funcao: m.cargo_funcao })));
     if (addError) {
       console.error('Error adding new members:', addError.message);
       showError(`Erro ao adicionar novos membros: ${addError.message}`);
@@ -143,21 +221,21 @@ export const updateComite = async (
     }
   }
 
-  // Update existing members' roles
+  // Atualizar funções e cargos de membros existentes
   for (const member of membersToUpdate) {
     const { error: updateRoleError } = await supabase
       .from('comite_membros')
-      .update({ role: member.role })
+      .update({ role: member.role, cargo_funcao: member.cargo_funcao })
       .eq('comite_id', id)
       .eq('user_id', member.user_id);
     if (updateRoleError) {
-      console.error('Error updating member role:', updateRoleError.message);
-      showError(`Erro ao atualizar função do membro: ${updateRoleError.message}`);
+      console.error('Error updating member role/cargo:', updateRoleError.message);
+      showError(`Erro ao atualizar função/cargo do membro: ${updateRoleError.message}`);
       return null;
     }
   }
 
-  // Remove old members
+  // Remover membros antigos
   if (membersToRemove.length > 0) {
     const { error: removeError } = await supabase
       .from('comite_membros')
@@ -182,74 +260,41 @@ export const deleteComite = async (id: string): Promise<boolean> => {
     showError(`Erro ao excluir comitê: ${error.message}`);
     return false;
   }
-  showSuccess('Comitê excluído com sucesso!');
   return true;
 };
 
 export const getComiteMembers = async (comite_id: string): Promise<ComiteMember[] | null> => {
-  // Step 1: Fetch comite_membros data
   const { data: membersData, error: membersError } = await supabase
     .from('comite_membros')
-    .select('*') // Select all columns, but don't try to join here
+    .select('*, user:usuarios(first_name, last_name, area:areas(nome))')
     .eq('comite_id', comite_id);
 
   if (membersError) {
-    console.error('Error fetching committee members (raw):', membersError.message);
+    console.error('Error fetching committee members:', membersError.message);
     showError('Erro ao carregar membros do comitê.');
     return null;
   }
 
-  if (!membersData || membersData.length === 0) {
-    return []; // No members found
-  }
-
-  // Step 2: Extract all user_id's
-  const userIds = membersData.map(member => member.user_id);
-
-  // Step 3: Fetch user profiles for these user_id's, including area name
-  const { data: userProfiles, error: profilesError } = await supabase
-    .from('usuarios')
-    .select('id, first_name, last_name, area:areas(nome)') // MODIFICADO: Incluindo a área
-    .in('id', userIds);
-
-  if (profilesError) {
-    console.error('Error fetching user profiles for committee members:', profilesError.message);
-    showError('Erro ao carregar perfis dos membros do comitê.');
-    return null;
-  }
-
-  const userProfileMap = new Map<string, Pick<UserProfile, 'id' | 'first_name' | 'last_name' | 'area_name'>>(); // Adjusted type
-  userProfiles.forEach(profile => userProfileMap.set(profile.id, {
-    id: profile.id,
-    first_name: profile.first_name,
-    last_name: profile.last_name,
-    area_name: (profile as any).area?.nome || 'N/A', // Extract area name
-  }));
-
-  // Step 4: Map the results together
-  return membersData.map(member => ({
+  return (membersData || []).map((member: any) => ({
     ...member,
-    user_name: userProfileMap.has(member.user_id)
-      ? `${userProfileMap.get(member.user_id)?.first_name} ${userProfileMap.get(member.user_id)?.last_name}`
-      : 'N/A',
-    user_area_name: userProfileMap.has(member.user_id)
-      ? userProfileMap.get(member.user_id)?.area_name
-      : 'N/A', // MODIFICADO: Usando o nome da área
+    user_name: member.user ? `${member.user.first_name} ${member.user.last_name}` : 'N/A',
+    user_area_name: member.user?.area?.nome || 'N/A',
   }));
 };
 
 export const addComiteMember = async (
   comite_id: string,
   user_id: string,
-  role: 'membro' | 'presidente' | 'secretario'
+  role: 'membro' | 'presidente' | 'secretario',
+  cargo_funcao: string | null
 ): Promise<ComiteMember | null> => {
   const { data, error } = await supabase
     .from('comite_membros')
-    .insert({ comite_id, user_id, role })
+    .insert({ comite_id, user_id, role, cargo_funcao })
     .select(`
       *,
       user:usuarios(first_name, last_name, area:areas(nome))
-    `) // Adjusted select to include area
+    `)
     .single();
 
   if (error) {
@@ -261,36 +306,37 @@ export const addComiteMember = async (
   return {
     ...data,
     user_name: (data as any).user ? `${(data as any).user.first_name} ${(data as any).user.last_name}` : 'N/A',
-    user_area_name: (data as any).user?.area?.nome || 'N/A', // MODIFICADO: Usando o nome da área
+    user_area_name: (data as any).user?.area?.nome || 'N/A',
   };
 };
 
 export const updateComiteMemberRole = async (
   comite_id: string,
   user_id: string,
-  role: 'membro' | 'presidente' | 'secretario'
+  role: 'membro' | 'presidente' | 'secretario',
+  cargo_funcao: string | null
 ): Promise<ComiteMember | null> => {
   const { data, error } = await supabase
     .from('comite_membros')
-    .update({ role })
+    .update({ role, cargo_funcao })
     .eq('comite_id', comite_id)
     .eq('user_id', user_id)
     .select(`
       *,
       user:usuarios(first_name, last_name, area:areas(nome))
-    `) // Adjusted select to include area
+    `)
     .single();
 
   if (error) {
-    console.error('Error updating committee member role:', error.message);
-    showError(`Erro ao atualizar função do membro: ${error.message}`);
+    console.error('Error updating committee member role/cargo:', error.message);
+    showError(`Erro ao atualizar função/cargo do membro: ${error.message}`);
     return null;
   }
-  showSuccess('Função do membro atualizada com sucesso!');
+  showSuccess('Função e cargo do membro atualizados com sucesso!');
   return {
     ...data,
     user_name: (data as any).user ? `${(data as any).user.first_name} ${(data as any).user.last_name}` : 'N/A',
-    user_area_name: (data as any).user?.area?.nome || 'N/A', // MODIFICADO: Usando o nome da área
+    user_area_name: (data as any).user?.area?.nome || 'N/A',
   };
 };
 

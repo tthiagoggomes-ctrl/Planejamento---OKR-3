@@ -34,13 +34,14 @@ import { UserProfile, getUsers } from "@/integrations/supabase/api/users";
 import { Loader2, PlusCircle, XCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
-import { useSession } from "@/components/auth/SessionContextProvider"; // Import useSession
+import { useSession } from "@/components/auth/SessionContextProvider";
 
 const memberSchema = z.object({
-  user_id: z.string().uuid({ message: "Selecione um usuário válido." }),
+  user_id: z.string().uuid({ message: "Selecione um usuário válido." }).nullable(),
   role: z.enum(['membro', 'presidente', 'secretario'], {
     message: "Selecione uma função válida.",
   }),
+  cargo_funcao: z.string().nullable(), // NOVO: Adicionado cargo_funcao
 });
 
 const formSchema = z.object({
@@ -51,6 +52,15 @@ const formSchema = z.object({
   status: z.enum(['active', 'archived'], {
     message: "Selecione um status válido.",
   }),
+  regras_comite: z.string().nullable(),
+  objetivo: z.string().nullable(),
+  justificativa: z.string().nullable(),
+  atribuicoes_comite: z.string().nullable(),
+  // REMOVIDO: composicao_recomendada e composicao_recomendada_adicional
+  periodicidade_reunioes: z.string().nullable(),
+  fluxo_demandas: z.string().nullable(),
+  criterios_priorizacao: z.string().nullable(),
+  beneficios_esperados: z.string().nullable(),
   members: z.array(memberSchema).min(0, "O comitê deve ter pelo menos um membro.").optional(),
 });
 
@@ -73,14 +83,22 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
   initialMembers,
   isLoading,
 }) => {
-  const { user } = useSession(); // Get current user
+  const { user } = useSession();
   const form = useForm<CommitteeFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       nome: initialData?.nome || "",
       descricao: initialData?.descricao || "",
       status: initialData?.status || "active",
-      members: initialMembers?.map(m => ({ user_id: m.user_id, role: m.role })) || [],
+      regras_comite: initialData?.regras_comite || "",
+      objetivo: initialData?.objetivo || "",
+      justificativa: initialData?.justificativa || "",
+      atribuicoes_comite: initialData?.atribuicoes_comite || "",
+      periodicidade_reunioes: initialData?.periodicidade_reunioes || "",
+      fluxo_demandas: initialData?.fluxo_demandas || "",
+      criterios_priorizacao: initialData?.criterios_priorizacao || "",
+      beneficios_esperados: initialData?.beneficios_esperados || "",
+      members: initialMembers?.map(m => ({ user_id: m.user_id, role: m.role, cargo_funcao: m.cargo_funcao || "" })) || [], // NOVO: Mapear cargo_funcao
     },
   });
 
@@ -100,29 +118,54 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
         nome: initialData.nome,
         descricao: initialData.descricao,
         status: initialData.status,
-        members: initialMembers?.map(m => ({ user_id: m.user_id, role: m.role })) || [],
+        regras_comite: initialData.regras_comite,
+        objetivo: initialData.objetivo,
+        justificativa: initialData.justificativa,
+        atribuicoes_comite: initialData.atribuicoes_comite,
+        periodicidade_reunioes: initialData.periodicidade_reunioes,
+        fluxo_demandas: initialData.fluxo_demandas,
+        criterios_priorizacao: initialData.criterios_priorizacao,
+        beneficios_esperados: initialData.beneficios_esperados,
+        members: initialMembers?.map(m => ({ user_id: m.user_id, role: m.role, cargo_funcao: m.cargo_funcao || "" })) || [], // NOVO: Mapear cargo_funcao
       });
     } else {
-      // For new committees, automatically add the current user as a 'presidente'
-      const defaultMembers = user?.id ? [{ user_id: user.id, role: "presidente" as const }] : [];
+      const defaultMembers = user?.id ? [{ user_id: user.id, role: "presidente" as const, cargo_funcao: "" }] : []; // NOVO: Adicionar cargo_funcao
+      const newCommitteeDefaultMembers = defaultMembers.map(m => ({ ...m, user_id: m.user_id || null }));
       form.reset({
         nome: "",
         descricao: "",
         status: "active",
-        members: defaultMembers,
+        regras_comite: "",
+        objetivo: "",
+        justificativa: "",
+        atribuicoes_comite: "",
+        periodicidade_reunioes: "",
+        fluxo_demandas: "",
+        criterios_priorizacao: "",
+        beneficios_esperados: "",
+        members: newCommitteeDefaultMembers,
       });
     }
-  }, [initialData, initialMembers, form, user]); // Add user to dependencies
+  }, [initialData, initialMembers, form, user]);
 
   const handleSubmit = (values: CommitteeFormValues) => {
+    console.log("[CommitteeForm] Valores do formulário antes de enviar:", values);
     onSubmit(values);
-    if (!initialData) { // Only reset if creating a new committee
-      const defaultMembers = user?.id ? [{ user_id: user.id, role: "presidente" as const }] : [];
+    if (!initialData) {
+      const defaultMembers = user?.id ? [{ user_id: user.id, role: "presidente" as const, cargo_funcao: "" }] : []; // NOVO: Adicionar cargo_funcao
       form.reset({
         nome: "",
         descricao: "",
         status: "active",
-        members: defaultMembers,
+        regras_comite: "",
+        objetivo: "",
+        justificativa: "",
+        atribuicoes_comite: "",
+        periodicidade_reunioes: "",
+        fluxo_demandas: "",
+        criterios_priorizacao: "",
+        beneficios_esperados: "",
+        members: defaultMembers.map(m => ({ ...m, user_id: m.user_id || null })),
       });
     }
   };
@@ -138,7 +181,6 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
     { value: "secretario", label: "Secretário" },
   ];
 
-  // Filter out users already selected in the form, and the current user if they are already a default member
   const availableUsers = users?.filter(
     (u) => !fields.some((member) => member.user_id === u.id)
   );
@@ -158,7 +200,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                 <FormItem>
                   <FormLabel>Nome do Comitê</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Comitê de Gestão de Sistemas" {...field} disabled={!!initialData} />
+                    <Input placeholder="Ex: Comitê de Gestão de Sistemas" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -171,7 +213,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                 <FormItem>
                   <FormLabel>Descrição (Opcional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Detalhes sobre o comitê" {...field} value={field.value || ""} disabled={!!initialData} />
+                    <Textarea placeholder="Detalhes sobre o comitê" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -183,7 +225,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!!initialData}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o status" />
@@ -203,16 +245,158 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
             />
 
             <Separator className="my-4" />
+            <h3 className="text-lg font-semibold mb-3">Informações Detalhadas do Comitê</h3>
+
+            <FormField
+              control={form.control}
+              name="objetivo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Objetivo</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Qual o objetivo principal deste comitê?" className="min-h-[80px]" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="justificativa"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Justificativa</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Por que este comitê é necessário?" className="min-h-[80px]" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="atribuicoes_comite"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Atribuições do Comitê</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Quais são as principais responsabilidades e atribuições deste comitê?" className="min-h-[100px]" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* REMOVIDO: Composição Recomendada como tabela dinâmica */}
+            {/* REMOVIDO: Campo para texto adicional na composição */}
+
+            <FormField
+              control={form.control}
+              name="periodicidade_reunioes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Periodicidade das Reuniões</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Ex: Semanal, Quinzenal, Mensal" className="min-h-[80px]" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="fluxo_demandas"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fluxo de Demandas</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Descreva o fluxo de como as demandas são recebidas, processadas e resolvidas pelo comitê." className="min-h-[100px]" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="criterios_priorizacao"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Critérios de Priorização</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder={`Ex:
+- Urgência: Impacto imediato na operação
+- Relevância Estratégica: Alinhamento com metas institucionais
+- Custo / Esforço: Complexidade técnica, custo de execução ou aquisição
+- Abrangência: Quantidade de usuários ou áreas impactadas
+- Risco / Conformidade: Se envolve exigências legais, LGPD ou riscos à operação`}
+                      className="min-h-[150px]"
+                      {...field}
+                      value={field.value || ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="beneficios_esperados"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Benefícios Esperados</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Quais resultados e benefícios são esperados com a atuação deste comitê?" className="min-h-[100px]" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Separator className="my-4" />
+            <h3 className="text-lg font-semibold mb-3">Regras do Comitê (Documento)</h3>
+            <FormField
+              control={form.control}
+              name="regras_comite"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Regras e Atribuições (Opcional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Descreva as regras, atribuições e funcionamento do comitê aqui..."
+                      className="min-h-[150px]"
+                      {...field}
+                      value={field.value || ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Separator className="my-4" />
             <h3 className="text-lg font-semibold mb-3">Membros do Comitê</h3>
             <div className="space-y-3">
               {fields.map((field, index) => (
-                <div key={field.id} className="flex items-center gap-2 p-2 border rounded-md">
+                <div key={field.id} className="flex flex-col gap-2 p-2 border rounded-md">
                   <FormField
                     control={form.control}
                     name={`members.${index}.user_id`}
                     render={({ field: memberField }) => (
                       <FormItem className="flex-1">
-                        <Select onValueChange={memberField.onChange} value={memberField.value}>
+                        <Select
+                          onValueChange={(value) => {
+                            memberField.onChange(value);
+                            // NOVO: Preencher cargo_funcao automaticamente
+                            const selectedUser = users?.find(u => u.id === value);
+                            if (selectedUser) {
+                              form.setValue(`members.${index}.cargo_funcao`, selectedUser.cargo_funcao || "");
+                            } else {
+                              form.setValue(`members.${index}.cargo_funcao`, "");
+                            }
+                          }}
+                          value={memberField.value || ""}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione um membro" />
@@ -222,18 +406,34 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
                             {isLoadingUsers ? (
                               <SelectItem value="" disabled>Carregando usuários...</SelectItem>
                             ) : (
-                              users?.map((u) => (
-                                <SelectItem
-                                  key={u.id}
-                                  value={u.id}
-                                  disabled={fields.some((m, i) => i !== index && m.user_id === u.id)}
-                                >
-                                  {u.first_name} {u.last_name} ({u.email})
-                                </SelectItem>
-                              ))
+                              <>
+                                <SelectItem value="null">Selecione um usuário</SelectItem>
+                                {users?.map((u) => (
+                                  <SelectItem
+                                    key={u.id}
+                                    value={u.id}
+                                    disabled={fields.some((m, i) => i !== index && m.user_id === u.id)}
+                                  >
+                                    {u.first_name} {u.last_name} ({u.email})
+                                  </SelectItem>
+                                ))}
+                              </>
                             )}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`members.${index}.cargo_funcao`} // NOVO: Campo para cargo/função
+                    render={({ field: cargoField }) => (
+                      <FormItem>
+                        <FormLabel>Cargo/Função</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ex: Gerente de Projetos" {...cargoField} value={cargoField.value || ""} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -275,7 +475,7 @@ export const CommitteeForm: React.FC<CommitteeFormProps> = ({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => append({ user_id: "", role: "membro" })}
+                onClick={() => append({ user_id: null, role: "membro", cargo_funcao: "" })} // NOVO: Adicionar cargo_funcao
                 disabled={isLoadingUsers || (availableUsers && availableUsers.length === 0)}
                 className="w-full"
               >

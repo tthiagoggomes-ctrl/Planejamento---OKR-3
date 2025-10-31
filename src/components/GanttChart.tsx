@@ -1,11 +1,9 @@
 "use client";
 
 import React from 'react';
-import { format, parseISO, startOfWeek, endOfWeek, eachWeekOfInterval, isWithinInterval, differenceInWeeks, min, max } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, eachWeekOfInterval, differenceInWeeks, min, max } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';

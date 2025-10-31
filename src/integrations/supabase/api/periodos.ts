@@ -1,5 +1,5 @@
 import { supabase } from '../client';
-import { showError, showSuccess } from '@/utils/toast';
+import { showError } from '@/utils/toast'; // Removido showSuccess
 import { getYear, format, getMonth } from 'date-fns'; // Importar funções de data, incluindo getMonth
 import { ptBR } from 'date-fns/locale'; // Corrigido: Importar ptBR diretamente
 
@@ -21,14 +21,14 @@ interface GetPeriodosParams {
   sortOrder?: 'asc' | 'desc';
 }
 
-export const getPeriodos = async (params?: GetPeriodosParams): Promise<Periodo[] | null> => {
+export const getPeriodos = async (params?: GetPeriodosParams): Promise<Periodo[]> => { // Changed return type to Periodo[]
   let query = supabase.from('periodos').select('*');
 
   const { data, error } = await query;
   if (error) {
     console.error('Error fetching periods:', error.message);
     showError('Erro ao carregar períodos.');
-    return null;
+    return []; // Return empty array on error
   }
 
   if (!data) return [];

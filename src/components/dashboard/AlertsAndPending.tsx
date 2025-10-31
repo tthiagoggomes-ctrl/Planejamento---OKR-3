@@ -9,18 +9,18 @@ import { getObjetivos, Objetivo } from '@/integrations/supabase/api/objetivos';
 import { getAtividades, Atividade } from '@/integrations/supabase/api/atividades';
 import { getAreas, Area } from '@/integrations/supabase/api/areas';
 import { showError } from '@/utils/toast';
-import { formatDistanceToNow, subDays, isPast as dateFnsIsPast } from 'date-fns'; // Renomear isPast para evitar conflito
+import { formatDistanceToNow, subDays, isPast as dateFnsIsPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
-import { Button } from '@/components/ui/button'; // Import Button
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 const AlertsAndPending: React.FC = () => {
-  const navigate = useNavigate(); // Initialize useNavigate
-  const [showAllKRsAtRisk, setShowAllKRsAtRisk] = React.useState(false); // Novo estado para controlar a expansão
+  const navigate = useNavigate();
+  const [showAllKRsAtRisk, setShowAllKRsAtRisk] = React.useState(false);
 
   const { data: keyResults, isLoading: isLoadingKeyResults, error: errorKeyResults } = useQuery<KeyResult[] | null, Error>({
     queryKey: ["allKeyResults"],
-    queryFn: () => getAllKeyResults(), // Wrap in arrow function
+    queryFn: () => getAllKeyResults(),
   });
 
   const { data: objetivos, isLoading: isLoadingObjetivos, error: errorObjetivos } = useQuery<Objetivo[] | null, Error>({
@@ -35,7 +35,7 @@ const AlertsAndPending: React.FC = () => {
 
   const { data: areas, isLoading: isLoadingAreas, error: errorAreas } = useQuery<Area[] | null, Error>({
     queryKey: ["areas"],
-    queryFn: () => getAreas(), // Wrap in arrow function
+    queryFn: () => getAreas(),
   });
 
   const krsAtRiskOrOffTrack = React.useMemo(() => {
@@ -46,7 +46,7 @@ const AlertsAndPending: React.FC = () => {
     if (!objetivos || !keyResults) return [];
     return objetivos.filter(obj => {
       const krsForObjective = keyResults.filter(kr => kr.objetivo_id === obj.id);
-      if (krsForObjective.length === 0) return false; // Consider objectives without KRs as not having progress
+      if (krsForObjective.length === 0) return false;
       const totalProgress = krsForObjective.reduce((sum, kr) => sum + calculateKeyResultProgress(kr), 0);
       const averageProgress = totalProgress / krsForObjective.length;
       return averageProgress < 30;
@@ -85,7 +85,8 @@ const AlertsAndPending: React.FC = () => {
         }
       });
 
-      if (!latestUpdate || latestUpdate < sevenDaysAgo) {
+      // Fix: Properly compare Date objects
+      if (!latestUpdate || (latestUpdate < sevenDaysAgo)) {
         areasWithNoRecentUpdate.push(area);
       }
     });

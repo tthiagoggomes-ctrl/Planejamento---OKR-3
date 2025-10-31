@@ -41,7 +41,7 @@ import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
-import { supabase } from '@/integrations/supabase/client'; // NOVO: Importar supabase
+import { supabase } from '@/integrations/supabase/client';
 
 const formSchema = z.object({
   titulo: z.string().min(5, {
@@ -86,8 +86,8 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
       descricao: initialData?.descricao || "",
       due_date: initialData?.due_date ? parseISO(initialData.due_date) : null,
       status: initialData?.status || "todo",
-      comite_id: initialData?.ata_reuniao_id ? "" : preselectedComiteId || "", // Will be set by effect
-      reuniao_id: initialData?.ata_reuniao_id ? "" : "", // Will be set by effect
+      comite_id: initialData?.ata_reuniao_id ? "" : preselectedComiteId || "",
+      reuniao_id: initialData?.ata_reuniao_id ? "" : "",
       ata_reuniao_id: initialData?.ata_reuniao_id || preselectedAtaReuniaoId || "",
       assignee_id: initialData?.assignee_id || null,
     },
@@ -125,25 +125,41 @@ export const AtividadeComiteForm: React.FC<AtividadeComiteFormProps> = ({
       if (initialData?.ata_reuniao_id) {
         const { data: ata, error: ataError } = await supabase
           .from('atas_reuniao')
-          .select('id, reuniao_id, reuniao:reunioes(id, comite_id)')
+          .select(`
+            id, 
+            reuniao_id,
+            reunioes (
+              id,
+              comite_id
+            )
+          `)
           .eq('id', initialData.ata_reuniao_id)
           .single();
 
-        if (ata && ata.reuniao) {
-          form.setValue('comite_id', ata.reuniao.comite_id);
-          form.setValue('reuniao_id', ata.reuniao_id);
+        // Fix: Properly access nested properties
+        if (ata && (ata as any).reunioes) {
+          form.setValue('comite_id', (ata as any).reunioes.comite_id);
+          form.setValue('reuniao_id', (ata as any).reuniao_id);
           form.setValue('ata_reuniao_id', initialData.ata_reuniao_id);
         }
       } else if (preselectedAtaReuniaoId) {
         const { data: ata, error: ataError } = await supabase
           .from('atas_reuniao')
-          .select('id, reuniao_id, reuniao:reunioes(id, comite_id)')
+          .select(`
+            id, 
+            reuniao_id,
+            reunioes (
+              id,
+              comite_id
+            )
+          `)
           .eq('id', preselectedAtaReuniaoId)
           .single();
 
-        if (ata && ata.reuniao) {
-          form.setValue('comite_id', ata.reuniao.comite_id);
-          form.setValue('reuniao_id', ata.reuniao_id);
+        // Fix: Properly access nested properties
+        if (ata && (ata as any).reunioes) {
+          form.setValue('comite_id', (ata as any).reunioes.comite_id);
+          form.setValue('reuniao_id', (ata as any).reuniao_id);
           form.setValue('ata_reuniao_id', preselectedAtaReuniaoId);
         }
       } else if (preselectedComiteId) {
